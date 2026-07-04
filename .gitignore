@@ -1,0 +1,34 @@
+.DS_Store
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+
+# Local databases and generated data
+postgres_data/
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Build outputs and binaries
+backend/server
+/server
+DerivedData/
+build/
+.build/
+
+# Xcode local state
+*.xcuserstate
+*.xcscmblueprint
+xcuserdata/
+*.moved-aside
+*.git.backup*
+.git.backup*/
+
+# Logs and temp files
+*.log
+tmp/
+temp/

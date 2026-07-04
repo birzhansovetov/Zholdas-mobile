@@ -1,0 +1,32 @@
+CREATE EXTENSION IF NOT EXISTS postgis;
+
+CREATE TABLE IF NOT EXISTS events (
+    id SERIAL PRIMARY KEY,
+    creator_id INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title VARCHAR(150) NOT NULL,
+    description TEXT NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    location_name VARCHAR(255) NOT NULL,
+    location GEOGRAPHY(Point, 4326) NOT NULL, -- Point: longitude, latitude
+    start_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    end_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    max_participants INT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'active',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Ensure all columns exist in case the table already existed
+ALTER TABLE events ADD COLUMN IF NOT EXISTS creator_id INT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS title VARCHAR(150);
+ALTER TABLE events ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS category VARCHAR(50);
+ALTER TABLE events ADD COLUMN IF NOT EXISTS location_name VARCHAR(255);
+ALTER TABLE events ADD COLUMN IF NOT EXISTS location GEOGRAPHY(Point, 4326);
+ALTER TABLE events ADD COLUMN IF NOT EXISTS start_time TIMESTAMP WITH TIME ZONE;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS end_time TIMESTAMP WITH TIME ZONE;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS max_participants INT;
+ALTER TABLE events ADD COLUMN IF NOT EXISTS status VARCHAR(20) DEFAULT 'active';
+ALTER TABLE events ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP;
+
+-- Spatial index for instant near-by point lookup
+CREATE INDEX IF NOT EXISTS idx_events_location ON events USING gist(location);
