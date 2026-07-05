@@ -1,15 +1,106 @@
 import SwiftUI
+import UIKit
+
+enum ThemePreference: String, CaseIterable, Identifiable {
+    case system
+    case dark
+    case light
+
+    var id: String { rawValue }
+
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .system:
+            return nil
+        case .dark:
+            return .dark
+        case .light:
+            return .light
+        }
+    }
+
+    var localizedTitle: String {
+        switch self {
+        case .system:
+            return "theme_system".localized
+        case .dark:
+            return "theme_dark".localized
+        case .light:
+            return "theme_light".localized
+        }
+    }
+}
 
 enum ZholdasTheme {
-    static let background = Color(red: 0.025, green: 0.018, blue: 0.070)
-    static let backgroundDeep = Color(red: 0.010, green: 0.010, blue: 0.032)
-    static let surface = Color(red: 0.060, green: 0.046, blue: 0.120)
-    static let elevatedSurface = Color(red: 0.095, green: 0.070, blue: 0.175)
-    static let panel = Color(red: 0.045, green: 0.037, blue: 0.098)
-    static let border = Color.white.opacity(0.095)
-    static let textPrimary = Color.white
-    static let textSecondary = Color.white.opacity(0.64)
-    static let textTertiary = Color.white.opacity(0.42)
+    private static func adaptive(dark: UIColor, light: UIColor) -> Color {
+        Color(UIColor { traits in
+            traits.userInterfaceStyle == .dark ? dark : light
+        })
+    }
+
+    static var background: Color {
+        adaptive(
+            dark: UIColor(red: 0.025, green: 0.018, blue: 0.070, alpha: 1),
+            light: UIColor(red: 0.965, green: 0.945, blue: 1.000, alpha: 1)
+        )
+    }
+
+    static var backgroundDeep: Color {
+        adaptive(
+            dark: UIColor(red: 0.010, green: 0.010, blue: 0.032, alpha: 1),
+            light: UIColor(red: 0.910, green: 0.875, blue: 0.985, alpha: 1)
+        )
+    }
+
+    static var surface: Color {
+        adaptive(
+            dark: UIColor(red: 0.060, green: 0.046, blue: 0.120, alpha: 1),
+            light: UIColor(red: 1.000, green: 1.000, blue: 1.000, alpha: 0.92)
+        )
+    }
+
+    static var elevatedSurface: Color {
+        adaptive(
+            dark: UIColor(red: 0.095, green: 0.070, blue: 0.175, alpha: 1),
+            light: UIColor(red: 0.945, green: 0.925, blue: 1.000, alpha: 0.96)
+        )
+    }
+
+    static var panel: Color {
+        adaptive(
+            dark: UIColor(red: 0.045, green: 0.037, blue: 0.098, alpha: 1),
+            light: UIColor(red: 0.985, green: 0.975, blue: 1.000, alpha: 0.94)
+        )
+    }
+
+    static var border: Color {
+        adaptive(
+            dark: UIColor.white.withAlphaComponent(0.095),
+            light: UIColor(red: 0.255, green: 0.165, blue: 0.530, alpha: 0.16)
+        )
+    }
+
+    static var textPrimary: Color {
+        adaptive(
+            dark: .white,
+            light: UIColor(red: 0.105, green: 0.080, blue: 0.180, alpha: 1)
+        )
+    }
+
+    static var textSecondary: Color {
+        adaptive(
+            dark: UIColor.white.withAlphaComponent(0.64),
+            light: UIColor(red: 0.345, green: 0.295, blue: 0.455, alpha: 1)
+        )
+    }
+
+    static var textTertiary: Color {
+        adaptive(
+            dark: UIColor.white.withAlphaComponent(0.42),
+            light: UIColor(red: 0.510, green: 0.455, blue: 0.610, alpha: 1)
+        )
+    }
+
     static let accent = Color(red: 0.58, green: 0.42, blue: 1.0)
     static let accentDeep = Color(red: 0.34, green: 0.18, blue: 0.78)
     static let accentSoft = Color(red: 0.36, green: 0.27, blue: 0.78)
@@ -21,7 +112,7 @@ enum ZholdasTheme {
     static var appBackground: some View {
         LinearGradient(
             colors: [
-                Color(red: 0.040, green: 0.030, blue: 0.105),
+                elevatedSurface,
                 background,
                 backgroundDeep
             ],

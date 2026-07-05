@@ -8,6 +8,7 @@ struct ProfileTabView: View {
     @State private var pendingRequestsCount = 0
     @State private var isShowingModeratorDashboard = false
     @AppStorage("app_language") private var selectedLanguage = "ru"
+    @AppStorage("zholdas_theme_preference") private var themePreferenceRaw = ThemePreference.system.rawValue
     
     var body: some View {
         NavigationStack {
@@ -482,6 +483,38 @@ struct ProfileTabView: View {
                 }
                 .padding(.vertical, 12)
                 .padding(.horizontal, 16)
+                
+                Divider().background(ZholdasTheme.border)
+
+                Menu {
+                    ForEach(ThemePreference.allCases) { preference in
+                        Button {
+                            themePreferenceRaw = preference.rawValue
+                        } label: {
+                            Label(
+                                preference.localizedTitle,
+                                systemImage: themePreferenceRaw == preference.rawValue ? "checkmark.circle.fill" : "circle"
+                            )
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Image(systemName: "circle.lefthalf.filled")
+                            .foregroundColor(ZholdasTheme.accent)
+                            .frame(width: 24)
+                        Text("prof_theme".localized)
+                            .foregroundColor(ZholdasTheme.textPrimary)
+                        Spacer()
+                        Text((ThemePreference(rawValue: themePreferenceRaw) ?? .system).localizedTitle)
+                            .foregroundColor(ZholdasTheme.accent)
+                            .fontWeight(.semibold)
+                        Image(systemName: "chevron.up.chevron.down")
+                            .foregroundColor(ZholdasTheme.accent)
+                            .font(.caption)
+                    }
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 16)
+                }
                 
                 Divider().background(ZholdasTheme.border)
                 

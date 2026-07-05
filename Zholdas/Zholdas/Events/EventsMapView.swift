@@ -253,7 +253,6 @@ struct EventsMapView: View {
             MapCompass()
             MapScaleView()
         }
-        .preferredColorScheme(.dark)
         .ignoresSafeArea(edges: .bottom)
     }
     

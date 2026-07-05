@@ -337,8 +337,7 @@ struct CreateEventView: View {
                                 )
                                 .datePickerStyle(.graphical)
                                 .tint(ZholdasTheme.accent)
-                                .foregroundColor(.white)
-                                .colorScheme(.dark)
+                                .foregroundColor(ZholdasTheme.textPrimary)
                                 .frame(maxWidth: .infinity)
                                 .padding(8)
                                 .background(ZholdasTheme.panel)
@@ -628,7 +627,6 @@ struct CreateEventView: View {
             }
         }
         .allowsHitTesting(false)
-        .preferredColorScheme(.dark)
     }
 
     @ViewBuilder
@@ -648,7 +646,6 @@ struct CreateEventView: View {
             .datePickerStyle(.wheel)
             .labelsHidden()
             .tint(ZholdasTheme.accent)
-            .colorScheme(.dark)
             .frame(maxWidth: .infinity)
             .frame(height: 112)
             .clipped()
@@ -753,7 +750,6 @@ struct EventLocationPickerView: View {
                             }
                         }
                     }
-                    .preferredColorScheme(.dark)
                     .ignoresSafeArea()
 	                    .onTapGesture(coordinateSpace: .local) { point in
 	                        if let coordinate = proxy.convert(point, from: .local) {

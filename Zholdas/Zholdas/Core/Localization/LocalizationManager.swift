@@ -153,6 +153,26 @@ class LocalizationManager: ObservableObject {
             "kk": "Қосымша тілі",
             "en": "App Language"
         ],
+        "prof_theme": [
+            "ru": "Тема приложения",
+            "kk": "Қолданба тақырыбы",
+            "en": "App Theme"
+        ],
+        "theme_system": [
+            "ru": "Системная",
+            "kk": "Жүйелік",
+            "en": "System"
+        ],
+        "theme_dark": [
+            "ru": "Темная",
+            "kk": "Қараңғы",
+            "en": "Dark"
+        ],
+        "theme_light": [
+            "ru": "Светлая",
+            "kk": "Жарық",
+            "en": "Light"
+        ],
         "prof_notifications": [
             "ru": "Уведомления и заявки",
             "kk": "Хабарландырулар",

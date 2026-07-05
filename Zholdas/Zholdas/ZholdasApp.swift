@@ -21,6 +21,11 @@ struct ZholdasApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @StateObject private var authViewModel = AuthViewModel()
     @StateObject private var langManager = LocalizationManager.shared
+    @AppStorage("zholdas_theme_preference") private var themePreferenceRaw = ThemePreference.system.rawValue
+
+    private var preferredColorScheme: ColorScheme? {
+        ThemePreference(rawValue: themePreferenceRaw)?.colorScheme
+    }
     
     var body: some Scene {
         WindowGroup {
@@ -36,7 +41,7 @@ struct ZholdasApp: App {
             }
             .environmentObject(authViewModel)
             .environmentObject(langManager)
-            .preferredColorScheme(.dark)
+            .preferredColorScheme(preferredColorScheme)
             .onOpenURL { url in
                 authViewModel.handlePasswordResetURL(url)
             }
