@@ -33,13 +33,6 @@ struct EventsMapView: View {
         CLLocationCoordinate2D(latitude: 43.2389, longitude: 76.8897)
     }
 
-    private var isUsingFallbackLocation: Bool {
-        guard let loc = locationManager.location else { return true }
-        let lat = loc.coordinate.latitude
-        let lon = loc.coordinate.longitude
-        return abs(lat - 37.33) < 0.5 && abs(lon - (-122.03)) < 0.5
-    }
-
     private var effectiveCoordinate: CLLocationCoordinate2D {
         userCoordinate ?? defaultAlmatyCoordinate
     }
@@ -225,7 +218,7 @@ struct EventsMapView: View {
         Map(position: $position) {
             UserAnnotation()
             if let coordinate = userCoordinate {
-                Annotation("map_you_are_here".localized, coordinate: coordinate) {
+                Annotation("", coordinate: coordinate) {
                     userLocationMarker
                 }
             }
@@ -285,96 +278,6 @@ struct EventsMapView: View {
     }
     
     @ViewBuilder
-    private var userLocationStatusView: some View {
-        HStack(spacing: 8) {
-            Image(systemName: locationManager.isAuthorized ? "location.fill" : "location.slash.fill")
-                .font(.caption)
-                .foregroundColor(locationManager.isAuthorized ? ZholdasTheme.accent : .red.opacity(0.85))
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text(locationStatusTitle)
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white)
-                
-                if let coordinate = userCoordinate {
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(String(format: "%.5f, %.5f", coordinate.latitude, coordinate.longitude))
-                            .font(.caption2)
-                            .foregroundColor(.gray)
-
-                        if let accuracy = locationManager.accuracy {
-                            Text("Точность ~\(Int(accuracy)) м")
-                                .font(.caption2)
-                                .foregroundColor(.gray.opacity(0.8))
-                        }
-                    }
-                } else if isUsingFallbackLocation {
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("Алматы, центр города")
-                            .font(.caption2)
-                            .foregroundColor(.gray)
-                        Text("GPS недоступен или используется симулятор")
-                            .font(.caption2)
-                            .foregroundColor(.gray.opacity(0.8))
-                    }
-                } else if let error = locationManager.errorMessage {
-                    Text(error)
-                        .font(.caption2)
-                        .foregroundColor(.gray)
-                }
-            }
-            
-            Spacer()
-            
-            Button {
-                locationManager.requestLocation()
-                if let coordinate = userCoordinate {
-                    withAnimation {
-                        position = .region(MKCoordinateRegion(
-                            center: coordinate,
-                            span: MKCoordinateSpan(latitudeDelta: 0.035, longitudeDelta: 0.035)
-                        ))
-                    }
-                }
-            } label: {
-                Image(systemName: "arrow.clockwise")
-                    .font(.caption.weight(.bold))
-                    .foregroundColor(ZholdasTheme.accent)
-                    .frame(width: 28, height: 28)
-                    .background(Color.white.opacity(0.08))
-                    .clipShape(Circle())
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(10)
-        .background(Color.white.opacity(0.055))
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
-        )
-    }
-    
-    private var locationStatusTitle: String {
-        if userCoordinate != nil {
-            return "map_current_location".localized
-        }
-        if isUsingFallbackLocation {
-            return "map_location_default".localized
-        }
-        
-        switch locationManager.authorizationStatus {
-        case .denied, .restricted:
-            return "map_location_denied".localized
-        case .notDetermined:
-            return "map_location_waiting_permission".localized
-        default:
-            return "map_location_searching".localized
-        }
-    }
-    
-    @ViewBuilder
     private var cityInfoAndFiltersView: some View {
         VStack(alignment: .leading, spacing: 12) {
             if let errMsg = eventsViewModel.errorMessage, errMsg.contains("офлайн-режим") {
@@ -429,8 +332,6 @@ struct EventsMapView: View {
                     }
                     .buttonStyle(.plain)
                 }
-
-                userLocationStatusView
 
                 if isAISearchExpanded {
                     aiSearchField
