@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/birzhansovetov/zholdas-backend/internal/config"
@@ -208,6 +209,9 @@ func newDBPool(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
 		poolConfig.ConnConfig.RuntimeParams = map[string]string{}
 	}
 	poolConfig.ConnConfig.RuntimeParams["search_path"] = "mobile,public"
+	poolConfig.ConnConfig.StatementCacheCapacity = 0
+	poolConfig.ConnConfig.DescriptionCacheCapacity = 0
+	poolConfig.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
 	return pgxpool.NewWithConfig(ctx, poolConfig)
 }
 
