@@ -1,6 +1,10 @@
 import SwiftUI
 import MapKit
 
+private struct SelectedUserForDetail: Identifiable {
+    let id: String
+}
+
 struct EventDetailView: View {
     let event: Event
     @ObservedObject var eventsViewModel: EventsViewModel
@@ -13,8 +17,7 @@ struct EventDetailView: View {
     @State private var participants: [Participant] = []
     @State private var isLoadingParticipants = false
     @State private var isActionLoading = false
-    @State private var selectedParticipantID: String? = nil
-    @State private var isShowingUserDetail = false
+    @State private var selectedUserForDetail: SelectedUserForDetail? = nil
     @State private var isShowingRateSheet = false
     @State private var isShowingReportSheet = false
     @State private var localSession: ChatSession? = nil
@@ -401,11 +404,9 @@ struct EventDetailView: View {
                 messages: []
             )
         }
-        .sheet(isPresented: $isShowingUserDetail) {
-            if let userID = selectedParticipantID {
-                UserDetailView(userID: userID)
-                    .environmentObject(authViewModel)
-            }
+        .sheet(item: $selectedUserForDetail) { selectedUser in
+            UserDetailView(userID: selectedUser.id)
+                .environmentObject(authViewModel)
         }
         .sheet(isPresented: $isShowingRateSheet) {
             RateParticipantsView(eventID: event.id, participants: participants)
@@ -463,8 +464,7 @@ struct EventDetailView: View {
 
     private var organizerCard: some View {
         Button {
-            selectedParticipantID = event.creatorID
-            isShowingUserDetail = true
+            selectedUserForDetail = SelectedUserForDetail(id: event.creatorID)
         } label: {
             HStack(spacing: 16) {
                 ZholdasAvatarView(
@@ -734,8 +734,7 @@ struct EventDetailView: View {
 struct ParticipantsListView: View {
     let participants: [Participant]
     @EnvironmentObject var authViewModel: AuthViewModel
-    @State private var selectedUserID: String? = nil
-    @State private var isShowingUserDetail = false
+    @State private var selectedUserForDetail: SelectedUserForDetail? = nil
     
     var body: some View {
         ZStack {
@@ -753,8 +752,7 @@ struct ParticipantsListView: View {
             } else {
                 List(participants) { participant in
                     Button {
-                        selectedUserID = participant.id
-                        isShowingUserDetail = true
+                        selectedUserForDetail = SelectedUserForDetail(id: participant.id)
                     } label: {
                         HStack(spacing: 16) {
                             ZholdasAvatarView(avatarURL: participant.avatarURL, initials: getInitials(from: participant.fullName), size: 44)
@@ -782,11 +780,9 @@ struct ParticipantsListView: View {
         }
         .navigationTitle("ev_participants".localized)
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(isPresented: $isShowingUserDetail) {
-            if let userID = selectedUserID {
-                UserDetailView(userID: userID)
-                    .environmentObject(authViewModel)
-            }
+        .sheet(item: $selectedUserForDetail) { selectedUser in
+            UserDetailView(userID: selectedUser.id)
+                .environmentObject(authViewModel)
         }
     }
     
