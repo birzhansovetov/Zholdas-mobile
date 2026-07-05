@@ -30,7 +30,7 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	pool, err := newDBPool(ctx, cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("Unable to connect to database: %v", err)
 	}
@@ -197,6 +197,18 @@ func main() {
 	if err := router.Run(serverAddr); err != nil {
 		log.Fatalf("Failed to run server: %v", err)
 	}
+}
+
+func newDBPool(ctx context.Context, databaseURL string) (*pgxpool.Pool, error) {
+	poolConfig, err := pgxpool.ParseConfig(databaseURL)
+	if err != nil {
+		return nil, err
+	}
+	if poolConfig.ConnConfig.RuntimeParams == nil {
+		poolConfig.ConnConfig.RuntimeParams = map[string]string{}
+	}
+	poolConfig.ConnConfig.RuntimeParams["search_path"] = "mobile,public"
+	return pgxpool.NewWithConfig(ctx, poolConfig)
 }
 
 func ensureAdminRole(ctx context.Context, pool *pgxpool.Pool, adminEmail string) error {
