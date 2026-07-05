@@ -59,6 +59,26 @@ func (h *EventHandler) isAIEnabled(ctx context.Context) bool {
 	return enabled
 }
 
+func extractEventAIPrompt(text string) (string, bool) {
+	trimmed := strings.TrimSpace(text)
+	if trimmed == "" {
+		return "", false
+	}
+
+	lower := strings.ToLower(trimmed)
+	prefixes := []string{"@ai", "@жорик", "@joryk", "@jorik"}
+	for _, prefix := range prefixes {
+		if lower == prefix {
+			return "", true
+		}
+		if strings.HasPrefix(lower, prefix+" ") || strings.HasPrefix(lower, prefix+"\n") || strings.HasPrefix(lower, prefix+"\t") {
+			return strings.TrimSpace(trimmed[len(prefix):]), true
+		}
+	}
+
+	return "", false
+}
+
 type CreateEventDTO struct {
 	Title           string    `json:"title" binding:"required"`
 	Description     string    `json:"description" binding:"required"`
@@ -925,10 +945,8 @@ func (h *EventHandler) SendEventMessage(c *gin.Context) {
 	// Broadcast user message to all websocket clients
 	h.ChatHub.BroadcastMessage(int32(eventID), response)
 
-	// Asynchronously trigger AI helper if message starts with @ai
-	trimmedText := strings.TrimSpace(dto.Text)
-	if strings.HasPrefix(strings.ToLower(trimmedText), "@ai") && h.isAIEnabled(ctx) {
-		prompt := strings.TrimSpace(trimmedText[3:])
+	// Asynchronously trigger AI helper if message mentions Жорик.
+	if prompt, isAIRequest := extractEventAIPrompt(dto.Text); isAIRequest && h.isAIEnabled(ctx) {
 		if prompt != "" {
 			go func(eID int32, userPrompt string) {
 				// 1. Fetch event context

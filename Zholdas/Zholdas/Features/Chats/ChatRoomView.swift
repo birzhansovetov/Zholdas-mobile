@@ -5,6 +5,8 @@ struct ChatRoomView: View {
     @Binding var session: ChatSession
     @State private var messageText: String = ""
     @State private var isSimulatingReply = false
+    @State private var isJorykMentionActive = false
+    @FocusState private var isMessageFieldFocused: Bool
     
     @EnvironmentObject var authViewModel: AuthViewModel
     @EnvironmentObject var langManager: LocalizationManager
@@ -360,12 +362,34 @@ struct ChatRoomView: View {
                             .glassBackground(cornerRadius: 20)
                     }
                     .buttonStyle(SpringButtonStyle())
+
+                    Button {
+                        withAnimation(.spring(response: 0.25, dampingFraction: 0.82)) {
+                            isJorykMentionActive.toggle()
+                        }
+                        isMessageFieldFocused = true
+                    } label: {
+                        Text("@")
+                            .font(.system(size: 18, weight: .black))
+                            .foregroundColor(isJorykMentionActive ? .white : ZholdasTheme.accent)
+                            .frame(width: 40, height: 40)
+                            .background(
+                                Circle()
+                                    .fill(isJorykMentionActive ? ZholdasTheme.accent : Color.white.opacity(0.06))
+                            )
+                            .overlay(
+                                Circle()
+                                    .stroke(ZholdasTheme.accent.opacity(isJorykMentionActive ? 0.45 : 0.25), lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(SpringButtonStyle())
                 }
                 
-                TextField("chat_placeholder".localized, text: $messageText)
+                TextField(isJorykMentionActive ? "Спросите Жорика..." : "chat_placeholder".localized, text: $messageText)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
                     .glassBackground(cornerRadius: 12)
+                    .focused($isMessageFieldFocused)
                 
                 Button {
                     sendMessage()
@@ -390,8 +414,10 @@ struct ChatRoomView: View {
     private func sendMessage() {
         let cleanText = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanText.isEmpty else { return }
+        let outgoingText = normalizedEventChatText(cleanText)
         
         messageText = ""
+        isJorykMentionActive = false
         
         if session.id == 999 {
             // Append user message locally first for AI assistant
@@ -459,7 +485,7 @@ struct ChatRoomView: View {
             id: tempUUID,
             senderName: authViewModel.currentUserProfile?.fullName ?? "Вы",
             senderAvatarURL: authViewModel.currentUserProfile?.avatarURL,
-            text: cleanText,
+            text: outgoingText,
             timestamp: Date(),
             isCurrentUser: true
         )
@@ -467,7 +493,7 @@ struct ChatRoomView: View {
         
         Task {
             do {
-                let req = SendMessageDTO(text: cleanText)
+                let req = SendMessageDTO(text: outgoingText)
                 let reqBody = try JSONEncoder().encode(req)
                 
                 let response: EventMessageResponse = try await APIClient.shared.request("/events/\(session.id)/messages", method: "POST", body: reqBody, requiresAuth: true)
@@ -512,6 +538,26 @@ struct ChatRoomView: View {
                 }
             }
         }
+    }
+
+    private func normalizedEventChatText(_ text: String) -> String {
+        guard session.id != 999 else { return text }
+        if isJorykMention(text) {
+            return text
+        }
+        return isJorykMentionActive ? "@Жорик \(text)" : text
+    }
+
+    private func isJorykMention(_ text: String) -> Bool {
+        let lowercased = text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return lowercased == "@ai"
+            || lowercased.hasPrefix("@ai ")
+            || lowercased == "@жорик"
+            || lowercased.hasPrefix("@жорик ")
+            || lowercased == "@joryk"
+            || lowercased.hasPrefix("@joryk ")
+            || lowercased == "@jorik"
+            || lowercased.hasPrefix("@jorik ")
     }
     
     private func simulateReply() {
