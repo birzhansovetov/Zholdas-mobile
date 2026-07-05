@@ -100,6 +100,8 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
 
+	router.GET("/events/:id", eventHandler.GetPublicEventPage)
+
 	// WebSocket Route (JWT validation is handled inside query parameters)
 	router.GET("/events/:id/ws", eventHandler.WebSocketChatUpgrader)
 

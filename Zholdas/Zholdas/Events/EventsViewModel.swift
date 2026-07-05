@@ -144,7 +144,11 @@ class EventsViewModel: ObservableObject {
                     imageURL: oldEvent.imageURL,
                     distanceMeters: oldEvent.distanceMeters,
                     participantsCount: newCount,
-                    isJoined: true
+                    isJoined: true,
+                    visibility: oldEvent.visibility,
+                    genderFilter: oldEvent.genderFilter,
+                    minAge: oldEvent.minAge,
+                    maxAge: oldEvent.maxAge
                 )
             }
             
@@ -186,7 +190,11 @@ class EventsViewModel: ObservableObject {
                     imageURL: oldEvent.imageURL,
                     distanceMeters: oldEvent.distanceMeters,
                     participantsCount: newCount,
-                    isJoined: false
+                    isJoined: false,
+                    visibility: oldEvent.visibility,
+                    genderFilter: oldEvent.genderFilter,
+                    minAge: oldEvent.minAge,
+                    maxAge: oldEvent.maxAge
                 )
             }
             

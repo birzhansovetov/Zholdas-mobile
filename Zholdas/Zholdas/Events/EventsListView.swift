@@ -3,13 +3,19 @@ import SwiftUI
 struct EventsListView: View {
     @ObservedObject var eventsViewModel: EventsViewModel
     @EnvironmentObject var langManager: LocalizationManager
+    @EnvironmentObject var authViewModel: AuthViewModel
     @State private var selectedCategory = "cat_all"
+    @State private var showAdvancedFilters = false
+    @State private var filterGender = "all"
+    @State private var filterAge = 18
+    @State private var maxDistanceKm = 10.0
     
     let categories = ["cat_all", "cat_mountains", "cat_walks", "cat_sports", "cat_theater", "cat_restaurant", "cat_games", "cat_networking", "cat_other"]
     
     var filteredEvents: [Event] {
         eventsViewModel.events.filter { event in
             matchesCategory(eventCategory: event.category, filterCategory: selectedCategory)
+                && event.matchesAudienceFilters(gender: filterGender, age: filterAge, maxDistanceKm: maxDistanceKm)
         }
     }
     
@@ -34,6 +40,40 @@ struct EventsListView: View {
                     }
                     .padding(.horizontal, 24)
                     .padding(.top, 24)
+
+                    Button {
+                        withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                            showAdvancedFilters.toggle()
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: "line.3.horizontal.decrease.circle.fill")
+                            Text("Фильтры: \(Int(maxDistanceKm)) км · \(filterAge) лет")
+                                .fontWeight(.semibold)
+                            Spacer()
+                            Image(systemName: showAdvancedFilters ? "chevron.up" : "chevron.down")
+                                .font(.caption.weight(.bold))
+                        }
+                        .foregroundColor(ZholdasTheme.textPrimary)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(ZholdasTheme.panel)
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .stroke(ZholdasTheme.border, lineWidth: 1)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 14)
+
+                    if showAdvancedFilters {
+                        advancedFiltersPanel
+                            .padding(.horizontal, 24)
+                            .padding(.top, 10)
+                            .transition(.move(edge: .top).combined(with: .opacity))
+                    }
                     
                     // Horizontal Categories Filter
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -100,6 +140,11 @@ struct EventsListView: View {
                 }
             }
         }
+        .task {
+            if let profileAge = authViewModel.currentUserProfile?.age, profileAge > 0 {
+                filterAge = profileAge
+            }
+        }
     }
     
     // MARK: - Helper matches category
@@ -153,6 +198,64 @@ struct EventsListView: View {
             return "активности"
         }
         return "активностей"
+    }
+
+    @ViewBuilder
+    private var advancedFiltersPanel: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Дистанция", systemImage: "location.circle.fill")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundColor(ZholdasTheme.textPrimary)
+                Spacer()
+                Text("\(Int(maxDistanceKm)) км")
+                    .font(.caption.weight(.bold))
+                    .foregroundColor(ZholdasTheme.accent)
+            }
+
+            Slider(value: $maxDistanceKm, in: 1...50, step: 1)
+                .tint(ZholdasTheme.accent)
+
+            HStack(spacing: 8) {
+                filterChip(title: "Все", value: "all")
+                filterChip(title: "Мужчины", value: "men")
+                filterChip(title: "Женщины", value: "women")
+            }
+
+            Stepper(value: $filterAge, in: 12...80) {
+                HStack {
+                    Text("Возраст")
+                        .foregroundColor(ZholdasTheme.textPrimary)
+                    Spacer()
+                    Text("\(filterAge)")
+                        .fontWeight(.bold)
+                        .foregroundColor(ZholdasTheme.accent)
+                }
+            }
+            .tint(ZholdasTheme.accent)
+        }
+        .padding(14)
+        .background(ZholdasTheme.panel)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(ZholdasTheme.border, lineWidth: 1)
+        )
+    }
+
+    private func filterChip(title: String, value: String) -> some View {
+        Button {
+            filterGender = value
+        } label: {
+            Text(title)
+                .font(.caption.weight(.bold))
+                .foregroundColor(filterGender == value ? .white : ZholdasTheme.textSecondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 9)
+                .background(filterGender == value ? ZholdasTheme.accent : ZholdasTheme.surface)
+                .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 }
 

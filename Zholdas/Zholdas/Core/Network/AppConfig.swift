@@ -1,6 +1,8 @@
 import Foundation
 
 enum AppConfig {
+    static let publicBackendBaseURL = URL(string: "https://zholdas-mobile.onrender.com")!
+
     #if DEBUG
     #if targetEnvironment(simulator)
     static let backendBaseURL = URL(string: "http://localhost:8080")!

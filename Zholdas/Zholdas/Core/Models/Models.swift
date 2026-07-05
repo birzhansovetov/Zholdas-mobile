@@ -157,6 +157,10 @@ struct Event: Codable, Identifiable, Hashable {
     let distanceMeters: Double?
     let participantsCount: Int32?
     let isJoined: Bool?
+    let visibility: String?
+    let genderFilter: String?
+    let minAge: Int32?
+    let maxAge: Int32?
     
     enum CodingKeys: String, CodingKey {
         case id
@@ -175,6 +179,10 @@ struct Event: Codable, Identifiable, Hashable {
         case distanceMeters = "distance_meters"
         case participantsCount = "participants_count"
         case isJoined = "is_joined"
+        case visibility
+        case genderFilter = "gender_filter"
+        case minAge = "min_age"
+        case maxAge = "max_age"
     }
 }
 
@@ -197,6 +205,31 @@ struct Participant: Codable, Identifiable, Hashable {
 extension Event {
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+    }
+
+    func matchesAudienceFilters(gender: String, age: Int?, maxDistanceKm: Double) -> Bool {
+        if let distanceMeters, distanceMeters > maxDistanceKm * 1000 {
+            return false
+        }
+
+        let eventGender = (genderFilter ?? "all").lowercased()
+        if gender != "all", eventGender != "all", eventGender != gender {
+            return false
+        }
+
+        if let age {
+            let minAllowed = Int(minAge ?? 0)
+            let maxAllowed = Int(maxAge ?? 0)
+
+            if minAllowed > 0, age < minAllowed {
+                return false
+            }
+            if maxAllowed > 0, age > maxAllowed {
+                return false
+            }
+        }
+
+        return true
     }
 }
 

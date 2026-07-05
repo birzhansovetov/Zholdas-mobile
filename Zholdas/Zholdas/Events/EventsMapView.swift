@@ -5,6 +5,7 @@ struct EventsMapView: View {
     @ObservedObject var eventsViewModel: EventsViewModel
     @StateObject private var locationManager = LocationManager()
     @EnvironmentObject var langManager: LocalizationManager
+    @EnvironmentObject var authViewModel: AuthViewModel
     
     @State private var position: MapCameraPosition = .region(MKCoordinateRegion(
         center: CLLocationCoordinate2D(latitude: 43.2389, longitude: 76.8897),
@@ -16,6 +17,10 @@ struct EventsMapView: View {
     @State private var showAIRecommendationsSheet = false
     @State private var isAISearchExpanded = false
     @State private var selectedCategory = "cat_all"
+    @State private var showAdvancedFilters = false
+    @State private var filterGender = "all"
+    @State private var filterAge = 18
+    @State private var maxDistanceKm = 10.0
     
     let categories = ["cat_all", "cat_mountains", "cat_walks", "cat_sports", "cat_theater", "cat_restaurant", "cat_games", "cat_networking", "cat_other"]
     
@@ -44,7 +49,11 @@ struct EventsMapView: View {
                               event.title.localizedCaseInsensitiveContains(searchQuery) ||
                               event.description.localizedCaseInsensitiveContains(searchQuery) ||
                               event.locationName.localizedCaseInsensitiveContains(searchQuery)
-            return matchesCat && matchesText
+            return matchesCat && matchesText && event.matchesAudienceFilters(
+                gender: filterGender,
+                age: filterAge,
+                maxDistanceKm: maxDistanceKm
+            )
         }
     }
     
@@ -66,6 +75,9 @@ struct EventsMapView: View {
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarHidden(true) // Скрываем навигационный бар для соответствия макету
             .task {
+                if let profileAge = authViewModel.currentUserProfile?.age, profileAge > 0 {
+                    filterAge = profileAge
+                }
                 locationManager.requestLocation()
                 loadEvents()
             }
@@ -112,7 +124,8 @@ struct EventsMapView: View {
         Task {
             await eventsViewModel.fetchNearbyEvents(
                 latitude: coordinate.latitude,
-                longitude: coordinate.longitude
+                longitude: coordinate.longitude,
+                radiusMeters: Int(maxDistanceKm * 1000)
             )
         }
     }
@@ -330,10 +343,28 @@ struct EventsMapView: View {
                             )
                     }
                     .buttonStyle(.plain)
+
+                    Button {
+                        withAnimation(.spring(response: 0.28, dampingFraction: 0.82)) {
+                            showAdvancedFilters.toggle()
+                        }
+                    } label: {
+                        Image(systemName: showAdvancedFilters ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundColor(ZholdasTheme.accent)
+                            .frame(width: 36, height: 36)
+                            .background(Circle().fill(ZholdasTheme.accent.opacity(0.14)))
+                    }
+                    .buttonStyle(.plain)
                 }
 
                 if isAISearchExpanded {
                     aiSearchField
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+
+                if showAdvancedFilters {
+                    advancedFiltersPanel
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
             }
@@ -410,6 +441,77 @@ struct EventsMapView: View {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .stroke(ZholdasTheme.accent.opacity(0.26), lineWidth: 1)
         )
+    }
+
+    @ViewBuilder
+    private var advancedFiltersPanel: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Label("Фильтры", systemImage: "slider.horizontal.3")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundColor(ZholdasTheme.textPrimary)
+                Spacer()
+                Text("\(Int(maxDistanceKm)) км")
+                    .font(.caption.weight(.bold))
+                    .foregroundColor(ZholdasTheme.accent)
+            }
+
+            Slider(value: $maxDistanceKm, in: 1...50, step: 1) {
+                Text("Дистанция")
+            } minimumValueLabel: {
+                Text("1")
+                    .font(.caption2)
+                    .foregroundColor(ZholdasTheme.textSecondary)
+            } maximumValueLabel: {
+                Text("50")
+                    .font(.caption2)
+                    .foregroundColor(ZholdasTheme.textSecondary)
+            }
+            .tint(ZholdasTheme.accent)
+            .onChange(of: maxDistanceKm) { _ in
+                loadEvents()
+            }
+
+            HStack(spacing: 8) {
+                filterChip(title: "Все", value: "all")
+                filterChip(title: "Мужчины", value: "men")
+                filterChip(title: "Женщины", value: "women")
+            }
+
+            Stepper(value: $filterAge, in: 12...80) {
+                HStack {
+                    Text("Возраст")
+                        .foregroundColor(ZholdasTheme.textPrimary)
+                    Spacer()
+                    Text("\(filterAge)")
+                        .fontWeight(.bold)
+                        .foregroundColor(ZholdasTheme.accent)
+                }
+            }
+            .tint(ZholdasTheme.accent)
+        }
+        .padding(12)
+        .background(ZholdasTheme.panel)
+        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(ZholdasTheme.border, lineWidth: 1)
+        )
+    }
+
+    private func filterChip(title: String, value: String) -> some View {
+        Button {
+            filterGender = value
+        } label: {
+            Text(title)
+                .font(.caption.weight(.bold))
+                .foregroundColor(filterGender == value ? .white : ZholdasTheme.textSecondary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 9)
+                .background(filterGender == value ? ZholdasTheme.accent : ZholdasTheme.surface)
+                .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
     
     @ViewBuilder

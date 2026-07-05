@@ -24,6 +24,9 @@ struct EventDetailView: View {
     @State private var isShowingReportSheet = false
     @State private var localSession: ChatSession? = nil
     @State private var organizerProfile: User? = nil
+    @State private var isShowingPreparationSheet = false
+    @State private var isLoadingPreparation = false
+    @State private var preparationChecklist = ""
     
     private var sessionBinding: Binding<ChatSession> {
         Binding(
@@ -336,11 +339,16 @@ struct EventDetailView: View {
                     // 8. Join / Leave Purple Button
                     joinActionButton
                         .padding(.top, 8)
+
+                    preparationButton
                     
                     // 9. Bottom Action Buttons (Share & Route)
                     HStack(spacing: 12) {
                         Button {
-                            let shareText = "\("ev_share_prefix".localized): \(event.title) \("ev_share_at".localized) \(event.locationName)!"
+                            let shareText = """
+                            \("ev_share_prefix".localized): \(event.title) \("ev_share_at".localized) \(event.locationName)!
+                            \(publicEventURL.absoluteString)
+                            """
                             let av = UIActivityViewController(activityItems: [shareText], applicationActivities: nil)
                             if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
                                let rootVC = windowScene.windows.first?.rootViewController {
@@ -414,6 +422,13 @@ struct EventDetailView: View {
             ReportView(reportedUserID: nil, eventID: event.id, messageID: nil)
                 .environmentObject(authViewModel)
         }
+        .sheet(isPresented: $isShowingPreparationSheet) {
+            PreparationChecklistView(
+                eventTitle: event.title,
+                checklist: preparationChecklist,
+                isLoading: isLoadingPreparation
+            )
+        }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
@@ -424,6 +439,10 @@ struct EventDetailView: View {
                 }
             }
         }
+    }
+
+    private var publicEventURL: URL {
+        AppConfig.publicBackendBaseURL.appendingPathComponent("events/\(event.id)")
     }
 
     private func openRouteToEvent() {
@@ -669,6 +688,28 @@ struct EventDetailView: View {
         }
     }
 
+    private var preparationButton: some View {
+        Button {
+            isShowingPreparationSheet = true
+            if preparationChecklist.isEmpty {
+                loadPreparationChecklist()
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "backpack.fill")
+                Text("ev_prepare_btn".localized)
+                    .font(.headline)
+                    .fontWeight(.bold)
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(ZholdasTheme.accentGradient)
+            .cornerRadius(12)
+        }
+        .buttonStyle(SpringButtonStyle())
+    }
+
     private var arrivalActionButton: some View {
         Button {
             markArrived()
@@ -803,6 +844,83 @@ struct EventDetailView: View {
             }
         }
     }
+
+    private func loadPreparationChecklist() {
+        guard !isLoadingPreparation else { return }
+        isLoadingPreparation = true
+
+        struct AIChatRequest: Codable {
+            let message: String
+        }
+
+        struct AIChatResponse: Codable {
+            let reply: String
+        }
+
+        let prompt = """
+        Составь чеклист подготовки к событию в Жолдас.
+        Название: \(event.title)
+        Категория: \(categoryInfo(for: event.category).title)
+        Описание: \(event.description)
+        Место: \(event.locationName)
+        Дата и время: \(formatDate(event.startTime))
+        Участников максимум: \(event.maxParticipants)
+
+        Ответь строго разделами: Еда, Одежда, Вещи, Игры и активности, План, Важно.
+        Давай конкретные варианты, коротко и по делу.
+        """
+
+        Task {
+            do {
+                let body = try JSONEncoder().encode(AIChatRequest(message: prompt))
+                let response: AIChatResponse = try await APIClient.shared.request(
+                    "/ai/chat",
+                    method: "POST",
+                    body: body,
+                    requiresAuth: true
+                )
+                await MainActor.run {
+                    self.preparationChecklist = response.reply
+                    self.isLoadingPreparation = false
+                }
+            } catch {
+                await MainActor.run {
+                    self.preparationChecklist = fallbackPreparationChecklist()
+                    self.isLoadingPreparation = false
+                }
+            }
+        }
+    }
+
+    private func fallbackPreparationChecklist() -> String {
+        """
+        Еда
+        - Вода для каждого участника.
+        - Легкий перекус: фрукты, батончики, сэндвичи.
+
+        Одежда
+        - Удобная обувь.
+        - Одежда по погоде, лучше слоями.
+
+        Вещи
+        - Заряженный телефон.
+        - Салфетки, пакеты для мусора, небольшой power bank.
+
+        Игры и активности
+        - Быстрый круг знакомства.
+        - Фото-челлендж по месту встречи.
+        - Простая командная игра без реквизита.
+
+        План
+        - Собраться за 10-15 минут до начала.
+        - Проверить участников в чате.
+        - Договориться, кто что приносит.
+
+        Важно
+        - Проверьте прогноз перед выходом.
+        - Напишите в чат, если опаздываете.
+        """
+    }
     
     private func formatDate(_ date: Date) -> String {
         let formatter = DateFormatter()
@@ -908,6 +1026,74 @@ struct ParticipantsListView: View {
     }
 }
 
+struct PreparationChecklistView: View {
+    let eventTitle: String
+    let checklist: String
+    let isLoading: Bool
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                ZholdasTheme.appBackground.ignoresSafeArea()
+
+                if isLoading {
+                    VStack(spacing: 14) {
+                        ProgressView()
+                            .tint(ZholdasTheme.accent)
+                            .scaleEffect(1.25)
+                        Text("ev_prepare_loading".localized)
+                            .foregroundColor(ZholdasTheme.textSecondary)
+                    }
+                } else {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 18) {
+                            HStack(spacing: 12) {
+                                Image(systemName: "sparkles")
+                                    .font(.title2)
+                                    .foregroundColor(ZholdasTheme.accent)
+                                    .frame(width: 44, height: 44)
+                                    .background(Circle().fill(ZholdasTheme.accent.opacity(0.16)))
+
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text("ev_prepare_title".localized)
+                                        .font(.headline)
+                                        .foregroundColor(ZholdasTheme.textPrimary)
+                                    Text(eventTitle)
+                                        .font(.subheadline)
+                                        .foregroundColor(ZholdasTheme.textSecondary)
+                                        .lineLimit(2)
+                                }
+                            }
+                            .padding()
+                            .glassBackground(cornerRadius: 8)
+
+                            Text(checklist)
+                                .font(.body)
+                                .foregroundColor(ZholdasTheme.textPrimary)
+                                .lineSpacing(5)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding()
+                                .glassBackground(cornerRadius: 8)
+                        }
+                        .padding(18)
+                    }
+                }
+            }
+            .navigationTitle("ev_prepare_btn".localized)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Готово") {
+                        dismiss()
+                    }
+                    .foregroundColor(ZholdasTheme.accent)
+                }
+            }
+        }
+    }
+}
+
 #Preview {
     EventDetailView(
         event: Event(
@@ -926,7 +1112,11 @@ struct ParticipantsListView: View {
             imageURL: nil,
             distanceMeters: 8600,
             participantsCount: 1,
-            isJoined: false
+            isJoined: false,
+            visibility: "public",
+            genderFilter: "all",
+            minAge: 18,
+            maxAge: 30
         ),
         eventsViewModel: EventsViewModel()
     )

@@ -300,6 +300,21 @@ class LocalizationManager: ObservableObject {
             "kk": "Қатысушыларды бағалау",
             "en": "Rate Participants"
         ],
+        "ev_prepare_btn": [
+            "ru": "Подготовиться",
+            "kk": "Дайындалу",
+            "en": "Prepare"
+        ],
+        "ev_prepare_title": [
+            "ru": "Чеклист от Жорика",
+            "kk": "Жорик чеклисті",
+            "en": "Joryk Checklist"
+        ],
+        "ev_prepare_loading": [
+            "ru": "Жорик собирает чеклист...",
+            "kk": "Жорик чеклист дайындап жатыр...",
+            "en": "Joryk is preparing your checklist..."
+        ],
         "ev_restrictions": [
             "ru": "Ограничения: Все · Возраст 18 – 30 лет",
             "kk": "Шектеулер: Барлығы · Жас 18 – 30 жас",

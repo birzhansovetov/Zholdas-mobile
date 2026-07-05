@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html"
 	"log"
 	"net/http"
 	"strconv"
@@ -242,6 +243,120 @@ type NearbyEventResponse struct {
 	DistanceMeters   float64   `json:"distance_meters"`
 	ParticipantsCont int32     `json:"participants_count"`
 	IsJoined         bool      `json:"is_joined"`
+	Visibility       string    `json:"visibility"`
+	GenderFilter     string    `json:"gender_filter"`
+	MinAge           int32     `json:"min_age"`
+	MaxAge           int32     `json:"max_age"`
+}
+
+// GetPublicEventPage renders a lightweight public page for shared event links.
+func (h *EventHandler) GetPublicEventPage(c *gin.Context) {
+	eventID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.String(http.StatusBadRequest, "Invalid event id")
+		return
+	}
+
+	ctx := c.Request.Context()
+	var (
+		title           string
+		description     string
+		category        string
+		locationName    string
+		latitude        float64
+		longitude       float64
+		startTime       time.Time
+		endTime         time.Time
+		maxParticipants int32
+		status          string
+		organizerName   string
+	)
+
+	err = h.pool.QueryRow(ctx, `
+		SELECT e.title, e.description, e.category, e.location_name,
+		       (ST_Y(e.location::geometry))::float8 AS latitude,
+		       (ST_X(e.location::geometry))::float8 AS longitude,
+		       e.start_time, e.end_time, e.max_participants, e.status,
+		       COALESCE(NULLIF(p.full_name, ''), NULLIF(p.username, ''), 'Организатор') AS organizer_name
+		FROM events e
+		LEFT JOIN profiles p ON p.user_id = e.creator_id
+		WHERE e.id = $1
+	`, eventID).Scan(
+		&title,
+		&description,
+		&category,
+		&locationName,
+		&latitude,
+		&longitude,
+		&startTime,
+		&endTime,
+		&maxParticipants,
+		&status,
+		&organizerName,
+	)
+	if err != nil {
+		c.String(http.StatusNotFound, "Event not found")
+		return
+	}
+
+	routeURL := fmt.Sprintf("https://2gis.kz/geo/%f,%f", longitude, latitude)
+	appURL := fmt.Sprintf("zholdas://events/%d", eventID)
+	page := fmt.Sprintf(`<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>%s | Zholdas</title>
+  <style>
+    :root { color-scheme: dark; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: radial-gradient(circle at top, #4c1d95, #080414 58%%); color: white; }
+    main { width: min(92vw, 560px); padding: 32px; border: 1px solid rgba(255,255,255,.12); border-radius: 28px; background: rgba(17, 10, 34, .78); box-shadow: 0 24px 80px rgba(0,0,0,.42); }
+    .pill { display: inline-flex; gap: 8px; align-items: center; padding: 8px 12px; border-radius: 999px; background: rgba(139, 92, 246, .18); color: #c4b5fd; font-weight: 700; font-size: 14px; }
+    h1 { margin: 22px 0 10px; font-size: clamp(32px, 8vw, 52px); line-height: 1; }
+    p { color: rgba(255,255,255,.72); line-height: 1.55; }
+    .grid { display: grid; gap: 12px; margin: 24px 0; }
+    .row { padding: 16px; border-radius: 18px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); }
+    .label { color: rgba(255,255,255,.48); font-size: 13px; letter-spacing: .06em; text-transform: uppercase; }
+    .value { margin-top: 4px; font-weight: 750; }
+    .actions { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+    a { text-decoration: none; text-align: center; color: white; font-weight: 800; padding: 15px 18px; border-radius: 18px; background: linear-gradient(135deg, #a78bfa, #6d28d9); }
+    a.secondary { background: rgba(255,255,255,.09); }
+    @media (max-width: 520px) { main { padding: 24px; } .actions { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="pill">Жолдас · %s · %s</div>
+    <h1>%s</h1>
+    <p>%s</p>
+    <div class="grid">
+      <div class="row"><div class="label">Организатор</div><div class="value">%s</div></div>
+      <div class="row"><div class="label">Место</div><div class="value">%s</div></div>
+      <div class="row"><div class="label">Дата и время</div><div class="value">%s - %s</div></div>
+      <div class="row"><div class="label">Участников</div><div class="value">До %d человек</div></div>
+    </div>
+    <div class="actions">
+      <a href="%s">Открыть в приложении</a>
+      <a class="secondary" href="%s">Маршрут в 2GIS</a>
+    </div>
+  </main>
+</body>
+</html>`,
+		html.EscapeString(title),
+		html.EscapeString(category),
+		html.EscapeString(status),
+		html.EscapeString(title),
+		html.EscapeString(description),
+		html.EscapeString(organizerName),
+		html.EscapeString(locationName),
+		html.EscapeString(startTime.Format("02.01.2006 15:04")),
+		html.EscapeString(endTime.Format("15:04")),
+		maxParticipants,
+		html.EscapeString(appURL),
+		html.EscapeString(routeURL),
+	)
+
+	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(page))
 }
 
 // GetNearbyEvents queries PostgreSQL + PostGIS for close-by events
@@ -300,7 +415,11 @@ func (h *EventHandler) GetNearbyEvents(c *gin.Context) {
 		       e.start_time, e.end_time, e.max_participants, e.status, e.image_url, e.created_at,
 		       ST_Distance(e.location, ST_SetSRID(ST_MakePoint($1::float8, $2::float8), 4326)::geography)::float8 AS distance_meters,
 		       (SELECT COUNT(*) FROM event_participants ep WHERE ep.event_id = e.id)::int AS participants_count,
-		       EXISTS(SELECT 1 FROM event_participants ep WHERE ep.event_id = e.id AND ep.user_id = $6)::bool AS is_joined
+		       EXISTS(SELECT 1 FROM event_participants ep WHERE ep.event_id = e.id AND ep.user_id = $6)::bool AS is_joined,
+		       COALESCE(e.visibility, 'public') AS visibility,
+		       COALESCE(e.gender_filter, 'all') AS gender_filter,
+		       COALESCE(e.min_age, 0)::int AS min_age,
+		       COALESCE(e.max_age, 0)::int AS max_age
 		FROM events e
 		WHERE e.status = 'active'
 		  AND ST_DWithin(e.location, ST_SetSRID(ST_MakePoint($1::float8, $2::float8), 4326)::geography, $3::float8)
@@ -336,6 +455,10 @@ func (h *EventHandler) GetNearbyEvents(c *gin.Context) {
 			&item.DistanceMeters,
 			&item.ParticipantsCont,
 			&item.IsJoined,
+			&item.Visibility,
+			&item.GenderFilter,
+			&item.MinAge,
+			&item.MaxAge,
 		)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan event row: " + err.Error()})
