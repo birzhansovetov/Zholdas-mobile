@@ -358,11 +358,7 @@ struct EventDetailView: View {
                         .buttonStyle(SpringButtonStyle())
                         
                         Button {
-                            let coordinate = CLLocationCoordinate2D(latitude: event.latitude, longitude: event.longitude)
-                            let placemark = MKPlacemark(coordinate: coordinate)
-                            let mapItem = MKMapItem(placemark: placemark)
-                            mapItem.name = event.locationName
-                            mapItem.openInMaps(launchOptions: [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving])
+                            openRouteToEvent()
                         } label: {
                             Text("ev_route_btn".localized)
                                 .font(.subheadline)
@@ -426,6 +422,52 @@ struct EventDetailView: View {
                 }
             }
         }
+    }
+
+    private func openRouteToEvent() {
+        let latitude = event.latitude
+        let longitude = event.longitude
+        let coordinate = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+
+        let dgisAppURL = URL(string: "dgis://2gis.ru/routeSearch/rsType/car/to/\(longitude),\(latitude)")
+        let dgisWebURL = URL(string: "https://2gis.kz/almaty/routeSearch/rsType/car/to/\(longitude),\(latitude)")
+
+        if let dgisAppURL {
+            UIApplication.shared.open(dgisAppURL) { success in
+                if success {
+                    return
+                }
+
+                if let dgisWebURL {
+                    UIApplication.shared.open(dgisWebURL) { webSuccess in
+                        if !webSuccess {
+                            openAppleMapsRoute(to: coordinate, name: event.locationName)
+                        }
+                    }
+                } else {
+                    openAppleMapsRoute(to: coordinate, name: event.locationName)
+                }
+            }
+            return
+        }
+
+        if let dgisWebURL {
+            UIApplication.shared.open(dgisWebURL) { success in
+                if !success {
+                    openAppleMapsRoute(to: coordinate, name: event.locationName)
+                }
+            }
+            return
+        }
+
+        openAppleMapsRoute(to: coordinate, name: event.locationName)
+    }
+
+    private func openAppleMapsRoute(to coordinate: CLLocationCoordinate2D, name: String) {
+        let placemark = MKPlacemark(coordinate: coordinate)
+        let mapItem = MKMapItem(placemark: placemark)
+        mapItem.name = name
+        mapItem.openInMaps(launchOptions: [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving])
     }
     
     // MARK: - Subviews
