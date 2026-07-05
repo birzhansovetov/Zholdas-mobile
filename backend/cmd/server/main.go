@@ -49,8 +49,12 @@ func main() {
 	}
 
 	// 2. Run Database Migrations
-	if err := runMigrations(context.Background(), pool); err != nil {
-		log.Fatalf("Migration run failed: %v", err)
+	if cfg.RunMigrations {
+		if err := runMigrations(context.Background(), pool); err != nil {
+			log.Fatalf("Migration run failed: %v", err)
+		}
+	} else {
+		log.Println("Skipping database migrations because RUN_MIGRATIONS=false.")
 	}
 	if err := ensureAdminRole(context.Background(), pool, cfg.AdminEmail); err != nil {
 		log.Fatalf("Failed to ensure admin role: %v", err)

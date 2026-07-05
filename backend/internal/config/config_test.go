@@ -30,6 +30,7 @@ func TestLoadConfig_Defaults(t *testing.T) {
 	os.Unsetenv("JWT_SECRET")
 	os.Unsetenv("OPENAI_API_KEY")
 	os.Unsetenv("ADMIN_EMAIL")
+	os.Unsetenv("RUN_MIGRATIONS")
 
 	cfg := LoadConfig()
 
@@ -53,6 +54,10 @@ func TestLoadConfig_Defaults(t *testing.T) {
 	if cfg.AdminEmail != "" {
 		t.Errorf("Expected default AdminEmail empty, got '%s'", cfg.AdminEmail)
 	}
+
+	if !cfg.RunMigrations {
+		t.Error("Expected default RunMigrations true")
+	}
 }
 
 func TestLoadConfig_Overrides(t *testing.T) {
@@ -64,6 +69,7 @@ func TestLoadConfig_Overrides(t *testing.T) {
 	os.Setenv("JWT_SECRET", "custom_secret_key")
 	os.Setenv("OPENAI_API_KEY", "openai_key_123")
 	os.Setenv("ADMIN_EMAIL", "owner@example.com")
+	os.Setenv("RUN_MIGRATIONS", "false")
 
 	// Ensure they clean up after test
 	defer func() {
@@ -72,6 +78,7 @@ func TestLoadConfig_Overrides(t *testing.T) {
 		os.Unsetenv("JWT_SECRET")
 		os.Unsetenv("OPENAI_API_KEY")
 		os.Unsetenv("ADMIN_EMAIL")
+		os.Unsetenv("RUN_MIGRATIONS")
 	}()
 
 	cfg := LoadConfig()
@@ -95,5 +102,9 @@ func TestLoadConfig_Overrides(t *testing.T) {
 
 	if cfg.AdminEmail != "owner@example.com" {
 		t.Errorf("Expected AdminEmail 'owner@example.com', got '%s'", cfg.AdminEmail)
+	}
+
+	if cfg.RunMigrations {
+		t.Error("Expected RunMigrations false")
 	}
 }

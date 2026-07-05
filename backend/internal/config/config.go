@@ -7,11 +7,12 @@ import (
 )
 
 type Config struct {
-	Port         string
-	DatabaseURL  string
-	JWTSecret    string
-	OpenAIAPIKey string
-	AdminEmail   string
+	Port          string
+	DatabaseURL   string
+	JWTSecret     string
+	OpenAIAPIKey  string
+	AdminEmail    string
+	RunMigrations bool
 }
 
 func loadDotEnv() {
@@ -57,12 +58,27 @@ func LoadConfig() *Config {
 
 	openAIAPIKey := os.Getenv("OPENAI_API_KEY")
 	adminEmail := os.Getenv("ADMIN_EMAIL")
+	runMigrations := parseBoolEnv(os.Getenv("RUN_MIGRATIONS"), true)
 
 	return &Config{
-		Port:         port,
-		DatabaseURL:  dbURL,
-		JWTSecret:    jwtSecret,
-		OpenAIAPIKey: openAIAPIKey,
-		AdminEmail:   adminEmail,
+		Port:          port,
+		DatabaseURL:   dbURL,
+		JWTSecret:     jwtSecret,
+		OpenAIAPIKey:  openAIAPIKey,
+		AdminEmail:    adminEmail,
+		RunMigrations: runMigrations,
+	}
+}
+
+func parseBoolEnv(value string, fallback bool) bool {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "":
+		return fallback
+	case "1", "true", "yes", "y", "on":
+		return true
+	case "0", "false", "no", "n", "off":
+		return false
+	default:
+		return fallback
 	}
 }
