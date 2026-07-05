@@ -57,6 +57,9 @@ func main() {
 	} else {
 		log.Println("Skipping database migrations because RUN_MIGRATIONS=false.")
 	}
+	if err := ensureOperationalSchema(context.Background(), pool); err != nil {
+		log.Fatalf("Failed to ensure operational schema: %v", err)
+	}
 	if err := ensureAdminRole(context.Background(), pool, cfg.AdminEmail); err != nil {
 		log.Fatalf("Failed to ensure admin role: %v", err)
 	}
@@ -145,6 +148,7 @@ func main() {
 		protectedRoutes.GET("/events/nearby", eventHandler.GetNearbyEvents)
 		protectedRoutes.POST("/events/:id/join", eventHandler.JoinEvent)
 		protectedRoutes.POST("/events/:id/leave", eventHandler.LeaveEvent)
+		protectedRoutes.POST("/events/:id/arrive", eventHandler.MarkArrived)
 		protectedRoutes.GET("/events/:id/participants", eventHandler.GetEventParticipants)
 		protectedRoutes.POST("/events/:id/rate", authHandler.RateParticipant)
 
@@ -193,10 +197,124 @@ func main() {
 		}
 	}()
 
+	// Background task: notify participants before upcoming events.
+	go func() {
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+		for {
+			sendEventReminders(context.Background(), pool, notificationService)
+			<-ticker.C
+		}
+	}()
+
 	// Start HTTP Server
 	serverAddr := fmt.Sprintf(":%s", cfg.Port)
 	if err := router.Run(serverAddr); err != nil {
 		log.Fatalf("Failed to run server: %v", err)
+	}
+}
+
+func ensureOperationalSchema(ctx context.Context, pool *pgxpool.Pool) error {
+	statements := []string{
+		`ALTER TABLE event_participants ADD COLUMN IF NOT EXISTS arrived_at TIMESTAMP WITH TIME ZONE`,
+		`CREATE TABLE IF NOT EXISTS event_reminders (
+			id SERIAL PRIMARY KEY,
+			event_id INT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+			user_id uuid NOT NULL REFERENCES profiles(user_id) ON DELETE CASCADE,
+			reminder_type VARCHAR(20) NOT NULL,
+			sent_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(event_id, user_id, reminder_type)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_event_participants_arrived ON event_participants(event_id, arrived_at)`,
+		`CREATE INDEX IF NOT EXISTS idx_event_reminders_event_user ON event_reminders(event_id, user_id)`,
+	}
+
+	for _, statement := range statements {
+		if _, err := pool.Exec(ctx, statement); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func sendEventReminders(ctx context.Context, pool *pgxpool.Pool, notificationService *service.NotificationService) {
+	windows := []struct {
+		kind  string
+		label string
+		from  time.Duration
+		to    time.Duration
+	}{
+		{kind: "60m", label: "через 1 час", from: 55 * time.Minute, to: 65 * time.Minute},
+		{kind: "30m", label: "через 30 минут", from: 25 * time.Minute, to: 35 * time.Minute},
+	}
+
+	for _, window := range windows {
+		rows, err := pool.Query(ctx, `
+			WITH event_users AS (
+				SELECT e.id AS event_id, e.creator_id AS user_id
+				FROM events e
+				UNION
+				SELECT ep.event_id, ep.user_id
+				FROM event_participants ep
+			)
+			SELECT e.id, e.title, e.location_name, eu.user_id::text
+			FROM events e
+			JOIN event_users eu ON eu.event_id = e.id
+			WHERE e.status = 'active'
+			  AND e.start_time > NOW() + ($1::int * interval '1 second')
+			  AND e.start_time <= NOW() + ($2::int * interval '1 second')
+			  AND NOT EXISTS (
+			      SELECT 1
+			      FROM event_reminders er
+			      WHERE er.event_id = e.id
+			        AND er.user_id = eu.user_id
+			        AND er.reminder_type = $3
+			  )
+		`, int(window.from.Seconds()), int(window.to.Seconds()), window.kind)
+		if err != nil {
+			log.Printf("[Reminder Job] Failed to fetch %s reminders: %v", window.kind, err)
+			continue
+		}
+
+		type reminder struct {
+			eventID      int
+			title        string
+			locationName string
+			userID       string
+		}
+
+		reminders := []reminder{}
+		for rows.Next() {
+			var item reminder
+			if err := rows.Scan(&item.eventID, &item.title, &item.locationName, &item.userID); err != nil {
+				log.Printf("[Reminder Job] Failed to scan reminder: %v", err)
+				continue
+			}
+			reminders = append(reminders, item)
+		}
+		rows.Close()
+
+		for _, item := range reminders {
+			text := fmt.Sprintf("Напоминание: встреча \"%s\" начнется %s. Место: %s. Проверь маршрут и что нужно взять.", item.title, window.label, item.locationName)
+			_, err := pool.Exec(ctx, `
+				INSERT INTO event_reminders (event_id, user_id, reminder_type)
+				VALUES ($1, $2, $3)
+				ON CONFLICT (event_id, user_id, reminder_type) DO NOTHING
+			`, item.eventID, item.userID, window.kind)
+			if err != nil {
+				log.Printf("[Reminder Job] Failed to save %s reminder for user %s event %d: %v", window.kind, item.userID, item.eventID, err)
+				continue
+			}
+
+			_, _ = pool.Exec(ctx, `
+				INSERT INTO notifications (user_id, actor_id, event_id, notification_type, text)
+				VALUES ($1, $1, $2, $3, $4)
+			`, item.userID, item.eventID, "event_reminder", text)
+
+			if notificationService != nil {
+				notificationService.SendPush(item.userID, text)
+			}
+		}
 	}
 }
 

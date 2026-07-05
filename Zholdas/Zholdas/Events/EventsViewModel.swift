@@ -210,6 +210,25 @@ class EventsViewModel: ObservableObject {
             return []
         }
     }
+
+    func markArrived(id: Int32) async -> Bool {
+        self.isLoading = true
+        self.errorMessage = nil
+
+        do {
+            let _: [String: String] = try await APIClient.shared.request(
+                "/events/\(id)/arrive",
+                method: "POST",
+                requiresAuth: true
+            )
+            self.isLoading = false
+            return true
+        } catch {
+            self.errorMessage = "Не удалось отметить прибытие: \(error.localizedDescription)"
+            self.isLoading = false
+            return false
+        }
+    }
 }
 
 // MARK: - Additional DTOs for Events

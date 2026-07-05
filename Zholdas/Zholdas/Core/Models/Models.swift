@@ -183,12 +183,14 @@ struct Participant: Codable, Identifiable, Hashable {
     let username: String
     let fullName: String
     let avatarURL: String?
+    let arrivedAt: Date?
     
     enum CodingKeys: String, CodingKey {
         case id
         case username
         case fullName = "full_name"
         case avatarURL = "avatar_url"
+        case arrivedAt = "arrived_at"
     }
 }
 

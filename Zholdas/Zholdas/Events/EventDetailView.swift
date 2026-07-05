@@ -17,6 +17,8 @@ struct EventDetailView: View {
     @State private var participants: [Participant] = []
     @State private var isLoadingParticipants = false
     @State private var isActionLoading = false
+    @State private var isArrivalLoading = false
+    @State private var isArrived = false
     @State private var selectedUserForDetail: SelectedUserForDetail? = nil
     @State private var isShowingRateSheet = false
     @State private var isShowingReportSheet = false
@@ -599,6 +601,10 @@ struct EventDetailView: View {
                 .buttonStyle(SpringButtonStyle())
             }
             
+            if (isJoined || isCreator) && event.status == "active" && Date() <= event.endTime {
+                arrivalActionButton
+            }
+
             if Date() > event.endTime {
                 Button {
                     isShowingRateSheet = true
@@ -662,6 +668,35 @@ struct EventDetailView: View {
             }
         }
     }
+
+    private var arrivalActionButton: some View {
+        Button {
+            markArrived()
+        } label: {
+            HStack(spacing: 10) {
+                if isArrivalLoading {
+                    ProgressView()
+                        .tint(.white)
+                } else {
+                    Image(systemName: isArrived ? "checkmark.seal.fill" : "location.fill")
+                }
+                Text(isArrived ? "Вы на месте" : "Я на месте")
+                    .font(.headline)
+                    .fontWeight(.bold)
+            }
+            .foregroundColor(.white)
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(isArrived ? Color.green.opacity(0.75) : ZholdasTheme.accent.opacity(0.9))
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke((isArrived ? Color.green : ZholdasTheme.accent).opacity(0.35), lineWidth: 1)
+            )
+        }
+        .buttonStyle(SpringButtonStyle())
+        .disabled(isArrived || isArrivalLoading)
+    }
     
     // MARK: - Helpers
     
@@ -696,6 +731,10 @@ struct EventDetailView: View {
         let list = await eventsViewModel.fetchParticipants(id: event.id)
         await MainActor.run {
             self.participants = list
+            if let currentUserID = authViewModel.currentUserProfile?.id,
+               let currentParticipant = list.first(where: { $0.id == currentUserID }) {
+                self.isArrived = currentParticipant.arrivedAt != nil
+            }
             self.isLoadingParticipants = false
         }
     }
@@ -743,6 +782,24 @@ struct EventDetailView: View {
             
             await MainActor.run {
                 self.isActionLoading = false
+            }
+        }
+    }
+
+    private func markArrived() {
+        guard !isArrived, !isArrivalLoading else { return }
+        isArrivalLoading = true
+
+        Task {
+            let success = await eventsViewModel.markArrived(id: event.id)
+            if success {
+                await MainActor.run {
+                    self.isArrived = true
+                }
+                await loadParticipants()
+            }
+            await MainActor.run {
+                self.isArrivalLoading = false
             }
         }
     }
@@ -808,6 +865,18 @@ struct ParticipantsListView: View {
                                     .foregroundColor(ZholdasTheme.accent)
                             }
                             Spacer()
+                            if participant.arrivedAt != nil {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                    Text("На месте")
+                                }
+                                .font(.caption2.weight(.bold))
+                                .foregroundColor(.green)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 5)
+                                .background(Color.green.opacity(0.12))
+                                .clipShape(Capsule())
+                            }
                             Image(systemName: "chevron.right")
                                 .foregroundColor(.gray)
                                 .font(.caption)

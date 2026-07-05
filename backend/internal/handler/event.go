@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -451,10 +452,11 @@ func (h *EventHandler) GetAIRecommendations(c *gin.Context) {
 
 // ParticipantResponse represents a participant profile details
 type ParticipantResponse struct {
-	ID        string `json:"id"`
-	Username  string `json:"username"`
-	FullName  string `json:"full_name"`
-	AvatarURL string `json:"avatar_url"`
+	ID        string     `json:"id"`
+	Username  string     `json:"username"`
+	FullName  string     `json:"full_name"`
+	AvatarURL string     `json:"avatar_url"`
+	ArrivedAt *time.Time `json:"arrived_at,omitempty"`
 }
 
 // JoinEvent adds the current user as a participant to the event
@@ -614,6 +616,104 @@ func (h *EventHandler) LeaveEvent(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Successfully left the event"})
 }
 
+// MarkArrived marks the current participant as arrived at the event location.
+func (h *EventHandler) MarkArrived(c *gin.Context) {
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	userID := userIDVal.(string)
+
+	eventIDStr := c.Param("id")
+	eventID, err := strconv.Atoi(eventIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
+		return
+	}
+
+	ctx := c.Request.Context()
+	tx, err := h.pool.Begin(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
+		return
+	}
+	defer tx.Rollback(ctx)
+
+	var eventTitle string
+	var creatorID string
+	var status string
+	err = tx.QueryRow(ctx, `
+		SELECT title, creator_id::text, status
+		FROM events
+		WHERE id = $1
+	`, eventID).Scan(&eventTitle, &creatorID, &status)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+		return
+	}
+	if status != "active" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Event is not active"})
+		return
+	}
+
+	var res pgconn.CommandTag
+	if creatorID == userID {
+		res, err = tx.Exec(ctx, `
+			INSERT INTO event_participants (event_id, user_id, arrived_at)
+			VALUES ($1, $2, NOW())
+			ON CONFLICT (event_id, user_id) DO UPDATE
+			SET arrived_at = COALESCE(event_participants.arrived_at, NOW())
+		`, eventID, userID)
+	} else {
+		res, err = tx.Exec(ctx, `
+			UPDATE event_participants
+			SET arrived_at = COALESCE(arrived_at, NOW())
+			WHERE event_id = $1 AND user_id = $2
+		`, eventID, userID)
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to mark arrival"})
+		return
+	}
+	if res.RowsAffected() == 0 {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Join the event before marking arrival"})
+		return
+	}
+
+	var arrivedAt time.Time
+	_ = tx.QueryRow(ctx, `
+		SELECT arrived_at
+		FROM event_participants
+		WHERE event_id = $1 AND user_id = $2
+	`, eventID, userID).Scan(&arrivedAt)
+
+	if creatorID != userID {
+		var actorName string
+		err = tx.QueryRow(ctx, "SELECT full_name FROM profiles WHERE user_id = $1", userID).Scan(&actorName)
+		if err == nil {
+			text := fmt.Sprintf("%s уже на месте: %s", actorName, eventTitle)
+			_, _ = tx.Exec(ctx, `
+				INSERT INTO notifications (user_id, actor_id, event_id, notification_type, text)
+				VALUES ($1, $2, $3, $4, $5)
+			`, creatorID, userID, eventID, "arrival", text)
+			if h.notificationService != nil {
+				h.notificationService.SendPush(creatorID, text)
+			}
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":    "Arrival marked",
+		"arrived_at": arrivedAt,
+	})
+}
+
 // GetEventParticipants lists all users participating in the event
 func (h *EventHandler) GetEventParticipants(c *gin.Context) {
 	eventIDStr := c.Param("id")
@@ -626,7 +726,7 @@ func (h *EventHandler) GetEventParticipants(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	rows, err := h.pool.Query(ctx, `
-		SELECT p.user_id::text, p.username, p.full_name, COALESCE(p.avatar_url, '') AS avatar_url
+		SELECT p.user_id::text, p.username, p.full_name, COALESCE(p.avatar_url, '') AS avatar_url, ep.arrived_at
 		FROM event_participants ep
 		JOIN profiles p ON p.user_id = ep.user_id
 		WHERE ep.event_id = $1
@@ -641,7 +741,7 @@ func (h *EventHandler) GetEventParticipants(c *gin.Context) {
 	var participants []ParticipantResponse = []ParticipantResponse{}
 	for rows.Next() {
 		var p ParticipantResponse
-		err := rows.Scan(&p.ID, &p.Username, &p.FullName, &p.AvatarURL)
+		err := rows.Scan(&p.ID, &p.Username, &p.FullName, &p.AvatarURL, &p.ArrivedAt)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan participant row: " + err.Error()})
 			return
