@@ -36,6 +36,22 @@ type AIChatMessage struct {
 	Text string `json:"text"`
 }
 
+type EventChatContext struct {
+	Title             string
+	Description       string
+	Category          string
+	LocationName      string
+	StartTime         time.Time
+	EndTime           time.Time
+	MaxParticipants   int32
+	ParticipantsCount int32
+	GenderFilter      string
+	MinAge            int32
+	MaxAge            int32
+	ParticipantStatus string
+	RecentMessages    []AIChatMessage
+}
+
 type OpenAIMessage struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
@@ -169,23 +185,128 @@ func (ai *AIService) generateTextOutput(ctx context.Context, messages []OpenAIMe
 }
 
 // EventChatHelper calls OpenAI to answer a query inside a specific event chat context.
-func (ai *AIService) EventChatHelper(ctx context.Context, eventTitle, eventDesc, prompt string) (string, error) {
+func (ai *AIService) EventChatHelper(ctx context.Context, eventCtx EventChatContext, prompt string) (string, error) {
 	if ai.apiKey == "" {
-		return "Привет! Я Жорик, инструктор этой встречи. Сейчас я в демо-режиме без OPENAI_API_KEY, но после настройки ключа буду подсказывать участникам, что взять, как одеться и как подготовиться к событию.", nil
+		return mockEventHelperReply(eventCtx), nil
 	}
 
-	messages := []OpenAIMessage{
-		{
-			Role:    "system",
-			Content: fmt.Sprintf("Ты - Жорик, ИИ-инструктор и координатор участников встречи '%s' в приложении Жолдас. Описание события: '%s'. Отвечай как человек, который помогает группе реально подготовиться. Учитывай название и описание события. Если участник спрашивает, что взять, как одеться, что купить, как добраться, как вести себя на встрече или как организоваться, дай четкий практичный ответ. Если вопрос про развлечения, игры, знакомство участников или организацию, обязательно предложи 3-5 конкретных вариантов игр, конкурсов, ледоколов или форматов активности. Для каждого варианта кратко напиши правила, сколько человек нужно, что подготовить и когда лучше провести. Затем дай план организации: роли участников, тайминг, место сбора, что написать в чат перед встречей. Предпочитай формат короткого чеклиста: 'Варианты', 'Еда', 'Одежда', 'С собой', 'План', 'Важно'. Для еды называй конкретные варианты, например вода, легкий перекус, фрукты, батончики, чай в термосе, салфетки, пакеты для мусора - но подбирай по типу события. Для одежды объясняй слойность, обувь, куртку, кепку, дождевик или теплые вещи, если это уместно. Не выдумывай точную погоду, цены, расписания и факты, которых нет в контексте; если нужно, говори 'проверьте прогноз перед выходом'. Отвечай на языке пользователя, кратко, уверенно и по делу.", eventTitle, eventDesc),
-		},
-		{
-			Role:    "user",
-			Content: prompt,
-		},
+	messages := make([]OpenAIMessage, 0, len(eventCtx.RecentMessages)+2)
+	messages = append(messages, OpenAIMessage{
+		Role:    "system",
+		Content: buildEventHelperSystemPrompt(eventCtx),
+	})
+
+	for _, h := range eventCtx.RecentMessages {
+		role := normalizeOpenAIRole(h.Role)
+		if role == "" {
+			continue
+		}
+		messages = append(messages, OpenAIMessage{Role: role, Content: h.Text})
 	}
+
+	messages = append(messages, OpenAIMessage{
+		Role:    "user",
+		Content: prompt,
+	})
 
 	return ai.generateTextOutput(ctx, messages)
+}
+
+func buildEventHelperSystemPrompt(eventCtx EventChatContext) string {
+	category := strings.ToLower(strings.TrimSpace(eventCtx.Category))
+	return fmt.Sprintf(`Ты - Жорик, ИИ-инструктор и координатор конкретной встречи в приложении Жолдас.
+
+Контекст встречи:
+- Название: %s
+- Категория: %s
+- Описание: %s
+- Место: %s
+- Время: %s - %s
+- Участники: %d/%d
+- Ограничения: пол=%s, возраст=%s
+- Статус пользователя: %s
+
+Твоя задача - давать конкретные действия, а не общие советы. Учитывай категорию, место, время, лимит участников и последние сообщения чата.
+
+Правила ответа:
+- Отвечай на языке пользователя, коротко и уверенно.
+- Всегда давай применимые действия: кто что делает, что взять, что написать в чат, как начать встречу.
+- Если спрашивают "что взять/как подготовиться", отвечай разделами: Еда, Одежда, Вещи, Игры/активности, План, Важно.
+- Не используй Markdown-заголовки ### и жирный **.
+- Не выдумывай точную погоду, цены и расписания. Если погоды нет в контексте, скажи проверить прогноз перед выходом.
+- Если пользователь просит варианты игр/организации, дай 3-5 вариантов с правилами, длительностью, количеством людей и что подготовить.
+
+Категорийные правила:
+%s`, eventCtx.Title, category, eventCtx.Description, eventCtx.LocationName, eventCtx.StartTime.Format(time.RFC1123), eventCtx.EndTime.Format(time.RFC1123), eventCtx.ParticipantsCount, eventCtx.MaxParticipants, emptyFallback(eventCtx.GenderFilter, "all"), ageRestrictionText(eventCtx.MinAge, eventCtx.MaxAge), participantStatusText(eventCtx.ParticipantStatus), categoryInstruction(category))
+}
+
+func categoryInstruction(category string) string {
+	switch category {
+	case "networking", "cat_networking":
+		return "- Нетворкинг: не предлагай пикник, чипсы или пиво как основу. Фокус на знакомство, вопросы, мини-питчи, обмен контактами, роли модератора и тайминг.\n- Игры: speed networking, 2 правды 1 ложь, карточки-вопросы, мини-презентации по 60 секунд."
+	case "hiking", "cat_mountains":
+		return "- Горы/поход: вода, перекус, треккинговая обувь, слои одежды, аптечка, power bank, фонарик, темп группы, контроль отстающих, безопасность.\n- Не предлагай тяжелую еду и алкоголь."
+	case "walk", "cat_walks":
+		return "- Прогулка: удобная обувь, вода, простой маршрут, точки отдыха, фото-задания, разговорные игры, запасной план на дождь."
+	case "sports", "cat_sports":
+		return "- Спорт: форма, обувь, вода, разминка, правила, деление команд, безопасность, восстановление. Еду только легкий перекус после."
+	case "restaurant", "cat_restaurant":
+		return "- Ресторан/кафе: бронь, бюджет, аллергии, кто оплачивает, темы разговора, рассадка, игры за столом. Не советуй приносить свою еду."
+	case "board_games", "cat_games":
+		return "- Игры: ведущий, правила за 2 минуты, выбор игр по числу участников, таймер, запасные простые игры, легкие снеки по желанию."
+	case "theater", "cat_theater":
+		return "- Театр/кино/культура: билеты, время входа, дресс-код, где встретиться до входа, обсуждение после, опоздания нельзя."
+	default:
+		return "- Общая встреча: уточни формат, предложи простой план, роли, чеклист вещей и 3 активности для знакомства."
+	}
+}
+
+func mockEventHelperReply(eventCtx EventChatContext) string {
+	switch strings.ToLower(strings.TrimSpace(eventCtx.Category)) {
+	case "networking", "cat_networking":
+		return "Для этой нетворкинг-встречи лучше сделать так:\n\nЕда\n- Только вода/кофе по желанию, еду не делаем центром встречи.\n\nИгры и знакомство\n- Speed networking: пары меняются каждые 5 минут.\n- 2 правды и 1 ложь: быстро снимает напряжение.\n- Мини-питч 60 секунд: кто ты, чем занимаешься, кого ищешь.\n\nПлан\n- За 30 минут до встречи напишите в чат точку сбора.\n- Назначьте ведущего, который следит за таймингом.\n- В конце обменяйтесь контактами и сделайте общий итог."
+	case "hiking", "cat_mountains":
+		return "Для похода подготовка такая:\n\nЕда\n- Вода 1-1.5 л на человека, батончики, орехи, фрукты.\n\nОдежда\n- Удобная треккинговая обувь, слои одежды, ветровка/дождевик.\n\nВещи\n- Power bank, аптечка, салфетки, пакет для мусора.\n\nПлан\n- Проверьте прогноз, точку старта и кто идёт медленнее.\n- Договоритесь, что группа не разделяется."
+	case "restaurant", "cat_restaurant":
+		return "Для встречи в кафе/ресторане:\n\nЕда\n- Еду приносить не нужно. Лучше заранее договориться по бюджету и аллергиям.\n\nПлан\n- Забронируйте стол.\n- Напишите в чат точное место и имя брони.\n- Подготовьте 3 темы для разговора или карточки-вопросы.\n\nВажно\n- Уточните, кто и как оплачивает счёт."
+	default:
+		return "Сделайте встречу конкретнее:\n\nПлан\n- Напишите в чат точку сбора и время, когда ждать опоздавших.\n- Назначьте одного координатора.\n- Подготовьте 2-3 простые активности для знакомства.\n\nС собой\n- Вода, заряд телефона, удобная одежда по погоде.\n\nВажно\n- За час до начала подтвердите, кто точно идёт."
+	}
+}
+
+func emptyFallback(value, fallback string) string {
+	if strings.TrimSpace(value) == "" {
+		return fallback
+	}
+	return value
+}
+
+func ageRestrictionText(minAge, maxAge int32) string {
+	if minAge > 0 && maxAge > 0 {
+		return fmt.Sprintf("%d-%d", minAge, maxAge)
+	}
+	if minAge > 0 {
+		return fmt.Sprintf("от %d", minAge)
+	}
+	if maxAge > 0 {
+		return fmt.Sprintf("до %d", maxAge)
+	}
+	return "любой"
+}
+
+func participantStatusText(status string) string {
+	switch status {
+	case "going":
+		return "идёт"
+	case "late":
+		return "опаздывает"
+	case "arrived":
+		return "на месте"
+	case "not_going":
+		return "не сможет прийти"
+	default:
+		return "неизвестен"
+	}
 }
 
 func (ai *AIService) generateOpenAIOutput(ctx context.Context, messages []OpenAIMessage, responseFormat map[string]interface{}) (string, error) {

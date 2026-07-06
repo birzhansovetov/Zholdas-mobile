@@ -122,6 +122,10 @@ type MarkArrivedDTO struct {
 	Accuracy  *float64 `json:"accuracy"`
 }
 
+type UpdateParticipantStatusDTO struct {
+	Status string `json:"status" binding:"required"`
+}
+
 // CreateEvent creates an event with status 'active' and moderates it asynchronously
 func (h *EventHandler) CreateEvent(c *gin.Context) {
 	userIDVal, exists := c.Get("user_id")
@@ -493,6 +497,36 @@ func absFloat(value float64) float64 {
 	return value
 }
 
+func normalizeParticipantStatus(status string) string {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case "going", "иду", "go":
+		return "going"
+	case "late", "опаздываю":
+		return "late"
+	case "arrived", "на месте", "here":
+		return "arrived"
+	case "not_going", "not-going", "cant_go", "cannot_go", "не смогу":
+		return "not_going"
+	default:
+		return ""
+	}
+}
+
+func participantStatusLabel(status string) string {
+	switch status {
+	case "going":
+		return "иду"
+	case "late":
+		return "опаздываю"
+	case "arrived":
+		return "на месте"
+	case "not_going":
+		return "не смогу"
+	default:
+		return status
+	}
+}
+
 type NearbyEventResponse struct {
 	ID               int32     `json:"id"`
 	CreatorID        string    `json:"creator_id"`
@@ -843,11 +877,12 @@ func (h *EventHandler) GetAIRecommendations(c *gin.Context) {
 
 // ParticipantResponse represents a participant profile details
 type ParticipantResponse struct {
-	ID        string     `json:"id"`
-	Username  string     `json:"username"`
-	FullName  string     `json:"full_name"`
-	AvatarURL string     `json:"avatar_url"`
-	ArrivedAt *time.Time `json:"arrived_at,omitempty"`
+	ID                string     `json:"id"`
+	Username          string     `json:"username"`
+	FullName          string     `json:"full_name"`
+	AvatarURL         string     `json:"avatar_url"`
+	ParticipantStatus string     `json:"participant_status"`
+	ArrivedAt         *time.Time `json:"arrived_at,omitempty"`
 }
 
 // JoinEvent adds the current user as a participant to the event
@@ -901,8 +936,8 @@ func (h *EventHandler) JoinEvent(c *gin.Context) {
 	}
 
 	res, err := tx.Exec(ctx, `
-		INSERT INTO event_participants (event_id, user_id)
-		VALUES ($1, $2)
+		INSERT INTO event_participants (event_id, user_id, participant_status)
+		VALUES ($1, $2, 'going')
 		ON CONFLICT (event_id, user_id) DO NOTHING
 	`, eventID, userID)
 	if err != nil {
@@ -1007,6 +1042,136 @@ func (h *EventHandler) LeaveEvent(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Successfully left the event"})
 }
 
+// UpdateParticipantStatus lets a participant quickly say if they are going, late, arrived, or cannot come.
+func (h *EventHandler) UpdateParticipantStatus(c *gin.Context) {
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	userID := userIDVal.(string)
+
+	eventIDStr := c.Param("id")
+	eventID, err := strconv.Atoi(eventIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
+		return
+	}
+
+	var dto UpdateParticipantStatusDTO
+	if err := c.ShouldBindJSON(&dto); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Status is required"})
+		return
+	}
+
+	status := normalizeParticipantStatus(dto.Status)
+	if status == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Unsupported participant status"})
+		return
+	}
+	if status == "arrived" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Use the arrival endpoint with GPS to mark arrival"})
+		return
+	}
+
+	ctx := c.Request.Context()
+	tx, err := h.pool.Begin(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
+		return
+	}
+	defer tx.Rollback(ctx)
+
+	var eventTitle string
+	var creatorID string
+	var eventStatus string
+	err = tx.QueryRow(ctx, `
+		SELECT title, creator_id::text, status
+		FROM events
+		WHERE id = $1
+	`, eventID).Scan(&eventTitle, &creatorID, &eventStatus)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+		return
+	}
+	if eventStatus != "active" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Event is not active"})
+		return
+	}
+
+	var res pgconn.CommandTag
+	if creatorID == userID {
+		res, err = tx.Exec(ctx, `
+			INSERT INTO event_participants (event_id, user_id, participant_status, arrived_at)
+			VALUES ($1, $2, $3, CASE WHEN $3 = 'arrived' THEN NOW() ELSE NULL END)
+			ON CONFLICT (event_id, user_id) DO UPDATE
+			SET participant_status = EXCLUDED.participant_status,
+			    arrived_at = CASE
+			        WHEN EXCLUDED.participant_status = 'arrived' THEN COALESCE(event_participants.arrived_at, NOW())
+			        WHEN EXCLUDED.participant_status = 'going' THEN NULL
+			        ELSE event_participants.arrived_at
+			    END
+		`, eventID, userID, status)
+	} else {
+		res, err = tx.Exec(ctx, `
+			UPDATE event_participants
+			SET participant_status = $3,
+			    arrived_at = CASE
+			        WHEN $3 = 'arrived' THEN COALESCE(arrived_at, NOW())
+			        WHEN $3 = 'going' THEN NULL
+			        ELSE arrived_at
+			    END
+			WHERE event_id = $1 AND user_id = $2
+		`, eventID, userID, status)
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update participant status"})
+		return
+	}
+	if res.RowsAffected() == 0 {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Join the event before changing status"})
+		return
+	}
+
+	var arrivedAt pgtype.Timestamptz
+	_ = tx.QueryRow(ctx, `
+		SELECT arrived_at
+		FROM event_participants
+		WHERE event_id = $1 AND user_id = $2
+	`, eventID, userID).Scan(&arrivedAt)
+
+	var arrivedAtValue *time.Time
+	if arrivedAt.Valid {
+		arrivedAtValue = &arrivedAt.Time
+	}
+
+	if creatorID != userID && (status == "late" || status == "not_going" || status == "arrived") {
+		var actorName string
+		err = tx.QueryRow(ctx, "SELECT full_name FROM profiles WHERE user_id = $1", userID).Scan(&actorName)
+		if err == nil {
+			text := fmt.Sprintf("%s: %s — %s", eventTitle, actorName, participantStatusLabel(status))
+			_, _ = tx.Exec(ctx, `
+				INSERT INTO notifications (user_id, actor_id, event_id, notification_type, text)
+				VALUES ($1, $2, $3, $4, $5)
+			`, creatorID, userID, eventID, "participant_status", text)
+			if h.notificationService != nil {
+				go h.notificationService.SendPush(creatorID, text)
+			}
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":            "Participant status updated",
+		"participant_status": status,
+		"arrived_at":         arrivedAtValue,
+	})
+}
+
 // MarkArrived marks the current participant as arrived at the event location.
 func (h *EventHandler) MarkArrived(c *gin.Context) {
 	userIDVal, exists := c.Get("user_id")
@@ -1076,15 +1241,17 @@ func (h *EventHandler) MarkArrived(c *gin.Context) {
 	var res pgconn.CommandTag
 	if creatorID == userID {
 		res, err = tx.Exec(ctx, `
-			INSERT INTO event_participants (event_id, user_id, arrived_at)
-			VALUES ($1, $2, NOW())
+			INSERT INTO event_participants (event_id, user_id, arrived_at, participant_status)
+			VALUES ($1, $2, NOW(), 'arrived')
 			ON CONFLICT (event_id, user_id) DO UPDATE
-			SET arrived_at = COALESCE(event_participants.arrived_at, NOW())
+			SET arrived_at = COALESCE(event_participants.arrived_at, NOW()),
+			    participant_status = 'arrived'
 		`, eventID, userID)
 	} else {
 		res, err = tx.Exec(ctx, `
 			UPDATE event_participants
-			SET arrived_at = COALESCE(arrived_at, NOW())
+			SET arrived_at = COALESCE(arrived_at, NOW()),
+			    participant_status = 'arrived'
 			WHERE event_id = $1 AND user_id = $2
 		`, eventID, userID)
 	}
@@ -1143,11 +1310,24 @@ func (h *EventHandler) GetEventParticipants(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	rows, err := h.pool.Query(ctx, `
-		SELECT p.user_id::text, p.username, p.full_name, COALESCE(p.avatar_url, '') AS avatar_url, ep.arrived_at
+		SELECT p.user_id::text,
+		       p.username,
+		       p.full_name,
+		       COALESCE(p.avatar_url, '') AS avatar_url,
+		       COALESCE(ep.participant_status, 'going') AS participant_status,
+		       ep.arrived_at
 		FROM event_participants ep
 		JOIN profiles p ON p.user_id = ep.user_id
 		WHERE ep.event_id = $1
-		ORDER BY ep.joined_at ASC
+		ORDER BY
+			CASE COALESCE(ep.participant_status, 'going')
+				WHEN 'arrived' THEN 1
+				WHEN 'going' THEN 2
+				WHEN 'late' THEN 3
+				WHEN 'not_going' THEN 4
+				ELSE 5
+			END,
+			ep.joined_at ASC
 	`, eventID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch participants: " + err.Error()})
@@ -1158,10 +1338,14 @@ func (h *EventHandler) GetEventParticipants(c *gin.Context) {
 	var participants []ParticipantResponse = []ParticipantResponse{}
 	for rows.Next() {
 		var p ParticipantResponse
-		err := rows.Scan(&p.ID, &p.Username, &p.FullName, &p.AvatarURL, &p.ArrivedAt)
+		var arrivedAt pgtype.Timestamptz
+		err := rows.Scan(&p.ID, &p.Username, &p.FullName, &p.AvatarURL, &p.ParticipantStatus, &arrivedAt)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan participant row: " + err.Error()})
 			return
+		}
+		if arrivedAt.Valid {
+			p.ArrivedAt = &arrivedAt.Time
 		}
 		participants = append(participants, p)
 	}
@@ -1664,21 +1848,71 @@ func (h *EventHandler) SendEventMessage(c *gin.Context) {
 	// Asynchronously trigger AI helper if message mentions Жорик.
 	if prompt, isAIRequest := extractEventAIPrompt(dto.Text); isAIRequest && h.isAIEnabled(ctx) {
 		if prompt != "" {
-			go func(eID int32, userPrompt string) {
+			go func(eID int32, requesterID string, userPrompt string) {
 				// 1. Fetch event context
-				var eventTitle string
-				var eventDesc string
+				var eventCtx service.EventChatContext
 				ctx := context.Background()
 				err := h.pool.QueryRow(ctx, `
-					SELECT title, description FROM events WHERE id = $1
-				`, eID).Scan(&eventTitle, &eventDesc)
+					SELECT e.title,
+					       e.description,
+					       e.category,
+					       e.location_name,
+					       e.start_time,
+					       e.end_time,
+					       e.max_participants,
+					       (SELECT COUNT(*) FROM event_participants ep WHERE ep.event_id = e.id)::int,
+					       COALESCE(e.gender_filter, 'all'),
+					       COALESCE(e.min_age, 0),
+					       COALESCE(e.max_age, 0),
+					       COALESCE(ep.participant_status, CASE WHEN e.creator_id = $2 THEN 'going' ELSE '' END)
+					FROM events e
+					LEFT JOIN event_participants ep ON ep.event_id = e.id AND ep.user_id = $2
+					WHERE e.id = $1
+				`, eID, requesterID).Scan(
+					&eventCtx.Title,
+					&eventCtx.Description,
+					&eventCtx.Category,
+					&eventCtx.LocationName,
+					&eventCtx.StartTime,
+					&eventCtx.EndTime,
+					&eventCtx.MaxParticipants,
+					&eventCtx.ParticipantsCount,
+					&eventCtx.GenderFilter,
+					&eventCtx.MinAge,
+					&eventCtx.MaxAge,
+					&eventCtx.ParticipantStatus,
+				)
 				if err != nil {
 					log.Printf("[Event AI] Failed to query event context for ID %d: %v", eID, err)
 					return
 				}
 
+				rows, err := h.pool.Query(ctx, `
+					SELECT CASE WHEN sender_id IS NULL THEN 'assistant' ELSE 'user' END AS role,
+					       text
+					FROM event_messages
+					WHERE event_id = $1
+					ORDER BY created_at DESC
+					LIMIT 8
+				`, eID)
+				if err == nil {
+					defer rows.Close()
+					reversed := []service.AIChatMessage{}
+					for rows.Next() {
+						var msg service.AIChatMessage
+						if scanErr := rows.Scan(&msg.Role, &msg.Text); scanErr == nil {
+							reversed = append(reversed, msg)
+						}
+					}
+					for i := len(reversed) - 1; i >= 0; i-- {
+						eventCtx.RecentMessages = append(eventCtx.RecentMessages, reversed[i])
+					}
+				} else {
+					log.Printf("[Event AI] Failed to query recent chat context for ID %d: %v", eID, err)
+				}
+
 				// 2. Call AI provider
-				reply, err := h.aiService.EventChatHelper(ctx, eventTitle, eventDesc, userPrompt)
+				reply, err := h.aiService.EventChatHelper(ctx, eventCtx, userPrompt)
 				if err != nil {
 					log.Printf("[Event AI] AI request failed: %v", err)
 					reply = "Извините, не удалось связаться с Жориком. Пожалуйста, повторите запрос позже."
@@ -1709,7 +1943,7 @@ func (h *EventHandler) SendEventMessage(c *gin.Context) {
 					CreatedAt:       aiCreatedAt.Time,
 				}
 				h.ChatHub.BroadcastMessage(eID, aiResponse)
-			}(int32(eventID), prompt)
+			}(int32(eventID), userID, prompt)
 		}
 	}
 

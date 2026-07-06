@@ -180,6 +180,7 @@ func main() {
 		protectedRoutes.GET("/events/nearby", eventHandler.GetNearbyEvents)
 		protectedRoutes.POST("/events/:id/join", eventHandler.JoinEvent)
 		protectedRoutes.POST("/events/:id/leave", eventHandler.LeaveEvent)
+		protectedRoutes.POST("/events/:id/participant-status", eventHandler.UpdateParticipantStatus)
 		protectedRoutes.POST("/events/:id/arrive", eventHandler.MarkArrived)
 		protectedRoutes.GET("/events/:id/participants", eventHandler.GetEventParticipants)
 		protectedRoutes.POST("/events/:id/live-location", eventHandler.UpdateEventLiveLocation)
@@ -252,6 +253,9 @@ func main() {
 func ensureOperationalSchema(ctx context.Context, pool *pgxpool.Pool) error {
 	statements := []string{
 		`ALTER TABLE event_participants ADD COLUMN IF NOT EXISTS arrived_at TIMESTAMP WITH TIME ZONE`,
+		`ALTER TABLE event_participants ADD COLUMN IF NOT EXISTS participant_status VARCHAR(20) NOT NULL DEFAULT 'going'`,
+		`ALTER TABLE event_participants DROP CONSTRAINT IF EXISTS chk_event_participants_status`,
+		`ALTER TABLE event_participants ADD CONSTRAINT chk_event_participants_status CHECK (participant_status IN ('going', 'late', 'arrived', 'not_going'))`,
 		`CREATE TABLE IF NOT EXISTS event_reminders (
 			id SERIAL PRIMARY KEY,
 			event_id INT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
@@ -261,6 +265,7 @@ func ensureOperationalSchema(ctx context.Context, pool *pgxpool.Pool) error {
 			UNIQUE(event_id, user_id, reminder_type)
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_event_participants_arrived ON event_participants(event_id, arrived_at)`,
+		`CREATE INDEX IF NOT EXISTS idx_event_participants_status ON event_participants(event_id, participant_status)`,
 		`CREATE INDEX IF NOT EXISTS idx_event_reminders_event_user ON event_reminders(event_id, user_id)`,
 	}
 

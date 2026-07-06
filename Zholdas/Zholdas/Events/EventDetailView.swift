@@ -100,6 +100,9 @@ struct EventDetailView: View {
     @State private var isArrivalLoading = false
     @State private var isArrived = false
     @State private var arrivalError: String?
+    @State private var participantStatus = "going"
+    @State private var isStatusUpdating = false
+    @State private var participantStatusError: String?
     @State private var selectedUserForDetail: SelectedUserForDetail? = nil
     @State private var isShowingRateSheet = false
     @State private var isShowingReportSheet = false
@@ -342,6 +345,10 @@ struct EventDetailView: View {
 
                     if isLiveLocationAvailable {
                         liveLocationCard
+                    }
+
+                    if isJoined || isCreator {
+                        participantStatusCard
                     }
                     
                     // 4. Restrictions Banner
@@ -1065,6 +1072,67 @@ struct EventDetailView: View {
         .buttonStyle(SpringButtonStyle())
         .disabled(isArrived || isArrivalLoading)
     }
+
+    private var participantStatusCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Мой статус")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundColor(ZholdasTheme.textPrimary)
+                    Text("Покажите организатору и участникам, что с вами.")
+                        .font(.caption)
+                        .foregroundColor(ZholdasTheme.textSecondary)
+                }
+                Spacer()
+                if isStatusUpdating {
+                    ProgressView()
+                        .tint(ZholdasTheme.accent)
+                }
+            }
+
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                participantStatusButton(status: "going", title: "Иду", icon: "figure.walk", color: ZholdasTheme.accent)
+                participantStatusButton(status: "late", title: "Опаздываю", icon: "clock.fill", color: .orange)
+                participantStatusButton(status: "arrived", title: "На месте", icon: "checkmark.seal.fill", color: .green)
+                participantStatusButton(status: "not_going", title: "Не смогу", icon: "xmark.circle.fill", color: .red)
+            }
+
+            if let participantStatusError {
+                Text(participantStatusError)
+                    .font(.caption)
+                    .foregroundColor(.red.opacity(0.9))
+            }
+        }
+        .padding()
+        .glassBackground(cornerRadius: 16)
+    }
+
+    private func participantStatusButton(status: String, title: String, icon: String, color: Color) -> some View {
+        Button {
+            setParticipantStatus(status)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                Text(title)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+            }
+            .font(.caption.weight(.bold))
+            .foregroundColor(participantStatus == status ? .white : color)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 11)
+            .background(participantStatus == status ? color.opacity(0.85) : color.opacity(0.12))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(color.opacity(participantStatus == status ? 0.5 : 0.2), lineWidth: 1)
+            )
+        }
+        .buttonStyle(SpringButtonStyle())
+        .disabled(isStatusUpdating || (status == "arrived" && isArrived))
+    }
     
     // MARK: - Helpers
     
@@ -1102,6 +1170,9 @@ struct EventDetailView: View {
             if let currentUserID = authViewModel.currentUserProfile?.id,
                let currentParticipant = list.first(where: { $0.id == currentUserID }) {
                 self.isArrived = currentParticipant.arrivedAt != nil
+                self.participantStatus = currentParticipant.participantStatus ?? (currentParticipant.arrivedAt != nil ? "arrived" : "going")
+            } else if isCreator {
+                self.participantStatus = isArrived ? "arrived" : "going"
             }
             self.isLoadingParticipants = false
         }
@@ -1244,6 +1315,7 @@ struct EventDetailView: View {
             if success {
                 await MainActor.run {
                     self.isArrived = true
+                    self.participantStatus = "arrived"
                     self.arrivalError = nil
                 }
                 await loadParticipants()
@@ -1254,6 +1326,36 @@ struct EventDetailView: View {
             }
             await MainActor.run {
                 self.isArrivalLoading = false
+            }
+        }
+    }
+
+    private func setParticipantStatus(_ status: String) {
+        participantStatusError = nil
+
+        if status == "arrived" {
+            markArrived()
+            return
+        }
+
+        guard participantStatus != status, !isStatusUpdating else { return }
+        isStatusUpdating = true
+
+        Task {
+            let success = await eventsViewModel.updateParticipantStatus(eventID: event.id, status: status)
+            await MainActor.run {
+                if success {
+                    self.participantStatus = status
+                    if status == "going" {
+                        self.isArrived = false
+                    }
+                } else {
+                    self.participantStatusError = eventsViewModel.errorMessage
+                }
+                self.isStatusUpdating = false
+            }
+            if success {
+                await loadParticipants()
             }
         }
     }
@@ -1532,18 +1634,7 @@ struct ParticipantsListView: View {
                                     .foregroundColor(ZholdasTheme.accent)
                             }
                             Spacer()
-                            if participant.arrivedAt != nil {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "checkmark.circle.fill")
-                                    Text("На месте")
-                                }
-                                .font(.caption2.weight(.bold))
-                                .foregroundColor(.green)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 5)
-                                .background(Color.green.opacity(0.12))
-                                .clipShape(Capsule())
-                            }
+                            participantStatusBadge(participant.participantStatus ?? (participant.arrivedAt != nil ? "arrived" : "going"))
                             Image(systemName: "chevron.right")
                                 .foregroundColor(ZholdasTheme.textSecondary)
                                 .font(.caption)
@@ -1572,6 +1663,33 @@ struct ParticipantsListView: View {
             return String(first.prefix(2)).uppercased()
         }
         return "👤"
+    }
+
+    private func participantStatusBadge(_ status: String) -> some View {
+        let info = participantStatusInfo(status)
+        return HStack(spacing: 4) {
+            Image(systemName: info.icon)
+            Text(info.title)
+        }
+        .font(.caption2.weight(.bold))
+        .foregroundColor(info.color)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(info.color.opacity(0.12))
+        .clipShape(Capsule())
+    }
+
+    private func participantStatusInfo(_ status: String) -> (title: String, icon: String, color: Color) {
+        switch status {
+        case "late":
+            return ("Опаздывает", "clock.fill", .orange)
+        case "arrived":
+            return ("На месте", "checkmark.circle.fill", .green)
+        case "not_going":
+            return ("Не сможет", "xmark.circle.fill", .red)
+        default:
+            return ("Идёт", "figure.walk", ZholdasTheme.accent)
+        }
     }
 }
 

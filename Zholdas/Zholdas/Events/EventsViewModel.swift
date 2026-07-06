@@ -301,6 +301,24 @@ class EventsViewModel: ObservableObject {
         }
     }
 
+    func updateParticipantStatus(eventID: Int32, status: String) async -> Bool {
+        self.errorMessage = nil
+
+        do {
+            let body = try JSONEncoder().encode(UpdateParticipantStatusRequest(status: status))
+            let _: UpdateParticipantStatusResponse = try await APIClient.shared.request(
+                "/events/\(eventID)/participant-status",
+                method: "POST",
+                body: body,
+                requiresAuth: true
+            )
+            return true
+        } catch {
+            self.errorMessage = "Не удалось обновить статус: \(error.localizedDescription)"
+            return false
+        }
+    }
+
     func updateLiveLocation(eventID: Int32, location: CLLocation) async -> Bool {
         self.errorMessage = nil
 
@@ -368,6 +386,20 @@ struct MarkArrivedRequest: Codable {
 
 struct MarkArrivedResponse: Codable {
     let message: String
+}
+
+struct UpdateParticipantStatusRequest: Codable {
+    let status: String
+}
+
+struct UpdateParticipantStatusResponse: Codable {
+    let message: String
+    let participantStatus: String?
+
+    enum CodingKeys: String, CodingKey {
+        case message
+        case participantStatus = "participant_status"
+    }
 }
 
 struct CreateEventRequest: Codable {
