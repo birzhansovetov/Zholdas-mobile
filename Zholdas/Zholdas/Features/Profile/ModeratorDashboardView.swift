@@ -4,6 +4,7 @@ struct ModeratorDashboardView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @EnvironmentObject var langManager: LocalizationManager
     @Environment(\.dismiss) var dismiss
+    @StateObject private var eventsViewModel = EventsViewModel()
     
     // Tabs: 0 = Модерация, 1 = Статистика, 2 = Юзеры, 3 = Ивенты, 4 = Логи, 5 = Инструменты
     @State private var selectedTab = 0
@@ -20,6 +21,8 @@ struct ModeratorDashboardView: View {
     @State private var actionLoading = false
     @State private var errorMessage: String? = nil
     @State private var successMessage: String? = nil
+    @State private var selectedUserID: String? = nil
+    @State private var selectedEvent: Event? = nil
     
     // Search queries
     @State private var userSearchQuery = ""
@@ -64,7 +67,7 @@ struct ModeratorDashboardView: View {
                         .padding(.horizontal, 20)
                         .padding(.vertical, 16)
                     
-                    Divider().background(Color.white.opacity(0.08))
+                    Divider().background(ZholdasTheme.border)
                     
                     // Alert banners
                     if let err = errorMessage {
@@ -124,7 +127,7 @@ struct ModeratorDashboardView: View {
                     Button("btn_close".localized) {
                         dismiss()
                     }
-                    .foregroundColor(.gray)
+                    .foregroundColor(ZholdasTheme.textSecondary)
                 }
             }
             .task {
@@ -132,6 +135,21 @@ struct ModeratorDashboardView: View {
             }
             .sheet(isPresented: $isShowingBanSheet) {
                 banReasonInputSheet
+            }
+            .sheet(isPresented: Binding(
+                get: { selectedUserID != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        selectedUserID = nil
+                    }
+                }
+            )) {
+                if let selectedUserID {
+                    UserDetailView(userID: selectedUserID)
+                }
+            }
+            .sheet(item: $selectedEvent) { event in
+                EventDetailView(event: event, eventsViewModel: eventsViewModel)
             }
         }
     }
@@ -160,7 +178,7 @@ struct ModeratorDashboardView: View {
             
             Text("mod_subtitle".localized)
                 .font(.caption)
-                .foregroundColor(.gray)
+                .foregroundColor(ZholdasTheme.textSecondary)
         }
         .padding()
         .glassBackground(cornerRadius: 16)
@@ -200,12 +218,12 @@ struct ModeratorDashboardView: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            .background(selectedTab == index ? ZholdasTheme.accent : Color.white.opacity(0.04))
-            .foregroundColor(selectedTab == index ? .black : .white)
+            .background(selectedTab == index ? ZholdasTheme.accent : ZholdasTheme.surface.opacity(0.72))
+            .foregroundColor(selectedTab == index ? .white : ZholdasTheme.textSecondary)
             .cornerRadius(10)
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
-                    .stroke(selectedTab == index ? Color.clear : Color.white.opacity(0.08), lineWidth: 1)
+                    .stroke(selectedTab == index ? Color.clear : ZholdasTheme.border, lineWidth: 1)
             )
         }
     }
@@ -227,7 +245,7 @@ struct ModeratorDashboardView: View {
                     .foregroundColor(.white)
                 Text("mod_reports_empty_desc".localized)
                     .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ZholdasTheme.textSecondary)
             }
             .padding(.top, 40)
         } else {
@@ -256,33 +274,33 @@ struct ModeratorDashboardView: View {
                 
                 Text(formatDate(report.createdAt))
                     .font(.caption2)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ZholdasTheme.textSecondary)
             }
             
             if !report.description.isEmpty {
                 Text(report.description)
                     .font(.subheadline)
-                    .foregroundColor(.white)
+                    .foregroundColor(ZholdasTheme.textPrimary)
             }
             
-            Divider().background(Color.white.opacity(0.06))
+            Divider().background(ZholdasTheme.border)
             
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text("mod_reporter_label".localized)
                         .font(.caption)
-                        .foregroundColor(.gray)
+                        .foregroundColor(ZholdasTheme.textSecondary)
                     Text(report.reporterName)
                         .font(.caption)
                         .fontWeight(.bold)
-                        .foregroundColor(.white)
+                        .foregroundColor(ZholdasTheme.textPrimary)
                 }
                 
                 if let target = report.reportedUserName {
                     HStack {
                         Text("mod_reported_label".localized)
                             .font(.caption)
-                            .foregroundColor(.gray)
+                            .foregroundColor(ZholdasTheme.textSecondary)
                         Text(target)
                             .font(.caption)
                             .fontWeight(.bold)
@@ -294,10 +312,10 @@ struct ModeratorDashboardView: View {
                     HStack {
                         Text("mod_event_label".localized)
                             .font(.caption)
-                            .foregroundColor(.gray)
+                            .foregroundColor(ZholdasTheme.textSecondary)
                         Text(evTitle)
                             .font(.caption)
-                            .foregroundColor(.white.opacity(0.8))
+                            .foregroundColor(ZholdasTheme.textPrimary)
                     }
                 }
                 
@@ -305,9 +323,9 @@ struct ModeratorDashboardView: View {
                     Text("\("tab_chats".localized.prefix(4)): \"\(msg)\"")
                         .font(.caption)
                         .italic()
-                        .foregroundColor(.gray)
+                        .foregroundColor(ZholdasTheme.textSecondary)
                         .padding(6)
-                        .background(Color.white.opacity(0.03))
+                        .background(ZholdasTheme.surface.opacity(0.58))
                         .cornerRadius(6)
                 }
             }
@@ -321,8 +339,8 @@ struct ModeratorDashboardView: View {
                         .fontWeight(.bold)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
-                        .background(Color.white.opacity(0.06))
-                        .foregroundColor(.white)
+                        .background(ZholdasTheme.surface.opacity(0.74))
+                        .foregroundColor(ZholdasTheme.textPrimary)
                         .cornerRadius(8)
                 }
                 
@@ -356,7 +374,7 @@ struct ModeratorDashboardView: View {
             VStack(alignment: .leading, spacing: 20) {
                 Text("mod_stats_title".localized)
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(ZholdasTheme.textPrimary)
                 
                 // Grid counters
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
@@ -370,7 +388,7 @@ struct ModeratorDashboardView: View {
                 
                 Text("mod_analytics_title".localized)
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(ZholdasTheme.textPrimary)
                     .padding(.top, 8)
                 
                 VStack(spacing: 12) {
@@ -398,7 +416,7 @@ struct ModeratorDashboardView: View {
             
             Text(label)
                 .font(.caption2)
-                .foregroundColor(.gray)
+                .foregroundColor(ZholdasTheme.textSecondary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 16)
@@ -409,12 +427,12 @@ struct ModeratorDashboardView: View {
         HStack {
             Text(label)
                 .font(.footnote)
-                .foregroundColor(.gray)
+                .foregroundColor(ZholdasTheme.textSecondary)
             Spacer()
             Text(value)
                 .font(.footnote)
                 .fontWeight(.bold)
-                .foregroundColor(.white)
+                .foregroundColor(ZholdasTheme.textPrimary)
         }
     }
     
@@ -434,14 +452,14 @@ struct ModeratorDashboardView: View {
         VStack(alignment: .leading, spacing: 14) {
             Text("mod_users_title".localized)
                 .font(.headline)
-                .foregroundColor(.white)
+                .foregroundColor(ZholdasTheme.textPrimary)
             
             TextField("mod_users_search_placeholder".localized, text: $userSearchQuery)
                 .padding()
-                .background(Color.white.opacity(0.05))
+                .background(ZholdasTheme.surface.opacity(0.72))
                 .cornerRadius(12)
-                .foregroundColor(.white)
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                .foregroundColor(ZholdasTheme.textPrimary)
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(ZholdasTheme.border, lineWidth: 1))
             
             if isLoading {
                 ProgressView().tint(ZholdasTheme.accent).padding(.top, 20)
@@ -456,54 +474,63 @@ struct ModeratorDashboardView: View {
     @ViewBuilder
     private func userAdminCard(for usr: ModerationUser) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 12) {
-                ZholdasAvatarView(
-                    avatarURL: usr.avatarURL.isEmpty ? nil : usr.avatarURL,
-                    initials: initials(from: usr.fullName),
-                    size: 46
-                )
+            Button {
+                selectedUserID = usr.userID
+            } label: {
+                HStack(alignment: .top, spacing: 12) {
+                    ZholdasAvatarView(
+                        avatarURL: usr.avatarURL.isEmpty ? nil : usr.avatarURL,
+                        initials: initials(from: usr.fullName),
+                        size: 46
+                    )
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(usr.fullName)
-                        .font(.headline)
-                        .foregroundColor(.white)
-                    Text("@\(usr.username)")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundColor(ZholdasTheme.accent)
-                    Text(usr.email)
-                        .font(.caption)
-                        .foregroundColor(.gray)
-                    Text("ID: \(shortID(usr.userID))")
-                        .font(.caption2.monospaced())
-                        .foregroundColor(.gray.opacity(0.9))
-                    Text(userMetaLine(usr))
-                        .font(.caption2)
-                        .foregroundColor(.gray)
-                }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(usr.fullName)
+                            .font(.headline)
+                            .foregroundColor(ZholdasTheme.textPrimary)
+                        Text("@\(usr.username)")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(ZholdasTheme.accent)
+                        Text(usr.email)
+                            .font(.caption)
+                            .foregroundColor(ZholdasTheme.textSecondary)
+                        Text("ID: \(shortID(usr.userID))")
+                            .font(.caption2.monospaced())
+                            .foregroundColor(ZholdasTheme.textTertiary)
+                        Text(userMetaLine(usr))
+                            .font(.caption2)
+                            .foregroundColor(ZholdasTheme.textSecondary)
+                    }
 
-                Spacer()
+                    Spacer()
 
-                if usr.isBanned {
-                    Text("mod_user_banned_label".localized)
-                        .font(.caption2)
-                        .fontWeight(.bold)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.red.opacity(0.2))
-                        .foregroundColor(.red)
-                        .cornerRadius(6)
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundColor(ZholdasTheme.textTertiary)
+
+                    if usr.isBanned {
+                        Text("mod_user_banned_label".localized)
+                            .font(.caption2)
+                            .fontWeight(.bold)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.red.opacity(0.2))
+                            .foregroundColor(.red)
+                            .cornerRadius(6)
+                    }
                 }
             }
+            .buttonStyle(.plain)
 
             if !usr.bio.isEmpty {
                 Text(usr.bio)
                     .font(.caption)
-                    .foregroundColor(.white.opacity(0.78))
+                    .foregroundColor(ZholdasTheme.textSecondary)
                     .lineLimit(2)
                     .padding(10)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.white.opacity(0.04))
+                    .background(ZholdasTheme.surface.opacity(0.58))
                     .cornerRadius(10)
             }
 
@@ -542,13 +569,13 @@ struct ModeratorDashboardView: View {
             HStack(spacing: 8) {
                 Text("mod_user_roles_label".localized)
                     .font(.caption)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ZholdasTheme.textSecondary)
                 roleButton(title: "user", active: normalizedRole(usr.role) == "user", user: usr)
                 roleButton(title: "moderator", active: normalizedRole(usr.role) == "moderator", user: usr)
                 roleButton(title: "admin", active: normalizedRole(usr.role) == "admin", user: usr)
             }
 
-            Divider().background(Color.white.opacity(0.06))
+            Divider().background(ZholdasTheme.border)
 
             HStack(spacing: 12) {
                 if usr.isBanned {
@@ -605,14 +632,14 @@ struct ModeratorDashboardView: View {
             Text(value)
                 .font(.subheadline)
                 .fontWeight(.bold)
-                .foregroundColor(.white)
+                .foregroundColor(ZholdasTheme.textPrimary)
             Text(label)
                 .font(.caption2)
-                .foregroundColor(.gray)
+                .foregroundColor(ZholdasTheme.textSecondary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
-        .background(Color.white.opacity(0.045))
+        .background(ZholdasTheme.surface.opacity(0.58))
         .cornerRadius(10)
     }
 
@@ -635,8 +662,8 @@ struct ModeratorDashboardView: View {
                 .font(.system(size: 10, weight: .bold))
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .background(active ? ZholdasTheme.accent : Color.white.opacity(0.05))
-                .foregroundColor(active ? .black : .white)
+                .background(active ? ZholdasTheme.accent : ZholdasTheme.surface.opacity(0.68))
+                .foregroundColor(active ? .white : ZholdasTheme.textPrimary)
                 .cornerRadius(6)
         }
         .buttonStyle(.plain)
@@ -663,14 +690,14 @@ struct ModeratorDashboardView: View {
         VStack(alignment: .leading, spacing: 14) {
             Text("mod_events_title".localized)
                 .font(.headline)
-                .foregroundColor(.white)
+                .foregroundColor(ZholdasTheme.textPrimary)
             
             TextField("mod_events_search_placeholder".localized, text: $eventSearchQuery)
                 .padding()
-                .background(Color.white.opacity(0.05))
+                .background(ZholdasTheme.surface.opacity(0.72))
                 .cornerRadius(12)
-                .foregroundColor(.white)
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                .foregroundColor(ZholdasTheme.textPrimary)
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(ZholdasTheme.border, lineWidth: 1))
             
             // Event type filters
             HStack(spacing: 8) {
@@ -700,8 +727,8 @@ struct ModeratorDashboardView: View {
                 .fontWeight(.bold)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
-                .background(selectedEventFilter == value ? ZholdasTheme.accent : Color.white.opacity(0.05))
-                .foregroundColor(selectedEventFilter == value ? .black : .white)
+                .background(selectedEventFilter == value ? ZholdasTheme.accent : ZholdasTheme.surface.opacity(0.68))
+                .foregroundColor(selectedEventFilter == value ? .white : ZholdasTheme.textPrimary)
                 .cornerRadius(8)
         }
         .buttonStyle(.plain)
@@ -710,37 +737,47 @@ struct ModeratorDashboardView: View {
     @ViewBuilder
     private func eventAdminCard(for ev: ModerationEvent) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(ev.title)
-                        .font(.headline)
-                        .foregroundColor(.white)
+            Button {
+                selectedEvent = eventFromModerationEvent(ev)
+            } label: {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(ev.title)
+                            .font(.headline)
+                            .foregroundColor(ZholdasTheme.textPrimary)
 
-                    Text("\("mod_creator_label".localized): \(ev.creatorName) (@\(ev.creatorUsername))")
-                        .font(.caption)
-                        .foregroundColor(.gray)
+                        Text("\("mod_creator_label".localized): \(ev.creatorName) (@\(ev.creatorUsername))")
+                            .font(.caption)
+                            .foregroundColor(ZholdasTheme.textSecondary)
 
-                    Text("\("create_ev_start".localized): \(formatDate(ev.startTime)) - \(formatDate(ev.endTime))")
-                        .font(.caption2)
-                        .foregroundColor(.gray)
+                        Text("\("create_ev_start".localized): \(formatDate(ev.startTime)) - \(formatDate(ev.endTime))")
+                            .font(.caption2)
+                            .foregroundColor(ZholdasTheme.textSecondary)
+                    }
+
+                    Spacer()
+
+                    Text(ev.status.uppercased())
+                        .font(.system(size: 9, weight: .bold))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(ev.status == "active" ? Color.green.opacity(0.2) : Color.gray.opacity(0.2))
+                        .foregroundColor(ev.status == "active" ? .green : .gray)
+                        .cornerRadius(6)
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption.weight(.bold))
+                        .foregroundColor(ZholdasTheme.textTertiary)
+                        .padding(.top, 2)
                 }
-
-                Spacer()
-
-                Text(ev.status.uppercased())
-                    .font(.system(size: 9, weight: .bold))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(ev.status == "active" ? Color.green.opacity(0.2) : Color.gray.opacity(0.2))
-                    .foregroundColor(ev.status == "active" ? .green : .gray)
-                    .cornerRadius(6)
             }
+            .buttonStyle(.plain)
 
             VStack(alignment: .leading, spacing: 8) {
                 if !ev.locationName.isEmpty {
                     Label(ev.locationName, systemImage: "mappin.and.ellipse")
                         .font(.caption)
-                        .foregroundColor(.white.opacity(0.78))
+                        .foregroundColor(ZholdasTheme.textPrimary)
                 }
 
                 HStack(spacing: 8) {
@@ -761,12 +798,12 @@ struct ModeratorDashboardView: View {
                 if !ev.description.isEmpty {
                     Text(ev.description)
                         .font(.caption)
-                        .foregroundColor(.gray)
+                        .foregroundColor(ZholdasTheme.textSecondary)
                         .lineLimit(2)
                 }
             }
 
-            Divider().background(Color.white.opacity(0.06))
+            Divider().background(ZholdasTheme.border)
 
             HStack(spacing: 10) {
                 if ev.status == "active" {
@@ -779,7 +816,7 @@ struct ModeratorDashboardView: View {
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 8)
                             .background(Color.gray.opacity(0.2))
-                            .foregroundColor(.white)
+                            .foregroundColor(ZholdasTheme.textPrimary)
                             .cornerRadius(8)
                     }
 
@@ -832,12 +869,37 @@ struct ModeratorDashboardView: View {
         Label(text, systemImage: icon)
             .font(.caption2)
             .fontWeight(.semibold)
-            .foregroundColor(.white.opacity(0.84))
+            .foregroundColor(ZholdasTheme.textPrimary)
             .lineLimit(1)
             .padding(.horizontal, 8)
             .padding(.vertical, 5)
-            .background(Color.white.opacity(0.055))
+            .background(ZholdasTheme.surface.opacity(0.62))
             .cornerRadius(8)
+    }
+
+    private func eventFromModerationEvent(_ ev: ModerationEvent) -> Event {
+        Event(
+            id: ev.id,
+            creatorID: ev.creatorID,
+            title: ev.title,
+            description: ev.description,
+            category: ev.category,
+            locationName: ev.locationName,
+            latitude: ev.latitude,
+            longitude: ev.longitude,
+            startTime: ev.startTime,
+            endTime: ev.endTime,
+            maxParticipants: ev.maxParticipants,
+            status: ev.status,
+            imageURL: ev.imageURL.isEmpty ? nil : ev.imageURL,
+            distanceMeters: nil,
+            participantsCount: Int32(ev.participantCount),
+            isJoined: nil,
+            visibility: ev.visibility,
+            genderFilter: ev.genderFilter,
+            minAge: ev.minAge > 0 ? Int32(ev.minAge) : nil,
+            maxAge: ev.maxAge > 0 ? Int32(ev.maxAge) : nil
+        )
     }
     
     // 4. Tools Tab
@@ -846,7 +908,7 @@ struct ModeratorDashboardView: View {
         VStack(alignment: .leading, spacing: 14) {
             Text("mod_audit_title".localized)
                 .font(.headline)
-                .foregroundColor(.white)
+                .foregroundColor(ZholdasTheme.textPrimary)
 
             if isLoading {
                 ProgressView().tint(ZholdasTheme.accent).padding(.top, 20)
@@ -857,7 +919,7 @@ struct ModeratorDashboardView: View {
                         .foregroundColor(ZholdasTheme.accent)
                     Text("mod_audit_empty".localized)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.gray)
+                        .foregroundColor(ZholdasTheme.textSecondary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.top, 32)
@@ -882,10 +944,10 @@ struct ModeratorDashboardView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(auditTitle(for: item.actionType))
                         .font(.subheadline.weight(.bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(ZholdasTheme.textPrimary)
                     Text("\(item.moderatorName) · \(formatDate(item.createdAt))")
                         .font(.caption)
-                        .foregroundColor(.gray)
+                        .foregroundColor(ZholdasTheme.textSecondary)
                     Text("\(item.targetType) #\(shortID(item.targetID))")
                         .font(.caption2.monospaced())
                         .foregroundColor(ZholdasTheme.accent)
@@ -897,10 +959,10 @@ struct ModeratorDashboardView: View {
             if !item.details.isEmpty {
                 Text(item.details)
                     .font(.caption)
-                    .foregroundColor(.white.opacity(0.78))
+                    .foregroundColor(ZholdasTheme.textSecondary)
                     .padding(10)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.white.opacity(0.045))
+                    .background(ZholdasTheme.surface.opacity(0.58))
                     .cornerRadius(10)
             }
         }
@@ -917,23 +979,23 @@ struct ModeratorDashboardView: View {
                 Text("mod_tools_broadcast_header".localized)
                     .font(.caption2)
                     .fontWeight(.bold)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ZholdasTheme.textSecondary)
                     .tracking(1.0)
                 
                 TextField("mod_tools_broadcast_title_placeholder".localized, text: $broadcastTitle)
                     .padding()
-                    .background(Color.white.opacity(0.05))
+                    .background(ZholdasTheme.surface.opacity(0.72))
                     .cornerRadius(12)
-                    .foregroundColor(.white)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                    .foregroundColor(ZholdasTheme.textPrimary)
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(ZholdasTheme.border, lineWidth: 1))
                 
                 TextEditor(text: $broadcastText)
                     .frame(height: 100)
                     .padding(8)
-                    .background(Color.white.opacity(0.05))
+                    .background(ZholdasTheme.surface.opacity(0.72))
                     .cornerRadius(12)
-                    .foregroundColor(.white)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                    .foregroundColor(ZholdasTheme.textPrimary)
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(ZholdasTheme.border, lineWidth: 1))
                 
                 Button {
                     sendBroadcast()
@@ -961,29 +1023,29 @@ struct ModeratorDashboardView: View {
                 Text("mod_tools_settings_header".localized)
                     .font(.caption2)
                     .fontWeight(.bold)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ZholdasTheme.textSecondary)
                     .tracking(1.0)
                 
                 Toggle("AI помощник", isOn: $aiEnabled)
-                    .foregroundColor(.white)
+                    .foregroundColor(ZholdasTheme.textPrimary)
                     .padding(.vertical, 4)
                 
-                Divider().background(Color.white.opacity(0.06))
+                Divider().background(ZholdasTheme.border)
                 
                 HStack {
                     Text("Город по умолчанию")
-                        .foregroundColor(.white)
+                        .foregroundColor(ZholdasTheme.textPrimary)
                     Spacer()
                     TextField("Almaty", text: $defaultCity)
                         .multilineTextAlignment(.trailing)
                         .foregroundColor(ZholdasTheme.accent)
                 }
                 
-                Divider().background(Color.white.opacity(0.06))
+                Divider().background(ZholdasTheme.border)
                 
                 HStack {
                     Text("Лимит ИИ / 10 мин")
-                        .foregroundColor(.white)
+                        .foregroundColor(ZholdasTheme.textPrimary)
                     Spacer()
                     TextField("8", text: $aiRateLimit)
                         .keyboardType(.numberPad)
@@ -1002,12 +1064,12 @@ struct ModeratorDashboardView: View {
                             .font(.subheadline)
                             .fontWeight(.bold)
                     }
-                    .foregroundColor(.white)
+                    .foregroundColor(ZholdasTheme.textPrimary)
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.white.opacity(0.08))
+                    .background(ZholdasTheme.surface.opacity(0.74))
                     .cornerRadius(12)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(ZholdasTheme.border, lineWidth: 1))
                 }
                 .disabled(actionLoading)
             }
@@ -1026,18 +1088,18 @@ struct ModeratorDashboardView: View {
                 Text("mod_ban_sheet_title".localized)
                     .font(.title3)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(ZholdasTheme.textPrimary)
                 
                 Text("\("mod_ban_sheet_reason_placeholder".localized) (\(userToBanName)):")
                     .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ZholdasTheme.textSecondary)
                 
                 TextField("mod_ban_sheet_reason_placeholder".localized, text: $banReason)
                     .padding()
-                    .background(Color.white.opacity(0.05))
+                    .background(ZholdasTheme.surface.opacity(0.72))
                     .cornerRadius(12)
-                    .foregroundColor(.white)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                    .foregroundColor(ZholdasTheme.textPrimary)
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(ZholdasTheme.border, lineWidth: 1))
                 
                 HStack(spacing: 12) {
                     Button("btn_cancel".localized) {
@@ -1046,8 +1108,8 @@ struct ModeratorDashboardView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.white.opacity(0.08))
-                    .foregroundColor(.white)
+                    .background(ZholdasTheme.surface.opacity(0.74))
+                    .foregroundColor(ZholdasTheme.textPrimary)
                     .cornerRadius(12)
                     
                     Button("mod_btn_ban".localized) {
@@ -1529,14 +1591,18 @@ struct ModerationSettings: Codable {
 
 struct ModerationEvent: Codable, Identifiable {
     let id: Int32
+    let creatorID: String
     let title: String
     let description: String
     let category: String
     var status: String
     let locationName: String
+    let latitude: Double
+    let longitude: Double
     let startTime: Date
     let endTime: Date
     let maxParticipants: Int32
+    let imageURL: String
     let visibility: String
     let genderFilter: String
     let minAge: Int
@@ -1548,14 +1614,18 @@ struct ModerationEvent: Codable, Identifiable {
     
     enum CodingKeys: String, CodingKey {
         case id
+        case creatorID = "creator_id"
         case title
         case description
         case category
         case status
         case locationName = "location_name"
+        case latitude
+        case longitude
         case startTime = "start_time"
         case endTime = "end_time"
         case maxParticipants = "max_participants"
+        case imageURL = "image_url"
         case visibility
         case genderFilter = "gender_filter"
         case minAge = "min_age"

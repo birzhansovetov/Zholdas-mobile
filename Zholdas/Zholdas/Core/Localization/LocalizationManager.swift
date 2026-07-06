@@ -987,6 +987,11 @@ class LocalizationManager: ObservableObject {
             "kk": "Бас тарту",
             "en": "Cancel"
         ],
+        "btn_close": [
+            "ru": "Закрыть",
+            "kk": "Жабу",
+            "en": "Close"
+        ],
         "btn_done": [
             "ru": "Готово",
             "kk": "Дайын",
@@ -1196,10 +1201,70 @@ class LocalizationManager: ObservableObject {
             "kk": "Платформа статистикасы",
             "en": "Platform Statistics"
         ],
+        "mod_stats_users": [
+            "ru": "Пользователи",
+            "kk": "Пайдаланушылар",
+            "en": "Users"
+        ],
+        "mod_stats_events": [
+            "ru": "Ивенты",
+            "kk": "Оқиғалар",
+            "en": "Events"
+        ],
+        "mod_stats_active": [
+            "ru": "Активные",
+            "kk": "Белсенді",
+            "en": "Active"
+        ],
+        "mod_stats_messages": [
+            "ru": "Сообщения",
+            "kk": "Хабарламалар",
+            "en": "Messages"
+        ],
+        "mod_stats_reports": [
+            "ru": "Жалобы",
+            "kk": "Шағымдар",
+            "en": "Reports"
+        ],
+        "mod_stats_bans": [
+            "ru": "Баны",
+            "kk": "Бұғаттар",
+            "en": "Bans"
+        ],
         "mod_analytics_title": [
             "ru": "MVP Аналитика",
             "kk": "MVP Аналитикасы",
             "en": "MVP Analytics"
+        ],
+        "mod_anal_reg_today": [
+            "ru": "Регистрации сегодня",
+            "kk": "Бүгінгі тіркелулер",
+            "en": "Registrations today"
+        ],
+        "mod_anal_reg_7d": [
+            "ru": "Регистрации за 7 дней",
+            "kk": "7 күндегі тіркелулер",
+            "en": "Registrations 7d"
+        ],
+        "mod_anal_reg_30d": [
+            "ru": "Регистрации за 30 дней",
+            "kk": "30 күндегі тіркелулер",
+            "en": "Registrations 30d"
+        ],
+        "mod_anal_ev_7d": [
+            "ru": "Ивенты за 7 дней",
+            "kk": "7 күндегі оқиғалар",
+            "en": "Events 7d"
+        ],
+        "mod_anal_ev_30d": [
+            "ru": "Ивенты за 30 дней",
+            "kk": "30 күндегі оқиғалар",
+            "en": "Events 30d"
+        ],
+        "mod_anal_joins_7d": [
+            "ru": "Участия за 7 дней",
+            "kk": "7 күндегі қатысулар",
+            "en": "Joins 7d"
         ],
         "mod_users_title": [
             "ru": "Управление пользователями",

@@ -698,14 +698,18 @@ func (h *AuthHandler) GetModerationEvents(c *gin.Context) {
 	rows, err := h.pool.Query(ctx, `
 		SELECT
 			e.id,
+			e.creator_id::text,
 			e.title,
 			COALESCE(e.description, ''),
 			e.category,
 			e.status,
 			COALESCE(e.location_name, ''),
+			COALESCE(ST_Y(e.location::geometry), 0),
+			COALESCE(ST_X(e.location::geometry), 0),
 			e.start_time,
 			e.end_time,
 			e.max_participants,
+			COALESCE(e.image_url, ''),
 			COALESCE(e.visibility, 'public'),
 			COALESCE(e.gender_filter, 'Все'),
 			COALESCE(e.min_age, 0),
@@ -731,14 +735,18 @@ func (h *AuthHandler) GetModerationEvents(c *gin.Context) {
 
 	type EventItem struct {
 		ID               int32     `json:"id"`
+		CreatorID        string    `json:"creator_id"`
 		Title            string    `json:"title"`
 		Description      string    `json:"description"`
 		Category         string    `json:"category"`
 		Status           string    `json:"status"`
 		LocationName     string    `json:"location_name"`
+		Latitude         float64   `json:"latitude"`
+		Longitude        float64   `json:"longitude"`
 		StartTime        time.Time `json:"start_time"`
 		EndTime          time.Time `json:"end_time"`
 		MaxParticipants  int32     `json:"max_participants"`
+		ImageURL         string    `json:"image_url"`
 		Visibility       string    `json:"visibility"`
 		GenderFilter     string    `json:"gender_filter"`
 		MinAge           int       `json:"min_age"`
@@ -754,14 +762,18 @@ func (h *AuthHandler) GetModerationEvents(c *gin.Context) {
 		var ev EventItem
 		err := rows.Scan(
 			&ev.ID,
+			&ev.CreatorID,
 			&ev.Title,
 			&ev.Description,
 			&ev.Category,
 			&ev.Status,
 			&ev.LocationName,
+			&ev.Latitude,
+			&ev.Longitude,
 			&ev.StartTime,
 			&ev.EndTime,
 			&ev.MaxParticipants,
+			&ev.ImageURL,
 			&ev.Visibility,
 			&ev.GenderFilter,
 			&ev.MinAge,
