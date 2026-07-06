@@ -32,11 +32,11 @@ struct EventsListView: View {
                         Text("tab_events".localized)
                             .font(.largeTitle)
                             .fontWeight(.bold)
-                            .foregroundColor(.white)
+                            .foregroundColor(ZholdasTheme.textPrimary)
                         
                         Text(String(format: "list_events_nearby".localized, filteredEvents.count))
                             .font(.subheadline)
-                            .foregroundColor(.gray)
+                            .foregroundColor(ZholdasTheme.textSecondary)
                     }
                     .padding(.horizontal, 24)
                     .padding(.top, 24)
@@ -112,13 +112,13 @@ struct EventsListView: View {
                         VStack(spacing: 16) {
                             Image(systemName: "figure.run.circle.fill")
                                 .font(.system(size: 64))
-                                .foregroundColor(.gray)
+                                .foregroundColor(ZholdasTheme.textSecondary)
                             Text("list_no_events_found".localized)
                                 .font(.headline)
-                                .foregroundColor(.white)
+                                .foregroundColor(ZholdasTheme.textPrimary)
                             Text("list_no_events_hint".localized)
                                 .font(.subheadline)
-                                .foregroundColor(.gray)
+                                .foregroundColor(ZholdasTheme.textSecondary)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 32)
                         }
@@ -288,7 +288,7 @@ struct EventRowCard: View {
             Text(event.title)
                 .font(.title3)
                 .fontWeight(.bold)
-                .foregroundColor(.white)
+                .foregroundColor(ZholdasTheme.textPrimary)
                 .multilineTextAlignment(.leading)
             
             // Описание (первые 2 строки)
@@ -298,7 +298,7 @@ struct EventRowCard: View {
                 .lineLimit(2)
                 .multilineTextAlignment(.leading)
             
-            Divider().background(Color.white.opacity(0.1))
+            Divider().background(ZholdasTheme.border)
             
             // Время и Локация
             HStack(spacing: 16) {

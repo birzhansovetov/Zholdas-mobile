@@ -28,11 +28,11 @@ struct ActivityView: View {
                     Text("tab_activity".localized)
                         .font(.largeTitle)
                         .fontWeight(.bold)
-                        .foregroundColor(.white)
+                        .foregroundColor(ZholdasTheme.textPrimary)
                     
                     Text("act_all_community".localized)
                         .font(.subheadline)
-                        .foregroundColor(.gray)
+                        .foregroundColor(ZholdasTheme.textSecondary)
                 }
                 .padding(.horizontal, 24)
                 .padding(.top, 24)
@@ -97,22 +97,22 @@ struct ActivityView: View {
                     Text(tab.localized)
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(selectedTab == tab ? .white : .gray)
+                        .foregroundColor(selectedTab == tab ? ZholdasTheme.accent : ZholdasTheme.textSecondary)
                         .padding(.horizontal, 20)
                         .padding(.vertical, 8)
                         .background(
                             Capsule()
-                                .fill(selectedTab == tab ? Color.white.opacity(0.12) : Color.clear)
+                                .fill(selectedTab == tab ? ZholdasTheme.accent.opacity(0.14) : Color.clear)
                         )
                 }
             }
         }
         .padding(4)
-        .background(Color.white.opacity(0.04))
+        .background(ZholdasTheme.surface.opacity(0.72))
         .clipShape(Capsule())
         .overlay(
             Capsule()
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                .stroke(ZholdasTheme.border, lineWidth: 1)
         )
     }
     
@@ -122,7 +122,7 @@ struct ActivityView: View {
             // Actor Avatar or Icon
             ZStack {
                 Circle()
-                    .fill(Color.white.opacity(0.04))
+                    .fill(ZholdasTheme.accent.opacity(0.12))
                     .frame(width: 46, height: 46)
                 
                 if !item.actorAvatarURL.isEmpty, let url = URL(string: item.actorAvatarURL) {
@@ -140,7 +140,7 @@ struct ActivityView: View {
                     let initials = getInitials(from: item.actorName)
                     Text(initials)
                         .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(ZholdasTheme.textPrimary)
                 }
                 
                 // Little type icon in corner
@@ -161,7 +161,7 @@ struct ActivityView: View {
                 HStack(alignment: .top) {
                     Text(item.text)
                         .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.9))
+                        .foregroundColor(ZholdasTheme.textPrimary)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                     
@@ -177,15 +177,15 @@ struct ActivityView: View {
                 
                 Text(formatDate(item.createdAt))
                     .font(.caption2)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ZholdasTheme.textSecondary)
             }
         }
         .padding()
-        .background(item.isRead ? Color.white.opacity(0.02) : Color.white.opacity(0.05))
+        .background(item.isRead ? ZholdasTheme.surface.opacity(0.62) : ZholdasTheme.elevatedSurface.opacity(0.78))
         .cornerRadius(16)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(item.isRead ? Color.white.opacity(0.05) : ZholdasTheme.accent.opacity(0.3), lineWidth: 1)
+                .stroke(item.isRead ? ZholdasTheme.border : ZholdasTheme.accent.opacity(0.3), lineWidth: 1)
         )
     }
     
@@ -216,11 +216,11 @@ struct ActivityView: View {
                 Text(selectedTab == "act_tab_friends" ? "act_no_friends".localized : "act_no_notifications".localized)
                     .font(.title3)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(ZholdasTheme.textPrimary)
                 
                 Text(selectedTab == "act_tab_friends" ? "act_no_friends_hint".localized : "act_no_notifications_hint".localized)
                     .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ZholdasTheme.textSecondary)
                     .multilineTextAlignment(.center)
                     .lineSpacing(4)
             }
@@ -232,7 +232,7 @@ struct ActivityView: View {
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                .stroke(ZholdasTheme.border, lineWidth: 1)
         )
     }
     

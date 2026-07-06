@@ -314,12 +314,12 @@ struct EventsMapView: View {
                         Text("Жолдас")
                             .font(.title2)
                             .fontWeight(.bold)
-                            .foregroundColor(.white)
+                            .foregroundColor(ZholdasTheme.textPrimary)
 
                         let count = filteredEvents.count
                         Text(String(format: "map_events_in_city".localized, count))
                             .font(.subheadline)
-                            .foregroundColor(.gray)
+                            .foregroundColor(ZholdasTheme.textSecondary)
                     }
 
                     Spacer()
@@ -386,16 +386,16 @@ struct EventsMapView: View {
                             Text(cat.localized)
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
-                                .foregroundColor(selectedCategory == cat ? .white : .gray)
+                                .foregroundColor(selectedCategory == cat ? .white : ZholdasTheme.textSecondary)
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 8)
                                 .background(
                                     Capsule()
-                                        .fill(selectedCategory == cat ? ZholdasTheme.accent.opacity(0.8) : Color.white.opacity(0.05))
+                                        .fill(selectedCategory == cat ? ZholdasTheme.accent.opacity(0.86) : ZholdasTheme.surface.opacity(0.76))
                                 )
                                 .overlay(
                                     Capsule()
-                                        .stroke(selectedCategory == cat ? ZholdasTheme.accent : Color.white.opacity(0.1), lineWidth: 1)
+                                        .stroke(selectedCategory == cat ? ZholdasTheme.accent : ZholdasTheme.border, lineWidth: 1)
                                 )
                                 .shadow(color: selectedCategory == cat ? ZholdasTheme.accent.opacity(0.3) : Color.clear, radius: 8)
                         }
@@ -415,7 +415,7 @@ struct EventsMapView: View {
 
             TextField("map_search_placeholder".localized, text: $searchQuery)
                 .font(.subheadline)
-                .foregroundColor(.white)
+                .foregroundColor(ZholdasTheme.textPrimary)
                 .submitLabel(.search)
                 .onSubmit {
                     searchWithAI()
@@ -428,7 +428,7 @@ struct EventsMapView: View {
                     eventsViewModel.recommendationAnswer = nil
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.gray)
+                        .foregroundColor(ZholdasTheme.textSecondary)
                 }
                 .buttonStyle(.plain)
             }
@@ -589,19 +589,19 @@ struct AIRecommendationView: View {
                         .foregroundColor(ZholdasTheme.accent)
                     Text("map_ai_recs_title".localized)
                         .font(.headline)
-                        .foregroundColor(.white)
+                        .foregroundColor(ZholdasTheme.textPrimary)
                     Spacer()
                     Button {
                         dismiss()
                     } label: {
                         Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.gray)
+                            .foregroundColor(ZholdasTheme.textSecondary)
                     }
                 }
                 .padding(.horizontal)
                 .padding(.top)
                 
-                Divider().background(Color.white.opacity(0.1))
+                Divider().background(ZholdasTheme.border)
                 
                 if viewModel.isLoading {
                     ProgressView().tint(ZholdasTheme.accent).padding()
@@ -610,7 +610,7 @@ struct AIRecommendationView: View {
                         VStack(alignment: .leading, spacing: 16) {
                             Text(answer)
                                 .font(.body)
-                                .foregroundColor(.white)
+                                .foregroundColor(ZholdasTheme.textPrimary)
                                 .lineSpacing(4)
                             
                             if !viewModel.recommendedEventIDs.isEmpty {

@@ -40,11 +40,11 @@ struct ChatsListView: View {
                         Text("tab_chats".localized)
                             .font(.largeTitle)
                             .fontWeight(.bold)
-                            .foregroundColor(.white)
+                            .foregroundColor(ZholdasTheme.textPrimary)
                         
                         Text(String(format: "chats_count".localized, filteredSessions.count))
                             .font(.subheadline)
-                            .foregroundColor(.gray)
+                            .foregroundColor(ZholdasTheme.textSecondary)
                     }
                     .padding(.horizontal, 24)
                     .padding(.top, 24)
@@ -108,24 +108,24 @@ struct ChatsListView: View {
     private var searchBarView: some View {
         HStack {
             Image(systemName: "magnifyingglass")
-                .foregroundColor(.gray)
+                .foregroundColor(ZholdasTheme.textSecondary)
             TextField("chats_search_placeholder".localized, text: $searchQuery)
-                .foregroundColor(.white)
+                .foregroundColor(ZholdasTheme.textPrimary)
             if !searchQuery.isEmpty {
                 Button {
                     searchQuery = ""
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.gray)
+                        .foregroundColor(ZholdasTheme.textSecondary)
                 }
             }
         }
         .padding()
-        .background(Color.white.opacity(0.04))
+        .background(ZholdasTheme.surface.opacity(0.72))
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                .stroke(ZholdasTheme.border, lineWidth: 1)
         )
     }
     
@@ -149,7 +149,7 @@ struct ChatsListView: View {
                     Text(session.id == 999 ? "chat_ai_assistant_name".localized : session.title)
                         .font(.headline)
                         .fontWeight(.bold)
-                        .foregroundColor(.white)
+                        .foregroundColor(ZholdasTheme.textPrimary)
                         .lineLimit(1)
                     
                     Spacer()
@@ -173,22 +173,22 @@ struct ChatsListView: View {
                 // Date Subtitle
                 Text(session.timeLabel)
                     .font(.caption)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ZholdasTheme.textSecondary)
                 
                 // Message Preview
                 Text(session.id == 999 ? "chat_ai_assistant_welcome".localized : (session.messages.isEmpty ? session.lastMessage : lastMessagePreview(for: session)))
                     .font(.subheadline)
-                    .foregroundColor(session.messages.isEmpty ? .gray : .white.opacity(0.7))
+                    .foregroundColor(session.messages.isEmpty ? ZholdasTheme.textSecondary : ZholdasTheme.textSecondary)
                     .lineLimit(1)
                     .padding(.top, 2)
             }
         }
         .padding()
-        .background(Color.white.opacity(0.03))
+        .background(ZholdasTheme.surface.opacity(0.62))
         .cornerRadius(16)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                .stroke(ZholdasTheme.border, lineWidth: 1)
         )
     }
     
