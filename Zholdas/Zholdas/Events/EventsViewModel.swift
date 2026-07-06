@@ -88,6 +88,62 @@ class EventsViewModel: ObservableObject {
             return false
         }
     }
+
+    func updateEvent(
+        id: Int32,
+        title: String,
+        description: String,
+        category: String,
+        locationName: String,
+        latitude: Double,
+        longitude: Double,
+        startTime: Date,
+        endTime: Date,
+        maxParticipants: Int32,
+        imageURL: String? = nil,
+        visibility: String? = nil,
+        genderFilter: String? = nil,
+        minAge: Int32? = nil,
+        maxAge: Int32? = nil
+    ) async -> Bool {
+        self.isLoading = true
+        self.errorMessage = nil
+
+        let request = CreateEventRequest(
+            title: title,
+            description: description,
+            category: category,
+            locationName: locationName,
+            longitude: longitude,
+            latitude: latitude,
+            startTime: startTime,
+            endTime: endTime,
+            maxParticipants: maxParticipants,
+            imageURL: imageURL,
+            visibility: visibility,
+            genderFilter: genderFilter,
+            minAge: minAge,
+            maxAge: maxAge
+        )
+
+        do {
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let body = try encoder.encode(request)
+            let updatedEvent: Event = try await APIClient.shared.request("/events/\(id)", method: "PUT", body: body, requiresAuth: true)
+
+            if let index = events.firstIndex(where: { $0.id == id }) {
+                events[index] = updatedEvent
+            }
+
+            self.isLoading = false
+            return true
+        } catch {
+            self.errorMessage = "Ошибка при обновлении события: \(error.localizedDescription)"
+            self.isLoading = false
+            return false
+        }
+    }
     
     func fetchAIRecommendations(query: String, latitude: Double, longitude: Double, radiusMeters: Int = 10000) async {
         self.isLoading = true

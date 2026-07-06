@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -82,6 +83,23 @@ func extractEventAIPrompt(text string) (string, bool) {
 }
 
 type CreateEventDTO struct {
+	Title           string    `json:"title" binding:"required"`
+	Description     string    `json:"description" binding:"required"`
+	Category        string    `json:"category" binding:"required"`
+	LocationName    string    `json:"location_name" binding:"required"`
+	Longitude       float64   `json:"longitude" binding:"required"`
+	Latitude        float64   `json:"latitude" binding:"required"`
+	StartTime       time.Time `json:"start_time" binding:"required"`
+	EndTime         time.Time `json:"end_time" binding:"required"`
+	MaxParticipants int32     `json:"max_participants" binding:"required,gt=0"`
+	ImageURL        string    `json:"image_url"`
+	Visibility      string    `json:"visibility"`
+	GenderFilter    string    `json:"gender_filter"`
+	MinAge          int32     `json:"min_age"`
+	MaxAge          int32     `json:"max_age"`
+}
+
+type UpdateEventDTO struct {
 	Title           string    `json:"title" binding:"required"`
 	Description     string    `json:"description" binding:"required"`
 	Category        string    `json:"category" binding:"required"`
@@ -229,6 +247,250 @@ func (h *EventHandler) CreateEvent(c *gin.Context) {
 			h.notificationService.SendPush(creatorID, "Ваше событие заблокировано: "+reason)
 		}
 	}(createdEvent.ID, createdEvent.CreatorID, createdEvent.Title, createdEvent.Description)
+}
+
+// UpdateEvent lets the event creator edit the meeting and notifies participants about important changes.
+func (h *EventHandler) UpdateEvent(c *gin.Context) {
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	userID := userIDVal.(string)
+
+	eventID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
+		return
+	}
+
+	var dto UpdateEventDTO
+	if err := c.ShouldBindJSON(&dto); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if dto.EndTime.Before(dto.StartTime) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "End time must be after start time"})
+		return
+	}
+
+	ctx := c.Request.Context()
+	tx, err := h.pool.Begin(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction"})
+		return
+	}
+	defer tx.Rollback(ctx)
+
+	var old struct {
+		CreatorID       string
+		Title           string
+		Description     string
+		LocationName    string
+		Latitude        float64
+		Longitude       float64
+		StartTime       time.Time
+		EndTime         time.Time
+		MaxParticipants int32
+	}
+
+	err = tx.QueryRow(ctx, `
+		SELECT creator_id::text, title, description, location_name,
+		       (ST_Y(location::geometry))::float8 AS latitude,
+		       (ST_X(location::geometry))::float8 AS longitude,
+		       start_time, end_time, max_participants
+		FROM events
+		WHERE id = $1
+	`, eventID).Scan(
+		&old.CreatorID,
+		&old.Title,
+		&old.Description,
+		&old.LocationName,
+		&old.Latitude,
+		&old.Longitude,
+		&old.StartTime,
+		&old.EndTime,
+		&old.MaxParticipants,
+	)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch event"})
+		return
+	}
+
+	if old.CreatorID != userID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Only the organizer can edit this event"})
+		return
+	}
+
+	var currentParticipants int32
+	if err := tx.QueryRow(ctx, "SELECT COUNT(*)::int FROM event_participants WHERE event_id = $1", eventID).Scan(&currentParticipants); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to count participants"})
+		return
+	}
+
+	if dto.MaxParticipants < currentParticipants {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Max participants cannot be lower than current participants"})
+		return
+	}
+
+	var imageURLParam *string
+	if strings.TrimSpace(dto.ImageURL) != "" {
+		imageURLParam = &dto.ImageURL
+	}
+
+	visibilityVal := strings.TrimSpace(dto.Visibility)
+	if visibilityVal == "" {
+		visibilityVal = "public"
+	}
+
+	genderFilterVal := strings.TrimSpace(dto.GenderFilter)
+	if genderFilterVal == "" {
+		genderFilterVal = "all"
+	}
+
+	pgStartTime := pgtype.Timestamptz{Time: dto.StartTime, Valid: true}
+	pgEndTime := pgtype.Timestamptz{Time: dto.EndTime, Valid: true}
+
+	var updated NearbyEventResponse
+	err = tx.QueryRow(ctx, `
+		UPDATE events
+		SET title = $2,
+		    description = $3,
+		    category = $4,
+		    location_name = $5,
+		    location = ST_SetSRID(ST_MakePoint($6::float8, $7::float8), 4326)::geography,
+		    start_time = $8,
+		    end_time = $9,
+		    max_participants = $10,
+		    image_url = $11,
+		    visibility = $12,
+		    gender_filter = $13,
+		    min_age = $14,
+		    max_age = $15
+		WHERE id = $1
+		RETURNING id, creator_id::text, title, description, category, location_name,
+		          (ST_Y(location::geometry))::float8 AS latitude,
+		          (ST_X(location::geometry))::float8 AS longitude,
+		          start_time, end_time, max_participants, status, image_url, created_at,
+		          0::float8 AS distance_meters,
+		          (SELECT COUNT(*) FROM event_participants ep WHERE ep.event_id = events.id)::int AS participants_count,
+		          true::bool AS is_joined,
+		          COALESCE(visibility, 'public') AS visibility,
+		          COALESCE(gender_filter, 'all') AS gender_filter,
+		          COALESCE(min_age, 0)::int AS min_age,
+		          COALESCE(max_age, 0)::int AS max_age
+	`, eventID, dto.Title, dto.Description, dto.Category, dto.LocationName, dto.Longitude, dto.Latitude, pgStartTime, pgEndTime, dto.MaxParticipants, imageURLParam, visibilityVal, genderFilterVal, dto.MinAge, dto.MaxAge).Scan(
+		&updated.ID,
+		&updated.CreatorID,
+		&updated.Title,
+		&updated.Description,
+		&updated.Category,
+		&updated.LocationName,
+		&updated.Latitude,
+		&updated.Longitude,
+		&updated.StartTime,
+		&updated.EndTime,
+		&updated.MaxParticipants,
+		&updated.Status,
+		&updated.ImageURL,
+		&updated.CreatedAt,
+		&updated.DistanceMeters,
+		&updated.ParticipantsCont,
+		&updated.IsJoined,
+		&updated.Visibility,
+		&updated.GenderFilter,
+		&updated.MinAge,
+		&updated.MaxAge,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update event: " + err.Error()})
+		return
+	}
+
+	var pushParticipantIDs []string
+	var pushText string
+	changes := eventChangeLabels(old.Description, old.LocationName, old.Latitude, old.Longitude, old.StartTime, old.EndTime, old.MaxParticipants, dto)
+	if len(changes) > 0 {
+		text := fmt.Sprintf("В событии \"%s\" изменилось: %s.", updated.Title, strings.Join(changes, ", "))
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO notifications (user_id, actor_id, event_id, notification_type, text)
+			SELECT ep.user_id, $2, $1, 'event_update', $3
+			FROM event_participants ep
+			WHERE ep.event_id = $1 AND ep.user_id <> $2
+		`, eventID, userID, text); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to notify participants"})
+			return
+		}
+
+		rows, err := tx.Query(ctx, `
+			SELECT ep.user_id::text
+			FROM event_participants ep
+			WHERE ep.event_id = $1 AND ep.user_id <> $2
+		`, eventID, userID)
+		if err == nil {
+			for rows.Next() {
+				var participantID string
+				if scanErr := rows.Scan(&participantID); scanErr == nil {
+					pushParticipantIDs = append(pushParticipantIDs, participantID)
+				}
+			}
+			rows.Close()
+			pushText = text
+		} else {
+			log.Printf("[Event Update] Failed to fetch participant push targets for event_id=%d: %v", eventID, err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit update"})
+		return
+	}
+
+	if h.notificationService != nil && pushText != "" && len(pushParticipantIDs) > 0 {
+		go func(ids []string, message string) {
+			for _, id := range ids {
+				h.notificationService.SendPush(id, message)
+			}
+		}(pushParticipantIDs, pushText)
+	}
+
+	c.JSON(http.StatusOK, updated)
+}
+
+func eventChangeLabels(oldDescription, oldLocationName string, oldLatitude, oldLongitude float64, oldStartTime, oldEndTime time.Time, oldMaxParticipants int32, dto UpdateEventDTO) []string {
+	var changes []string
+
+	if strings.TrimSpace(oldLocationName) != strings.TrimSpace(dto.LocationName) ||
+		absFloat(oldLatitude-dto.Latitude) > 0.00001 ||
+		absFloat(oldLongitude-dto.Longitude) > 0.00001 {
+		changes = append(changes, "место")
+	}
+
+	if !oldStartTime.Equal(dto.StartTime) || !oldEndTime.Equal(dto.EndTime) {
+		changes = append(changes, "время")
+	}
+
+	if strings.TrimSpace(oldDescription) != strings.TrimSpace(dto.Description) {
+		changes = append(changes, "описание")
+	}
+
+	if oldMaxParticipants != dto.MaxParticipants {
+		changes = append(changes, "лимит участников")
+	}
+
+	return changes
+}
+
+func absFloat(value float64) float64 {
+	if value < 0 {
+		return -value
+	}
+	return value
 }
 
 type NearbyEventResponse struct {

@@ -116,6 +116,7 @@ struct EventDetailView: View {
     @State private var isLoadingWeather = false
     @State private var isShowingShareSheet = false
     @State private var shareItems: [Any] = []
+    @State private var isShowingEditSheet = false
 
     private let liveLocationTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
     
@@ -576,6 +577,19 @@ struct EventDetailView: View {
         .sheet(isPresented: $isShowingShareSheet) {
             ActivityShareSheet(items: shareItems)
         }
+        .sheet(isPresented: $isShowingEditSheet) {
+            EditEventView(event: event, eventsViewModel: eventsViewModel) {
+                Task {
+                    if let location = liveLocationManager.location {
+                        await eventsViewModel.fetchNearbyEvents(
+                            latitude: location.coordinate.latitude,
+                            longitude: location.coordinate.longitude,
+                            radiusMeters: 50000
+                        )
+                    }
+                }
+            }
+        }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
@@ -944,6 +958,22 @@ struct EventDetailView: View {
                 }
                 .buttonStyle(SpringButtonStyle())
             } else if isCreator {
+                Button {
+                    isShowingEditSheet = true
+                } label: {
+                    HStack {
+                        Image(systemName: "pencil")
+                        Text("Редактировать встречу")
+                            .fontWeight(.bold)
+                    }
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(ZholdasTheme.accentGradient)
+                    .cornerRadius(12)
+                }
+                .buttonStyle(SpringButtonStyle())
+
                 // Organizer notification
                 HStack {
                     Spacer()

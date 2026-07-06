@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -106,5 +107,37 @@ func TestLoadConfig_Overrides(t *testing.T) {
 
 	if cfg.RunMigrations {
 		t.Error("Expected RunMigrations false")
+	}
+}
+
+func TestValidateForRuntime_Warnings(t *testing.T) {
+	cfg := &Config{
+		Port:          "8080",
+		DatabaseURL:   "",
+		JWTSecret:     "zholdas_secret_key_change_me",
+		OpenAIAPIKey:  "",
+		AdminEmail:    "",
+		RunMigrations: false,
+	}
+
+	warnings := cfg.ValidateForRuntime()
+	if len(warnings) == 0 {
+		t.Fatal("Expected warnings for incomplete config")
+	}
+}
+
+func TestSummary_HidesSecrets(t *testing.T) {
+	cfg := &Config{
+		Port:          "8080",
+		DatabaseURL:   "postgres://user:password@example.com/db",
+		JWTSecret:     "jwt_secret",
+		OpenAIAPIKey:  "sk-secret",
+		AdminEmail:    "owner@example.com",
+		RunMigrations: false,
+	}
+
+	summary := cfg.Summary()
+	if strings.Contains(summary, "sk-secret") || strings.Contains(summary, "jwt_secret") || strings.Contains(summary, "password") {
+		t.Fatalf("Summary leaked a secret: %s", summary)
 	}
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/time/rate"
 
 	"github.com/birzhansovetov/zholdas-backend/internal/config"
 	"github.com/birzhansovetov/zholdas-backend/internal/handler"
@@ -26,6 +27,10 @@ func main() {
 	cfg := config.LoadConfig()
 
 	log.Printf("Starting Zholdas Backend on port %s...", cfg.Port)
+	log.Printf("Runtime config: %s", cfg.Summary())
+	for _, warning := range cfg.ValidateForRuntime() {
+		log.Printf("[Config Warning] %s", warning)
+	}
 
 	// 1. Initialize PostgreSQL Connection Pool
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -58,10 +63,10 @@ func main() {
 		log.Println("Skipping database migrations because RUN_MIGRATIONS=false.")
 	}
 	if err := ensureOperationalSchema(context.Background(), pool); err != nil {
-		log.Fatalf("Failed to ensure operational schema: %v", err)
+		log.Printf("[Startup Warning] Failed to ensure operational schema: %v", err)
 	}
 	if err := ensureAdminRole(context.Background(), pool, cfg.AdminEmail); err != nil {
-		log.Fatalf("Failed to ensure admin role: %v", err)
+		log.Printf("[Startup Warning] Failed to ensure admin role: %v", err)
 	}
 
 	// 3. Initialize Services
@@ -97,7 +102,30 @@ func main() {
 	router.Static("/uploads", "./uploads")
 
 	router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+		c.JSON(http.StatusOK, gin.H{
+			"status": "ok",
+			"time":   time.Now().UTC().Format(time.RFC3339),
+		})
+	})
+
+	router.GET("/ready", func(c *gin.Context) {
+		readyCtx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
+		defer cancel()
+
+		if err := pool.Ping(readyCtx); err != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"status":   "error",
+				"database": "down",
+				"error":    err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"status":   "ready",
+			"database": "ok",
+			"time":     time.Now().UTC().Format(time.RFC3339),
+		})
 	})
 
 	router.GET("/events/:id", eventHandler.GetPublicEventPage)
@@ -117,6 +145,7 @@ func main() {
 	// Protected Routes (JWT Auth)
 	protectedRoutes := router.Group("/")
 	protectedRoutes.Use(middleware.AuthMiddleware(cfg.JWTSecret, pool))
+	protectedRoutes.Use(middleware.RateLimitMiddleware(middleware.NewUserRateLimiter(rate.Limit(10), 30)))
 	{
 		protectedRoutes.POST("/auth/logout", authHandler.LogOut)
 		protectedRoutes.GET("/auth/me", authHandler.GetProfile)
@@ -127,6 +156,7 @@ func main() {
 		protectedRoutes.GET("/users/:id/reviews", authHandler.GetUserReviews)
 		protectedRoutes.POST("/reports", authHandler.CreateReport)
 		protectedRoutes.POST("/events", eventHandler.CreateEvent)
+		protectedRoutes.PUT("/events/:id", eventHandler.UpdateEvent)
 
 		// Moderation routes
 		protectedRoutes.GET("/moderation/reports", authHandler.GetReports)

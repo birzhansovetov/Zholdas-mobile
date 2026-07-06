@@ -24,10 +24,14 @@ type AIRateLimiter struct {
 // NewAIRateLimiter initializes the rate limiter.
 // Recover 1 token every 2 minutes (rate.Every(2 * time.Minute)) with a burst of 3.
 func NewAIRateLimiter() *AIRateLimiter {
+	return NewUserRateLimiter(rate.Every(2*time.Minute), 3)
+}
+
+func NewUserRateLimiter(r rate.Limit, burst int) *AIRateLimiter {
 	i := &AIRateLimiter{
 		clients: make(map[string]*client),
-		r:       rate.Every(2 * time.Minute),
-		b:       3,
+		r:       r,
+		b:       burst,
 	}
 
 	go i.cleanupClients()
@@ -82,7 +86,7 @@ func RateLimitMiddleware(limiter *AIRateLimiter) gin.HandlerFunc {
 
 		lim := limiter.GetLimiter(userID)
 		if !lim.Allow() {
-			c.JSON(http.StatusTooManyRequests, gin.H{"error": "Rate limit exceeded. Allowed 3 requests burst, restoring 1 request every 2 minutes."})
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": "Rate limit exceeded. Please try again later."})
 			c.Abort()
 			return
 		}

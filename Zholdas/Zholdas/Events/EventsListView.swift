@@ -11,18 +11,21 @@ struct EventsListView: View {
     @State private var filterGender = "all"
     @State private var filterAge = 18
     @State private var maxDistanceKm = 10.0
+    @State private var onlyToday = false
+    @State private var nearMeOnly = false
     
     let categories = ["cat_all", "cat_mountains", "cat_walks", "cat_sports", "cat_theater", "cat_restaurant", "cat_games", "cat_networking", "cat_other"]
     
     var filteredEvents: [Event] {
         eventsViewModel.events.filter { event in
-            matchesCategory(eventCategory: event.category, filterCategory: selectedCategory)
-                && event.matchesAudienceFilters(
-                    gender: filterGender,
-                    age: filterAge,
-                    maxDistanceKm: maxDistanceKm,
-                    distanceMetersOverride: localDistanceMeters(to: event)
-                )
+            let matchesCategory = matchesCategory(eventCategory: event.category, filterCategory: selectedCategory)
+            let matchesAudience = event.matchesAudienceFilters(
+                gender: filterGender,
+                age: filterAge,
+                maxDistanceKm: maxDistanceKm,
+                distanceMetersOverride: localDistanceMeters(to: event)
+            )
+            return matchesCategory && matchesAudience && matchesDateFilter(event) && matchesNearMeFilter(event)
         }
     }
     
@@ -55,7 +58,7 @@ struct EventsListView: View {
                     } label: {
                         HStack {
                             Image(systemName: "line.3.horizontal.decrease.circle.fill")
-                            Text("Фильтры: \(Int(maxDistanceKm)) км · \(filterAge) лет")
+                            Text(filtersSummary)
                                 .fontWeight(.semibold)
                             Spacer()
                             Image(systemName: showAdvancedFilters ? "chevron.up" : "chevron.down")
@@ -220,6 +223,27 @@ struct EventsListView: View {
         let eventLocation = CLLocation(latitude: event.latitude, longitude: event.longitude)
         return eventLocation.distance(from: location)
     }
+
+    private var filtersSummary: String {
+        var parts = ["\(Int(maxDistanceKm)) км", "\(filterAge) лет"]
+        if onlyToday {
+            parts.append("сегодня")
+        }
+        if nearMeOnly {
+            parts.append("рядом")
+        }
+        return "Фильтры: " + parts.joined(separator: " · ")
+    }
+
+    private func matchesDateFilter(_ event: Event) -> Bool {
+        !onlyToday || Calendar.current.isDateInToday(event.startTime)
+    }
+
+    private func matchesNearMeFilter(_ event: Event) -> Bool {
+        guard nearMeOnly else { return true }
+        guard let distance = localDistanceMeters(to: event) else { return false }
+        return distance <= min(maxDistanceKm, 3) * 1000
+    }
     
     private func getEventsWord(for count: Int) -> String {
         let mod10 = count % 10
@@ -267,6 +291,18 @@ struct EventsListView: View {
                         .fontWeight(.bold)
                         .foregroundColor(ZholdasTheme.accent)
                 }
+            }
+            .tint(ZholdasTheme.accent)
+
+            Toggle(isOn: $onlyToday) {
+                Label("Только сегодня", systemImage: "calendar")
+                    .foregroundColor(ZholdasTheme.textPrimary)
+            }
+            .tint(ZholdasTheme.accent)
+
+            Toggle(isOn: $nearMeOnly) {
+                Label("Рядом со мной", systemImage: "location.fill")
+                    .foregroundColor(ZholdasTheme.textPrimary)
             }
             .tint(ZholdasTheme.accent)
         }

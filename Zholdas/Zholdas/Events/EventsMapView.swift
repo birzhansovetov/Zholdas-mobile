@@ -21,6 +21,8 @@ struct EventsMapView: View {
     @State private var filterGender = "all"
     @State private var filterAge = 18
     @State private var maxDistanceKm = 10.0
+    @State private var onlyToday = false
+    @State private var nearMeOnly = false
     
     let categories = ["cat_all", "cat_mountains", "cat_walks", "cat_sports", "cat_theater", "cat_restaurant", "cat_games", "cat_networking", "cat_other"]
     
@@ -49,12 +51,13 @@ struct EventsMapView: View {
                               event.title.localizedCaseInsensitiveContains(searchQuery) ||
                               event.description.localizedCaseInsensitiveContains(searchQuery) ||
                               event.locationName.localizedCaseInsensitiveContains(searchQuery)
-            return matchesCat && matchesText && event.matchesAudienceFilters(
+            let matchesAudience = event.matchesAudienceFilters(
                 gender: filterGender,
                 age: filterAge,
                 maxDistanceKm: maxDistanceKm,
                 distanceMetersOverride: localDistanceMeters(to: event)
             )
+            return matchesCat && matchesText && matchesAudience && matchesDateFilter(event) && matchesNearMeFilter(event)
         }
     }
     
@@ -190,6 +193,16 @@ struct EventsMapView: View {
         let userLocation = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
         let eventLocation = CLLocation(latitude: event.latitude, longitude: event.longitude)
         return eventLocation.distance(from: userLocation)
+    }
+
+    private func matchesDateFilter(_ event: Event) -> Bool {
+        !onlyToday || Calendar.current.isDateInToday(event.startTime)
+    }
+
+    private func matchesNearMeFilter(_ event: Event) -> Bool {
+        guard nearMeOnly else { return true }
+        guard let distance = localDistanceMeters(to: event) else { return false }
+        return distance <= min(maxDistanceKm, 3) * 1000
     }
     
     private func categoryIcon(for category: String) -> String {
@@ -497,6 +510,18 @@ struct EventsMapView: View {
                         .fontWeight(.bold)
                         .foregroundColor(ZholdasTheme.accent)
                 }
+            }
+            .tint(ZholdasTheme.accent)
+
+            Toggle(isOn: $onlyToday) {
+                Label("Только сегодня", systemImage: "calendar")
+                    .foregroundColor(ZholdasTheme.textPrimary)
+            }
+            .tint(ZholdasTheme.accent)
+
+            Toggle(isOn: $nearMeOnly) {
+                Label("Рядом со мной", systemImage: "location.fill")
+                    .foregroundColor(ZholdasTheme.textPrimary)
             }
             .tint(ZholdasTheme.accent)
         }
