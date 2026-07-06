@@ -6,6 +6,16 @@ private struct SelectedUserForDetail: Identifiable {
     let id: String
 }
 
+private struct ActivityShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
 private struct EventWeatherSummary: Equatable {
     let temperature: Double
     let apparentTemperature: Double?
@@ -104,6 +114,8 @@ struct EventDetailView: View {
     @State private var liveMapPosition: MapCameraPosition = .automatic
     @State private var weatherSummary: EventWeatherSummary?
     @State private var isLoadingWeather = false
+    @State private var isShowingShareSheet = false
+    @State private var shareItems: [Any] = []
 
     private let liveLocationTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
     
@@ -169,6 +181,14 @@ struct EventDetailView: View {
             || category == "hiking"
             || category == "cat_mountains"
     }
+
+    private var currentDistanceMeters: Double? {
+        if let location = liveLocationManager.location {
+            let eventLocation = CLLocation(latitude: event.latitude, longitude: event.longitude)
+            return eventLocation.distance(from: location)
+        }
+        return event.distanceMeters
+    }
     
     var body: some View {
         ZStack {
@@ -233,11 +253,11 @@ struct EventDetailView: View {
                             Text(event.title)
                                 .font(.title)
                                 .fontWeight(.bold)
-                                .foregroundColor(.white)
+                                .foregroundColor(ZholdasTheme.textPrimary)
                             
                             Text(daysLeftText)
                                 .font(.subheadline)
-                                .foregroundColor(.gray)
+                                .foregroundColor(ZholdasTheme.textSecondary)
                         }
                         
                         // Stats Grid (3 cards in a row)
@@ -267,11 +287,11 @@ struct EventDetailView: View {
                                 Text("ev_date_time".localized.uppercased())
                                     .font(.caption2)
                                     .fontWeight(.bold)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(ZholdasTheme.textSecondary)
                                     .tracking(1.0)
                                 
                                 Text(formatDate(event.startTime))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(ZholdasTheme.textPrimary)
                                     .fontWeight(.bold)
                             }
                             Spacer()
@@ -292,21 +312,21 @@ struct EventDetailView: View {
                                 Text("ev_location".localized.uppercased())
                                     .font(.caption2)
                                     .fontWeight(.bold)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(ZholdasTheme.textSecondary)
                                     .tracking(1.0)
                                 
                                 Text(event.locationName)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(ZholdasTheme.textPrimary)
                                     .fontWeight(.bold)
                                 
-                                if let dist = event.distanceMeters {
+                                if let dist = currentDistanceMeters {
                                     Text("\("ev_distance".localized): \(String(format: "%.1f км", dist / 1000.0))")
                                         .font(.caption)
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(ZholdasTheme.textSecondary)
                                 } else {
                                     Text("ev_distance_calculating".localized)
                                         .font(.caption)
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(ZholdasTheme.textSecondary)
                                 }
                             }
                             Spacer()
@@ -330,7 +350,7 @@ struct EventDetailView: View {
                         Text("ev_restrictions".localized)
                             .font(.footnote)
                             .fontWeight(.bold)
-                            .foregroundColor(.white)
+                            .foregroundColor(ZholdasTheme.textPrimary)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding()
@@ -343,10 +363,10 @@ struct EventDetailView: View {
                         Text("create_ev_desc".localized)
                             .font(.headline)
                             .fontWeight(.bold)
-                            .foregroundColor(.white)
+                            .foregroundColor(ZholdasTheme.textPrimary)
                         
                         Text(event.description)
-                            .foregroundColor(.gray)
+                            .foregroundColor(ZholdasTheme.textSecondary)
                             .lineSpacing(4)
                     }
                     .padding()
@@ -359,11 +379,11 @@ struct EventDetailView: View {
                             Text("ev_participants".localized)
                                 .font(.headline)
                                 .fontWeight(.bold)
-                                .foregroundColor(.white)
+                                .foregroundColor(ZholdasTheme.textPrimary)
                             Spacer()
                             Text("\(participantsCount)/\(event.maxParticipants)")
                                 .font(.subheadline)
-                                .foregroundColor(.gray)
+                                .foregroundColor(ZholdasTheme.textSecondary)
                         }
                         
                         // Custom Progress Bar
@@ -383,7 +403,7 @@ struct EventDetailView: View {
                         
                         Text("ev_remaining_seats".localized + ": \(max(0, Int(event.maxParticipants) - participantsCount))")
                             .font(.caption)
-                            .foregroundColor(.gray)
+                            .foregroundColor(ZholdasTheme.textSecondary)
                         
                         // Navigation Link to List
                         NavigationLink {
@@ -392,12 +412,12 @@ struct EventDetailView: View {
                         } label: {
                             Text("ev_view_all_participants".localized)
                                 .fontWeight(.bold)
-                                .foregroundColor(.white)
+                                .foregroundColor(ZholdasTheme.textPrimary)
                                 .frame(maxWidth: .infinity)
                                 .padding()
-                                .background(Color.white.opacity(0.08))
+                                .background(ZholdasTheme.surface.opacity(0.72))
                                 .cornerRadius(12)
-                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(ZholdasTheme.border, lineWidth: 1))
                         }
                         .buttonStyle(SpringButtonStyle())
                     }
@@ -409,28 +429,28 @@ struct EventDetailView: View {
                         Text("ev_how_it_runs".localized)
                             .font(.headline)
                             .fontWeight(.bold)
-                            .foregroundColor(.white)
+                            .foregroundColor(ZholdasTheme.textPrimary)
                         
                         VStack(alignment: .leading, spacing: 12) {
                             HStack(alignment: .top, spacing: 12) {
                                 ruleIcon("clock.fill")
                                 Text("ev_how_it_runs_rule1".localized)
                                     .font(.subheadline)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(ZholdasTheme.textSecondary)
                             }
                             
                             HStack(alignment: .top, spacing: 12) {
                                 ruleIcon("bubble.left.and.bubble.right.fill")
                                 Text("ev_how_it_runs_rule2".localized)
                                     .font(.subheadline)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(ZholdasTheme.textSecondary)
                             }
                             
                             HStack(alignment: .top, spacing: 12) {
                                 ruleIcon("star.fill")
                                 Text("ev_how_it_runs_rule3".localized)
                                     .font(.subheadline)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(ZholdasTheme.textSecondary)
                             }
                         }
                     }
@@ -447,25 +467,17 @@ struct EventDetailView: View {
                     // 9. Bottom Action Buttons (Share & Route)
                     HStack(spacing: 12) {
                         Button {
-                            let shareText = """
-                            \("ev_share_prefix".localized): \(event.title) \("ev_share_at".localized) \(event.locationName)!
-                            \(publicEventURL.absoluteString)
-                            """
-                            let av = UIActivityViewController(activityItems: [shareText], applicationActivities: nil)
-                            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-                               let rootVC = windowScene.windows.first?.rootViewController {
-                                rootVC.present(av, animated: true, completion: nil)
-                            }
+                            shareEvent()
                         } label: {
                             Text("ev_share_btn".localized)
                                 .font(.subheadline)
                                 .fontWeight(.bold)
-                                .foregroundColor(.white)
+                                .foregroundColor(ZholdasTheme.textPrimary)
                                 .frame(maxWidth: .infinity)
                                 .padding()
-                                .background(Color.white.opacity(0.08))
+                                .background(ZholdasTheme.surface.opacity(0.72))
                                 .cornerRadius(12)
-                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.06), lineWidth: 1))
+                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(ZholdasTheme.border, lineWidth: 1))
                         }
                         .buttonStyle(SpringButtonStyle())
                         
@@ -475,12 +487,12 @@ struct EventDetailView: View {
                             Text("ev_route_btn".localized)
                                 .font(.subheadline)
                                 .fontWeight(.bold)
-                                .foregroundColor(.white)
+                                .foregroundColor(ZholdasTheme.textPrimary)
                                 .frame(maxWidth: .infinity)
                                 .padding()
-                                .background(Color.white.opacity(0.08))
+                                .background(ZholdasTheme.surface.opacity(0.72))
                                 .cornerRadius(12)
-                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.white.opacity(0.06), lineWidth: 1))
+                                .overlay(RoundedRectangle(cornerRadius: 12).stroke(ZholdasTheme.border, lineWidth: 1))
                         }
                         .buttonStyle(SpringButtonStyle())
                     }
@@ -494,6 +506,7 @@ struct EventDetailView: View {
         .task {
             isJoined = event.isJoined ?? false
             participantsCount = Int(event.participantsCount ?? 0)
+            liveLocationManager.requestLocation()
             await loadParticipants()
             await loadOrganizer()
             
@@ -560,6 +573,9 @@ struct EventDetailView: View {
                 isLoading: isLoadingPreparation
             )
         }
+        .sheet(isPresented: $isShowingShareSheet) {
+            ActivityShareSheet(items: shareItems)
+        }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
@@ -574,6 +590,16 @@ struct EventDetailView: View {
 
     private var publicEventURL: URL {
         AppConfig.publicBackendBaseURL.appendingPathComponent("events/\(event.id)")
+    }
+
+    private func shareEvent() {
+        let shareText = """
+        \("ev_share_prefix".localized): \(event.title)
+        \("ev_share_at".localized) \(event.locationName)
+        \(publicEventURL.absoluteString)
+        """
+        shareItems = [shareText, publicEventURL]
+        isShowingShareSheet = true
     }
 
     private func openRouteToEvent() {
@@ -652,7 +678,7 @@ struct EventDetailView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(event.status == "active" ? Color.green.opacity(0.15) : Color.white.opacity(0.1))
+        .background(event.status == "active" ? Color.green.opacity(0.15) : ZholdasTheme.surface.opacity(0.7))
         .cornerRadius(8)
     }
 
@@ -671,11 +697,11 @@ struct EventDetailView: View {
                     Text("ev_organizer".localized.uppercased())
                         .font(.caption2)
                         .fontWeight(.bold)
-                        .foregroundColor(.gray)
+                        .foregroundColor(ZholdasTheme.textSecondary)
                         .tracking(1.0)
 
                     Text(organizerName)
-                        .foregroundColor(.white)
+                        .foregroundColor(ZholdasTheme.textPrimary)
                         .fontWeight(.bold)
 
                     if let username = organizerUsername, !username.isEmpty {
@@ -689,7 +715,7 @@ struct EventDetailView: View {
 
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.bold))
-                    .foregroundColor(.gray)
+                    .foregroundColor(ZholdasTheme.textSecondary)
             }
             .padding()
             .glassBackground(cornerRadius: 16)
@@ -709,25 +735,25 @@ struct EventDetailView: View {
                 Text("Погода для встречи".uppercased())
                     .font(.caption2)
                     .fontWeight(.bold)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ZholdasTheme.textSecondary)
                     .tracking(1.0)
 
                 if let weatherSummary {
                     Text("\(weatherSummary.conditionText), \(Int(round(weatherSummary.temperature)))°C")
-                        .foregroundColor(.white)
+                        .foregroundColor(ZholdasTheme.textPrimary)
                         .fontWeight(.bold)
 
                     Text(weatherSummary.checklistText)
                         .font(.caption)
-                        .foregroundColor(.gray)
+                        .foregroundColor(ZholdasTheme.textSecondary)
                         .lineLimit(2)
                 } else if isLoadingWeather {
                     Text("Загружаем прогноз...")
-                        .foregroundColor(.gray)
+                        .foregroundColor(ZholdasTheme.textSecondary)
                         .font(.subheadline)
                 } else {
                     Text("Прогноз пока недоступен")
-                        .foregroundColor(.gray)
+                        .foregroundColor(ZholdasTheme.textSecondary)
                         .font(.subheadline)
                 }
             }
@@ -763,11 +789,11 @@ struct EventDetailView: View {
                     Text("ev_live_location_title".localized)
                         .font(.headline)
                         .fontWeight(.bold)
-                        .foregroundColor(.white)
+                        .foregroundColor(ZholdasTheme.textPrimary)
 
                     Text("ev_live_location_hint".localized)
                         .font(.caption)
-                        .foregroundColor(.gray)
+                        .foregroundColor(ZholdasTheme.textSecondary)
                 }
 
                 Spacer()
@@ -820,11 +846,11 @@ struct EventDetailView: View {
             } else if liveLocations.isEmpty {
                 Text("ev_live_location_empty".localized)
                     .font(.caption)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ZholdasTheme.textSecondary)
             } else {
                 Text(String(format: "ev_live_location_count".localized, liveLocations.count))
                     .font(.caption)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ZholdasTheme.textSecondary)
             }
         }
         .padding()
@@ -845,19 +871,19 @@ struct EventDetailView: View {
             Text(title)
                 .font(.headline)
                 .fontWeight(.bold)
-                .foregroundColor(isStatus ? (event.status == "active" ? .green : .gray) : .white)
+                .foregroundColor(isStatus ? (event.status == "active" ? .green : ZholdasTheme.textSecondary) : ZholdasTheme.textPrimary)
             
             Text(label)
                 .font(.caption2)
-                .foregroundColor(.gray)
+                .foregroundColor(ZholdasTheme.textSecondary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
-        .background(Color.white.opacity(0.04))
+        .background(ZholdasTheme.surface.opacity(0.68))
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                .stroke(ZholdasTheme.border, lineWidth: 1)
         )
     }
     
@@ -1276,7 +1302,7 @@ struct EventDetailView: View {
         let prompt = """
         Составь чеклист подготовки к событию в Жолдас.
         Название: \(event.title)
-        Категория: \(categoryInfo(for: event.category).title)
+        Категория: \(categoryInfo(for: event.category).title) (\(event.category))
         Описание: \(event.description)
         Место: \(event.locationName)
         Дата и время: \(formatDate(event.startTime))
@@ -1284,6 +1310,15 @@ struct EventDetailView: View {
         Погода: \(weatherSummary?.checklistText ?? "нет данных")
 
         Ответь строго разделами: Еда, Одежда, Вещи, Игры и активности, План, Погода, Важно.
+        Не используй Markdown-заголовки с ### и не выделяй жирным через **.
+        Каждый раздел должен быть адаптирован под категорию, а не универсальным.
+        Правила по категориям:
+        - Нетворкинг: акцент на знакомство, визитки/LinkedIn/заметки, вопросы для разговора, мини-питчи; еду предлагай только как вода/кофе, без пива, чипсов и пикника.
+        - Горы/поход: вода, перекус, обувь, слои одежды, аптечка, power bank, безопасность.
+        - Прогулка: удобная обувь, вода, легкий маршрут, фото/разговорные игры.
+        - Спорт: форма, обувь, вода, разминка, правила команды.
+        - Ресторан/кафе: бронь, бюджет, аллергии, кто оплачивает, игры за столом; не предлагай приносить еду.
+        - Игры: настолки/карты/роли, правила, тайминг, ведущий, но еду только легкую по желанию.
         Если есть дождь, ветер, холод или жара, подстрой одежду, воду, обувь и вещи.
         Давай конкретные варианты, коротко и по делу.
         """
@@ -1298,7 +1333,7 @@ struct EventDetailView: View {
                     requiresAuth: true
                 )
                 await MainActor.run {
-                    self.preparationChecklist = response.reply
+                    self.preparationChecklist = cleanChecklist(response.reply)
                     self.isLoadingPreparation = false
                 }
             } catch {
@@ -1311,7 +1346,63 @@ struct EventDetailView: View {
     }
 
     private func fallbackPreparationChecklist() -> String {
-        """
+        switch event.category.lowercased() {
+        case "networking", "cat_networking":
+            return """
+            Еда
+            - Вода или кофе по желанию.
+            - Еду лучше не делать главным фокусом встречи.
+
+            Одежда
+            - Опрятный casual или smart casual.
+            - Удобная обувь, если будет прогулка после знакомства.
+
+            Вещи
+            - Заряженный телефон.
+            - Короткая заметка о себе: чем занимаешься и кого хочешь найти.
+            - QR/ссылка на профиль или контакты.
+
+            Игры и активности
+            - Круг 30 секунд: имя, сфера, чем можешь быть полезен.
+            - Поиск совпадений: каждый находит 2 общие темы с новым человеком.
+            - Мини-пары на 5 минут, потом смена собеседника.
+
+            План
+            - Начать с короткого знакомства.
+            - Разделиться на пары или мини-группы.
+            - В конце обменяться контактами и написать итоги в чат.
+
+            Важно
+            - Не превращайте встречу в лекцию одного человека.
+            - Дайте каждому сказать пару слов.
+            """
+        case "restaurant", "cat_restaurant":
+            return """
+            Еда
+            - Проверьте бронь и примерный бюджет.
+            - Уточните аллергии и предпочтения участников.
+
+            Одежда
+            - Одежда по формату места: casual или smart casual.
+
+            Вещи
+            - Заряженный телефон.
+            - Деньги/карта и подтверждение брони.
+
+            Игры и активности
+            - Легкие вопросы для знакомства.
+            - Игра “2 факта и 1 ложь”.
+
+            План
+            - Собраться у входа.
+            - Дождаться основной группы 10 минут.
+            - Обсудить оплату заранее.
+
+            Важно
+            - Не приносите свою еду, если это кафе или ресторан.
+            """
+        default:
+            return """
         Еда
         - Вода для каждого участника.
         - Легкий перекус: фрукты, батончики, сэндвичи.
@@ -1339,6 +1430,15 @@ struct EventDetailView: View {
         - Проверьте прогноз перед выходом.
         - Напишите в чат, если опаздываете.
         """
+        }
+    }
+
+    private func cleanChecklist(_ text: String) -> String {
+        text
+            .replacingOccurrences(of: "### ", with: "")
+            .replacingOccurrences(of: "## ", with: "")
+            .replacingOccurrences(of: "# ", with: "")
+            .replacingOccurrences(of: "**", with: "")
     }
     
     private func formatDate(_ date: Date) -> String {
@@ -1381,9 +1481,9 @@ struct ParticipantsListView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "person.3.fill")
                         .font(.largeTitle)
-                        .foregroundColor(.gray)
+                        .foregroundColor(ZholdasTheme.textSecondary)
                     Text("ev_participants_empty".localized)
-                        .foregroundColor(.gray)
+                        .foregroundColor(ZholdasTheme.textSecondary)
                 }
             } else {
                 List(participants) { participant in
@@ -1396,7 +1496,7 @@ struct ParticipantsListView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(participant.fullName)
                                     .font(.headline)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(ZholdasTheme.textPrimary)
                                 Text("@\(participant.username)")
                                     .font(.subheadline)
                                     .foregroundColor(ZholdasTheme.accent)
@@ -1415,12 +1515,12 @@ struct ParticipantsListView: View {
                                 .clipShape(Capsule())
                             }
                             Image(systemName: "chevron.right")
-                                .foregroundColor(.gray)
+                                .foregroundColor(ZholdasTheme.textSecondary)
                                 .font(.caption)
                         }
                         .padding(.vertical, 4)
                     }
-                    .listRowBackground(Color.white.opacity(0.02))
+                    .listRowBackground(ZholdasTheme.surface.opacity(0.4))
                     .buttonStyle(PlainButtonStyle())
                 }
                 .scrollContentBackground(.hidden)

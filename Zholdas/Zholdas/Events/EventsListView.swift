@@ -1,9 +1,11 @@
 import SwiftUI
+import CoreLocation
 
 struct EventsListView: View {
     @ObservedObject var eventsViewModel: EventsViewModel
     @EnvironmentObject var langManager: LocalizationManager
     @EnvironmentObject var authViewModel: AuthViewModel
+    @StateObject private var locationManager = LocationManager()
     @State private var selectedCategory = "cat_all"
     @State private var showAdvancedFilters = false
     @State private var filterGender = "all"
@@ -15,7 +17,12 @@ struct EventsListView: View {
     var filteredEvents: [Event] {
         eventsViewModel.events.filter { event in
             matchesCategory(eventCategory: event.category, filterCategory: selectedCategory)
-                && event.matchesAudienceFilters(gender: filterGender, age: filterAge, maxDistanceKm: maxDistanceKm)
+                && event.matchesAudienceFilters(
+                    gender: filterGender,
+                    age: filterAge,
+                    maxDistanceKm: maxDistanceKm,
+                    distanceMetersOverride: localDistanceMeters(to: event)
+                )
         }
     }
     
@@ -144,6 +151,27 @@ struct EventsListView: View {
             if let profileAge = authViewModel.currentUserProfile?.age, profileAge > 0 {
                 filterAge = profileAge
             }
+            locationManager.requestLocation()
+        }
+        .onChange(of: locationManager.location) { location in
+            guard let location else { return }
+            Task {
+                await eventsViewModel.fetchNearbyEvents(
+                    latitude: location.coordinate.latitude,
+                    longitude: location.coordinate.longitude,
+                    radiusMeters: Int(maxDistanceKm * 1000)
+                )
+            }
+        }
+        .onChange(of: maxDistanceKm) { _ in
+            guard let location = locationManager.location else { return }
+            Task {
+                await eventsViewModel.fetchNearbyEvents(
+                    latitude: location.coordinate.latitude,
+                    longitude: location.coordinate.longitude,
+                    radiusMeters: Int(maxDistanceKm * 1000)
+                )
+            }
         }
     }
     
@@ -183,6 +211,14 @@ struct EventsListView: View {
         default:
             return false
         }
+    }
+
+    private func localDistanceMeters(to event: Event) -> Double? {
+        guard let location = locationManager.location else {
+            return nil
+        }
+        let eventLocation = CLLocation(latitude: event.latitude, longitude: event.longitude)
+        return eventLocation.distance(from: location)
     }
     
     private func getEventsWord(for count: Int) -> String {

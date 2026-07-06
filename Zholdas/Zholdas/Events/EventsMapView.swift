@@ -52,7 +52,8 @@ struct EventsMapView: View {
             return matchesCat && matchesText && event.matchesAudienceFilters(
                 gender: filterGender,
                 age: filterAge,
-                maxDistanceKm: maxDistanceKm
+                maxDistanceKm: maxDistanceKm,
+                distanceMetersOverride: localDistanceMeters(to: event)
             )
         }
     }
@@ -180,6 +181,15 @@ struct EventsMapView: View {
         default:
             return false
         }
+    }
+
+    private func localDistanceMeters(to event: Event) -> Double? {
+        guard let coordinate = userCoordinate else {
+            return nil
+        }
+        let userLocation = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        let eventLocation = CLLocation(latitude: event.latitude, longitude: event.longitude)
+        return eventLocation.distance(from: userLocation)
     }
     
     private func categoryIcon(for category: String) -> String {

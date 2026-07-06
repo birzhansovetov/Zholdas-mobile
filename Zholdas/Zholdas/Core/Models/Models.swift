@@ -233,8 +233,12 @@ extension Event {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 
-    func matchesAudienceFilters(gender: String, age: Int?, maxDistanceKm: Double) -> Bool {
-        if let distanceMeters, distanceMeters > maxDistanceKm * 1000 {
+    func matchesAudienceFilters(gender: String, age: Int?, maxDistanceKm: Double, distanceMetersOverride: Double? = nil) -> Bool {
+        let effectiveDistanceMeters = distanceMetersOverride ?? distanceMeters
+        guard let effectiveDistanceMeters else {
+            return false
+        }
+        if effectiveDistanceMeters > maxDistanceKm * 1000 {
             return false
         }
 

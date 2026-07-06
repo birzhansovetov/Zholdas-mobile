@@ -1,5 +1,9 @@
 import SwiftUI
 
+private struct ActivitySelectedUser: Identifiable {
+    let id: String
+}
+
 struct ActivityView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @EnvironmentObject var langManager: LocalizationManager
@@ -8,6 +12,8 @@ struct ActivityView: View {
     @State private var notifications: [NotificationItem] = []
     @State private var isLoading = false
     @State private var errorString: String? = nil
+    @State private var selectedUserForDetail: ActivitySelectedUser? = nil
+    @State private var pendingFriendActionUserID: String? = nil
     
     var filteredNotifications: [NotificationItem] {
         if selectedTab == "act_tab_friends" {
@@ -81,6 +87,10 @@ struct ActivityView: View {
             await loadNotifications()
             await markAllAsRead()
         }
+        .sheet(item: $selectedUserForDetail) { selectedUser in
+            UserDetailView(userID: selectedUser.id)
+                .environmentObject(authViewModel)
+        }
     }
     
     // MARK: - Subviews
@@ -118,66 +128,87 @@ struct ActivityView: View {
     
     @ViewBuilder
     private func notificationRow(for item: NotificationItem) -> some View {
-        HStack(spacing: 16) {
-            // Actor Avatar or Icon
-            ZStack {
-                Circle()
-                    .fill(ZholdasTheme.accent.opacity(0.12))
-                    .frame(width: 46, height: 46)
-                
-                if !item.actorAvatarURL.isEmpty, let url = URL(string: item.actorAvatarURL) {
-                    AsyncImage(url: url) { image in
-                        image
-                            .resizable()
-                            .scaledToFill()
-                            .clipShape(Circle())
-                            .frame(width: 46, height: 46)
-                    } placeholder: {
-                        ProgressView()
-                            .tint(.white)
-                    }
-                } else {
-                    let initials = getInitials(from: item.actorName)
-                    Text(initials)
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(ZholdasTheme.textPrimary)
+        VStack(alignment: .leading, spacing: 12) {
+            Button {
+                if let actorID = item.actorID, !actorID.isEmpty {
+                    selectedUserForDetail = ActivitySelectedUser(id: actorID)
                 }
-                
-                // Little type icon in corner
-                let (icon, color) = getIconAndColor(for: item.notificationType)
-                ZStack {
-                    Circle()
-                        .fill(color)
-                        .frame(width: 18, height: 18)
-                    
-                    Image(systemName: icon)
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(.white)
-                }
-                .offset(x: 14, y: 14)
-            }
-            
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(alignment: .top) {
-                    Text(item.text)
-                        .font(.subheadline)
-                        .foregroundColor(ZholdasTheme.textPrimary)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-                    
-                    Spacer()
-                    
-                    if !item.isRead {
+            } label: {
+                HStack(spacing: 16) {
+                    // Actor Avatar or Icon
+                    ZStack {
                         Circle()
-                            .fill(ZholdasTheme.accent)
-                            .frame(width: 8, height: 8)
-                            .padding(.top, 4)
+                            .fill(ZholdasTheme.accent.opacity(0.12))
+                            .frame(width: 46, height: 46)
+                        
+                        if !item.actorAvatarURL.isEmpty, let url = URL(string: item.actorAvatarURL) {
+                            AsyncImage(url: url) { image in
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                                    .clipShape(Circle())
+                                    .frame(width: 46, height: 46)
+                            } placeholder: {
+                                ProgressView()
+                                    .tint(ZholdasTheme.accent)
+                            }
+                        } else {
+                            let initials = getInitials(from: item.actorName)
+                            Text(initials)
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(ZholdasTheme.textPrimary)
+                        }
+                        
+                        // Little type icon in corner
+                        let (icon, color) = getIconAndColor(for: item.notificationType)
+                        ZStack {
+                            Circle()
+                                .fill(color)
+                                .frame(width: 18, height: 18)
+                            
+                            Image(systemName: icon)
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.white)
+                        }
+                        .offset(x: 14, y: 14)
+                    }
+                    
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(alignment: .top) {
+                            Text(item.text)
+                                .font(.subheadline)
+                                .foregroundColor(ZholdasTheme.textPrimary)
+                                .lineLimit(2)
+                                .multilineTextAlignment(.leading)
+                            
+                            Spacer()
+                            
+                            if !item.isRead {
+                                Circle()
+                                    .fill(ZholdasTheme.accent)
+                                    .frame(width: 8, height: 8)
+                                    .padding(.top, 4)
+                            }
+                        }
+                        
+                        Text(formatDate(item.createdAt))
+                            .font(.caption2)
+                            .foregroundColor(ZholdasTheme.textSecondary)
                     }
                 }
-                
-                Text(formatDate(item.createdAt))
-                    .font(.caption2)
-                    .foregroundColor(ZholdasTheme.textSecondary)
+            }
+            .buttonStyle(.plain)
+
+            if item.notificationType == "friend_request", let actorID = item.actorID, !actorID.isEmpty {
+                HStack(spacing: 10) {
+                    friendRequestActionButton(title: "Принять", color: ZholdasTheme.accent, isPrimary: true) {
+                        await handleFriendRequest(item: item, accept: true)
+                    }
+                    friendRequestActionButton(title: "Отклонить", color: ZholdasTheme.surface, isPrimary: false) {
+                        await handleFriendRequest(item: item, accept: false)
+                    }
+                }
+                .disabled(pendingFriendActionUserID == actorID)
             }
         }
         .padding()
@@ -187,6 +218,25 @@ struct ActivityView: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(item.isRead ? ZholdasTheme.border : ZholdasTheme.accent.opacity(0.3), lineWidth: 1)
         )
+    }
+
+    private func friendRequestActionButton(title: String, color: Color, isPrimary: Bool, action: @escaping () async -> Void) -> some View {
+        Button {
+            Task { await action() }
+        } label: {
+            Text(title)
+                .font(.caption.weight(.bold))
+                .foregroundColor(isPrimary ? .white : ZholdasTheme.textPrimary)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 9)
+                .background(color)
+                .clipShape(Capsule())
+                .overlay(
+                    Capsule()
+                        .stroke(ZholdasTheme.border, lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
     }
     
     @ViewBuilder
@@ -269,6 +319,22 @@ struct ActivityView: View {
             print("Failed to mark notifications as read: \(error)")
         }
     }
+
+    private func handleFriendRequest(item: NotificationItem, accept: Bool) async {
+        guard let actorID = item.actorID, !actorID.isEmpty else { return }
+        await MainActor.run {
+            pendingFriendActionUserID = actorID
+        }
+        let success = accept
+            ? await authViewModel.acceptFriendRequest(from: actorID)
+            : await authViewModel.rejectFriendRequest(from: actorID)
+        await MainActor.run {
+            pendingFriendActionUserID = nil
+            if success {
+                notifications.removeAll { $0.id == item.id }
+            }
+        }
+    }
     
     private func getInitials(from name: String) -> String {
         let parts = name.split(separator: " ")
@@ -290,6 +356,8 @@ struct ActivityView: View {
             return ("megaphone.fill", ZholdasTheme.accent) // Indigo
         case "ban":
             return ("hand.raised.fill", .red)
+        case "friend_request":
+            return ("person.crop.circle.badge.plus", ZholdasTheme.accent)
         default:
             return ("bell.fill", ZholdasTheme.accent)
         }
