@@ -219,14 +219,21 @@ class EventsViewModel: ObservableObject {
         }
     }
 
-    func markArrived(id: Int32) async -> Bool {
+    func markArrived(id: Int32, location: CLLocation) async -> Bool {
         self.isLoading = true
         self.errorMessage = nil
 
         do {
-            let _: [String: String] = try await APIClient.shared.request(
+            let payload = MarkArrivedRequest(
+                latitude: location.coordinate.latitude,
+                longitude: location.coordinate.longitude,
+                accuracy: location.horizontalAccuracy >= 0 ? location.horizontalAccuracy : nil
+            )
+            let body = try JSONEncoder().encode(payload)
+            let _: MarkArrivedResponse = try await APIClient.shared.request(
                 "/events/\(id)/arrive",
                 method: "POST",
+                body: body,
                 requiresAuth: true
             )
             self.isLoading = false
@@ -295,6 +302,16 @@ struct UpdateLiveLocationRequest: Codable {
     let latitude: Double
     let longitude: Double
     let accuracy: Double?
+}
+
+struct MarkArrivedRequest: Codable {
+    let latitude: Double
+    let longitude: Double
+    let accuracy: Double?
+}
+
+struct MarkArrivedResponse: Codable {
+    let message: String
 }
 
 struct CreateEventRequest: Codable {

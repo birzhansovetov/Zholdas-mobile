@@ -6,6 +6,74 @@ private struct SelectedUserForDetail: Identifiable {
     let id: String
 }
 
+private struct EventWeatherSummary: Equatable {
+    let temperature: Double
+    let apparentTemperature: Double?
+    let precipitation: Double?
+    let windSpeed: Double?
+    let code: Int?
+
+    var conditionText: String {
+        guard let code else { return "Прогноз" }
+        switch code {
+        case 0: return "Ясно"
+        case 1...3: return "Переменная облачность"
+        case 45, 48: return "Туман"
+        case 51...67, 80...82: return "Дождь"
+        case 71...77, 85...86: return "Снег"
+        case 95...99: return "Гроза"
+        default: return "Прогноз"
+        }
+    }
+
+    var icon: String {
+        guard let code else { return "cloud.sun.fill" }
+        switch code {
+        case 0: return "sun.max.fill"
+        case 1...3: return "cloud.sun.fill"
+        case 45, 48: return "cloud.fog.fill"
+        case 51...67, 80...82: return "cloud.rain.fill"
+        case 71...77, 85...86: return "snowflake"
+        case 95...99: return "cloud.bolt.rain.fill"
+        default: return "cloud.sun.fill"
+        }
+    }
+
+    var checklistText: String {
+        var parts = ["\(conditionText), \(Int(round(temperature)))°C"]
+        if let apparentTemperature {
+            parts.append("ощущается \(Int(round(apparentTemperature)))°C")
+        }
+        if let precipitation, precipitation > 0 {
+            parts.append("осадки \(String(format: "%.1f", precipitation)) мм")
+        }
+        if let windSpeed {
+            parts.append("ветер \(Int(round(windSpeed))) км/ч")
+        }
+        return parts.joined(separator: ", ")
+    }
+}
+
+private struct OpenMeteoResponse: Codable {
+    let current: Current
+
+    struct Current: Codable {
+        let temperature2m: Double
+        let apparentTemperature: Double?
+        let precipitation: Double?
+        let weatherCode: Int?
+        let windSpeed10m: Double?
+
+        enum CodingKeys: String, CodingKey {
+            case temperature2m = "temperature_2m"
+            case apparentTemperature = "apparent_temperature"
+            case precipitation
+            case weatherCode = "weather_code"
+            case windSpeed10m = "wind_speed_10m"
+        }
+    }
+}
+
 struct EventDetailView: View {
     let event: Event
     @ObservedObject var eventsViewModel: EventsViewModel
@@ -21,6 +89,7 @@ struct EventDetailView: View {
     @State private var isActionLoading = false
     @State private var isArrivalLoading = false
     @State private var isArrived = false
+    @State private var arrivalError: String?
     @State private var selectedUserForDetail: SelectedUserForDetail? = nil
     @State private var isShowingRateSheet = false
     @State private var isShowingReportSheet = false
@@ -33,6 +102,8 @@ struct EventDetailView: View {
     @State private var liveLocations: [EventLiveLocation] = []
     @State private var liveLocationError: String?
     @State private var liveMapPosition: MapCameraPosition = .automatic
+    @State private var weatherSummary: EventWeatherSummary?
+    @State private var isLoadingWeather = false
 
     private let liveLocationTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
     
@@ -89,6 +160,14 @@ struct EventDetailView: View {
             && event.status == "active"
             && Date() >= event.startTime.addingTimeInterval(-3600)
             && Date() <= event.endTime.addingTimeInterval(900)
+    }
+
+    private var shouldShowWeather: Bool {
+        let category = event.category.lowercased()
+        return category == "walk"
+            || category == "cat_walks"
+            || category == "hiking"
+            || category == "cat_mountains"
     }
     
     var body: some View {
@@ -234,6 +313,10 @@ struct EventDetailView: View {
                         }
                         .padding()
                         .glassBackground(cornerRadius: 16)
+                    }
+
+                    if shouldShowWeather {
+                        weatherCard
                     }
 
                     if isLiveLocationAvailable {
@@ -432,6 +515,9 @@ struct EventDetailView: View {
             if isLiveLocationAvailable {
                 await loadLiveLocations()
             }
+            if shouldShowWeather {
+                await loadWeather()
+            }
         }
         .onReceive(liveLocationTimer) { _ in
             guard isSharingLiveLocation, isLiveLocationAvailable else { return }
@@ -611,6 +697,59 @@ struct EventDetailView: View {
         .buttonStyle(SpringButtonStyle())
     }
 
+    private var weatherCard: some View {
+        HStack(spacing: 16) {
+            Image(systemName: weatherSummary?.icon ?? "cloud.sun.fill")
+                .font(.title2)
+                .foregroundColor(ZholdasTheme.accent)
+                .frame(width: 48, height: 48)
+                .background(Circle().fill(ZholdasTheme.accent.opacity(0.14)))
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text("Погода для встречи".uppercased())
+                    .font(.caption2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.gray)
+                    .tracking(1.0)
+
+                if let weatherSummary {
+                    Text("\(weatherSummary.conditionText), \(Int(round(weatherSummary.temperature)))°C")
+                        .foregroundColor(.white)
+                        .fontWeight(.bold)
+
+                    Text(weatherSummary.checklistText)
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                        .lineLimit(2)
+                } else if isLoadingWeather {
+                    Text("Загружаем прогноз...")
+                        .foregroundColor(.gray)
+                        .font(.subheadline)
+                } else {
+                    Text("Прогноз пока недоступен")
+                        .foregroundColor(.gray)
+                        .font(.subheadline)
+                }
+            }
+
+            Spacer()
+
+            Button {
+                Task { await loadWeather() }
+            } label: {
+                Image(systemName: "arrow.clockwise")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundColor(ZholdasTheme.accent)
+                    .frame(width: 34, height: 34)
+                    .background(Circle().fill(Color.white.opacity(0.08)))
+            }
+            .buttonStyle(SpringButtonStyle())
+            .disabled(isLoadingWeather)
+        }
+        .padding()
+        .glassBackground(cornerRadius: 16)
+    }
+
     private var liveLocationCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .top, spacing: 12) {
@@ -748,6 +887,12 @@ struct EventDetailView: View {
             
             if (isJoined || isCreator) && event.status == "active" && Date() <= event.endTime {
                 arrivalActionButton
+                if let arrivalError {
+                    Text(arrivalError)
+                        .font(.caption)
+                        .foregroundColor(.red.opacity(0.9))
+                        .multilineTextAlignment(.center)
+                }
             }
 
             if Date() > event.endTime {
@@ -847,7 +992,7 @@ struct EventDetailView: View {
                 } else {
                     Image(systemName: isArrived ? "checkmark.seal.fill" : "location.fill")
                 }
-                Text(isArrived ? "Вы на месте" : "Я на месте")
+                Text(isArrived ? "Вы на месте" : (isArrivalLoading ? "Проверяем GPS..." : "Я на месте"))
                     .font(.headline)
                     .fontWeight(.bold)
             }
@@ -1026,17 +1171,92 @@ struct EventDetailView: View {
     private func markArrived() {
         guard !isArrived, !isArrivalLoading else { return }
         isArrivalLoading = true
+        arrivalError = nil
+        liveLocationManager.requestLocation()
 
         Task {
-            let success = await eventsViewModel.markArrived(id: event.id)
+            let location = await waitForCurrentLocation()
+            guard let location else {
+                await MainActor.run {
+                    self.arrivalError = liveLocationManager.errorMessage ?? "Не удалось получить GPS. Проверьте доступ к геолокации."
+                    self.isArrivalLoading = false
+                }
+                return
+            }
+
+            let success = await eventsViewModel.markArrived(id: event.id, location: location)
             if success {
                 await MainActor.run {
                     self.isArrived = true
+                    self.arrivalError = nil
                 }
                 await loadParticipants()
+            } else {
+                await MainActor.run {
+                    self.arrivalError = eventsViewModel.errorMessage
+                }
             }
             await MainActor.run {
                 self.isArrivalLoading = false
+            }
+        }
+    }
+
+    private func waitForCurrentLocation() async -> CLLocation? {
+        if let location = liveLocationManager.location {
+            return location
+        }
+
+        for _ in 0..<10 {
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            if let location = await MainActor.run(body: { liveLocationManager.location }) {
+                return location
+            }
+        }
+
+        return nil
+    }
+
+    private func loadWeather() async {
+        guard shouldShowWeather else { return }
+        await MainActor.run {
+            self.isLoadingWeather = true
+        }
+
+        var components = URLComponents(string: "https://api.open-meteo.com/v1/forecast")
+        components?.queryItems = [
+            URLQueryItem(name: "latitude", value: "\(event.latitude)"),
+            URLQueryItem(name: "longitude", value: "\(event.longitude)"),
+            URLQueryItem(name: "current", value: "temperature_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m"),
+            URLQueryItem(name: "timezone", value: "auto")
+        ]
+
+        guard let url = components?.url else {
+            await MainActor.run { self.isLoadingWeather = false }
+            return
+        }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+            guard let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) else {
+                throw URLError(.badServerResponse)
+            }
+            let decoded = try JSONDecoder().decode(OpenMeteoResponse.self, from: data)
+            let current = decoded.current
+            let summary = EventWeatherSummary(
+                temperature: current.temperature2m,
+                apparentTemperature: current.apparentTemperature,
+                precipitation: current.precipitation,
+                windSpeed: current.windSpeed10m,
+                code: current.weatherCode
+            )
+            await MainActor.run {
+                self.weatherSummary = summary
+                self.isLoadingWeather = false
+            }
+        } catch {
+            await MainActor.run {
+                self.isLoadingWeather = false
             }
         }
     }
@@ -1061,8 +1281,10 @@ struct EventDetailView: View {
         Место: \(event.locationName)
         Дата и время: \(formatDate(event.startTime))
         Участников максимум: \(event.maxParticipants)
+        Погода: \(weatherSummary?.checklistText ?? "нет данных")
 
-        Ответь строго разделами: Еда, Одежда, Вещи, Игры и активности, План, Важно.
+        Ответь строго разделами: Еда, Одежда, Вещи, Игры и активности, План, Погода, Важно.
+        Если есть дождь, ветер, холод или жара, подстрой одежду, воду, обувь и вещи.
         Давай конкретные варианты, коротко и по делу.
         """
 
@@ -1097,6 +1319,7 @@ struct EventDetailView: View {
         Одежда
         - Удобная обувь.
         - Одежда по погоде, лучше слоями.
+        \(weatherSummary.map { "- По прогнозу: \($0.checklistText)." } ?? "- Проверьте прогноз перед выходом.")
 
         Вещи
         - Заряженный телефон.

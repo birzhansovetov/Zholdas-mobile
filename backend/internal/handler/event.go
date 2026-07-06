@@ -98,6 +98,12 @@ type CreateEventDTO struct {
 	MaxAge          int32     `json:"max_age"`
 }
 
+type MarkArrivedDTO struct {
+	Latitude  *float64 `json:"latitude"`
+	Longitude *float64 `json:"longitude"`
+	Accuracy  *float64 `json:"accuracy"`
+}
+
 // CreateEvent creates an event with status 'active' and moderates it asynchronously
 func (h *EventHandler) CreateEvent(c *gin.Context) {
 	userIDVal, exists := c.Get("user_id")
@@ -755,6 +761,20 @@ func (h *EventHandler) MarkArrived(c *gin.Context) {
 		return
 	}
 
+	var dto MarkArrivedDTO
+	if err := c.ShouldBindJSON(&dto); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Location is required to mark arrival"})
+		return
+	}
+	if dto.Latitude == nil || dto.Longitude == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Location is required to mark arrival"})
+		return
+	}
+	if *dto.Latitude < -90 || *dto.Latitude > 90 || *dto.Longitude < -180 || *dto.Longitude > 180 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid coordinates"})
+		return
+	}
+
 	ctx := c.Request.Context()
 	tx, err := h.pool.Begin(ctx)
 	if err != nil {
@@ -766,17 +786,28 @@ func (h *EventHandler) MarkArrived(c *gin.Context) {
 	var eventTitle string
 	var creatorID string
 	var status string
+	var distanceMeters float64
 	err = tx.QueryRow(ctx, `
-		SELECT title, creator_id::text, status
+		SELECT title,
+		       creator_id::text,
+		       status,
+		       ST_Distance(location, ST_SetSRID(ST_MakePoint($2::float8, $3::float8), 4326)::geography)::float8
 		FROM events
 		WHERE id = $1
-	`, eventID).Scan(&eventTitle, &creatorID, &status)
+	`, eventID, *dto.Longitude, *dto.Latitude).Scan(&eventTitle, &creatorID, &status, &distanceMeters)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
 		return
 	}
 	if status != "active" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Event is not active"})
+		return
+	}
+	if distanceMeters > 200 {
+		c.JSON(http.StatusForbidden, gin.H{
+			"error":           fmt.Sprintf("Вы слишком далеко от места встречи: %.0f м. Подойдите ближе, чтобы отметиться.", distanceMeters),
+			"distance_meters": distanceMeters,
+		})
 		return
 	}
 
@@ -832,8 +863,9 @@ func (h *EventHandler) MarkArrived(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":    "Arrival marked",
-		"arrived_at": arrivedAt,
+		"message":         "Arrival marked",
+		"arrived_at":      arrivedAt,
+		"distance_meters": distanceMeters,
 	})
 }
 

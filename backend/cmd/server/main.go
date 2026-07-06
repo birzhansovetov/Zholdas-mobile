@@ -250,7 +250,7 @@ func sendEventReminders(ctx context.Context, pool *pgxpool.Pool, notificationSer
 		to    time.Duration
 	}{
 		{kind: "60m", label: "через 1 час", from: 55 * time.Minute, to: 65 * time.Minute},
-		{kind: "30m", label: "через 30 минут", from: 25 * time.Minute, to: 35 * time.Minute},
+		{kind: "15m", label: "через 15 минут", from: 10 * time.Minute, to: 20 * time.Minute},
 	}
 
 	for _, window := range windows {
