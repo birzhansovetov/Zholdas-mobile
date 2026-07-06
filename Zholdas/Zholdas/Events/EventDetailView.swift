@@ -1,5 +1,6 @@
 import SwiftUI
 import MapKit
+import Combine
 
 private struct SelectedUserForDetail: Identifiable {
     let id: String
@@ -8,6 +9,7 @@ private struct SelectedUserForDetail: Identifiable {
 struct EventDetailView: View {
     let event: Event
     @ObservedObject var eventsViewModel: EventsViewModel
+    @StateObject private var liveLocationManager = LocationManager()
     @EnvironmentObject var authViewModel: AuthViewModel
     @EnvironmentObject var langManager: LocalizationManager
     @Environment(\.dismiss) var dismiss
@@ -27,6 +29,12 @@ struct EventDetailView: View {
     @State private var isShowingPreparationSheet = false
     @State private var isLoadingPreparation = false
     @State private var preparationChecklist = ""
+    @State private var isSharingLiveLocation = false
+    @State private var liveLocations: [EventLiveLocation] = []
+    @State private var liveLocationError: String?
+    @State private var liveMapPosition: MapCameraPosition = .automatic
+
+    private let liveLocationTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
     
     private var sessionBinding: Binding<ChatSession> {
         Binding(
@@ -74,6 +82,13 @@ struct EventDetailView: View {
             }
         }
         return "ev_already_started".localized
+    }
+
+    private var isLiveLocationAvailable: Bool {
+        (isJoined || isCreator)
+            && event.status == "active"
+            && Date() >= event.startTime.addingTimeInterval(-3600)
+            && Date() <= event.endTime.addingTimeInterval(900)
     }
     
     var body: some View {
@@ -219,6 +234,10 @@ struct EventDetailView: View {
                         }
                         .padding()
                         .glassBackground(cornerRadius: 16)
+                    }
+
+                    if isLiveLocationAvailable {
+                        liveLocationCard
                     }
                     
                     // 4. Restrictions Banner
@@ -409,6 +428,32 @@ struct EventDetailView: View {
                 categoryColorHex: color,
                 messages: []
             )
+
+            if isLiveLocationAvailable {
+                await loadLiveLocations()
+            }
+        }
+        .onReceive(liveLocationTimer) { _ in
+            guard isSharingLiveLocation, isLiveLocationAvailable else { return }
+            liveLocationManager.requestLocation()
+            Task {
+                await sendLiveLocationIfPossible()
+                await loadLiveLocations()
+            }
+        }
+        .onChange(of: liveLocationManager.location) { _ in
+            guard isSharingLiveLocation, isLiveLocationAvailable else { return }
+            Task {
+                await sendLiveLocationIfPossible()
+                await loadLiveLocations()
+            }
+        }
+        .onDisappear {
+            if isSharingLiveLocation {
+                Task {
+                    await eventsViewModel.stopLiveLocation(eventID: event.id)
+                }
+            }
         }
         .sheet(item: $selectedUserForDetail) { selectedUser in
             UserDetailView(userID: selectedUser.id)
@@ -564,6 +609,87 @@ struct EventDetailView: View {
             .glassBackground(cornerRadius: 16)
         }
         .buttonStyle(SpringButtonStyle())
+    }
+
+    private var liveLocationCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: "location.circle.fill")
+                    .font(.title3)
+                    .foregroundColor(ZholdasTheme.accent)
+                    .frame(width: 42, height: 42)
+                    .background(Circle().fill(ZholdasTheme.accent.opacity(0.14)))
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("ev_live_location_title".localized)
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+
+                    Text("ev_live_location_hint".localized)
+                        .font(.caption)
+                        .foregroundColor(.gray)
+                }
+
+                Spacer()
+
+                Toggle("", isOn: Binding(
+                    get: { isSharingLiveLocation },
+                    set: { newValue in
+                        setLiveLocationSharing(newValue)
+                    }
+                ))
+                .labelsHidden()
+                .tint(ZholdasTheme.accent)
+            }
+
+            Map(position: $liveMapPosition) {
+                Marker(event.locationName, systemImage: "mappin.and.ellipse", coordinate: event.coordinate)
+                    .tint(.red)
+
+                ForEach(liveLocations) { location in
+                    Annotation(location.fullName, coordinate: location.coordinate) {
+                        VStack(spacing: 4) {
+                            ZholdasAvatarView(
+                                avatarURL: location.avatarURL,
+                                initials: getInitials(from: location.fullName),
+                                size: 34
+                            )
+                            .overlay(Circle().stroke(ZholdasTheme.accent, lineWidth: 2))
+                            .shadow(color: ZholdasTheme.accent.opacity(0.35), radius: 8)
+
+                            Text(location.userID == authViewModel.currentUserProfile?.id ? "ev_live_location_you".localized : location.fullName)
+                                .font(.caption2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3)
+                                .background(Color.black.opacity(0.55))
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
+            }
+            .frame(height: 190)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.08), lineWidth: 1))
+
+            if let error = liveLocationError {
+                Text(error)
+                    .font(.caption)
+                    .foregroundColor(.red.opacity(0.9))
+            } else if liveLocations.isEmpty {
+                Text("ev_live_location_empty".localized)
+                    .font(.caption)
+                    .foregroundColor(.gray)
+            } else {
+                Text(String(format: "ev_live_location_count".localized, liveLocations.count))
+                    .font(.caption)
+                    .foregroundColor(.gray)
+            }
+        }
+        .padding()
+        .glassBackground(cornerRadius: 16)
     }
 
     private func ruleIcon(_ systemName: String) -> some View {
@@ -794,6 +920,74 @@ struct EventDetailView: View {
             }
         }
     }
+
+    private func setLiveLocationSharing(_ isEnabled: Bool) {
+        liveLocationError = nil
+        isSharingLiveLocation = isEnabled
+
+        if isEnabled {
+            liveLocationManager.requestLocation()
+            Task {
+                await sendLiveLocationIfPossible()
+                await loadLiveLocations()
+            }
+        } else {
+            Task {
+                await eventsViewModel.stopLiveLocation(eventID: event.id)
+                await loadLiveLocations()
+            }
+        }
+    }
+
+    private func sendLiveLocationIfPossible() async {
+        guard isSharingLiveLocation, isLiveLocationAvailable else { return }
+        guard let location = liveLocationManager.location else {
+            await MainActor.run {
+                if let message = liveLocationManager.errorMessage {
+                    self.liveLocationError = message
+                }
+            }
+            return
+        }
+
+        let success = await eventsViewModel.updateLiveLocation(eventID: event.id, location: location)
+        await MainActor.run {
+            if success {
+                self.liveLocationError = nil
+            } else {
+                self.liveLocationError = eventsViewModel.errorMessage
+                self.isSharingLiveLocation = false
+            }
+        }
+    }
+
+    private func loadLiveLocations() async {
+        guard isLiveLocationAvailable else { return }
+        let locations = await eventsViewModel.fetchLiveLocations(eventID: event.id)
+        await MainActor.run {
+            self.liveLocations = locations
+            self.updateLiveMapPosition()
+        }
+    }
+
+    private func updateLiveMapPosition() {
+        let coordinates = [event.coordinate] + liveLocations.map { $0.coordinate }
+        guard let first = coordinates.first else {
+            liveMapPosition = .automatic
+            return
+        }
+
+        let minLat = coordinates.map(\.latitude).min() ?? first.latitude
+        let maxLat = coordinates.map(\.latitude).max() ?? first.latitude
+        let minLon = coordinates.map(\.longitude).min() ?? first.longitude
+        let maxLon = coordinates.map(\.longitude).max() ?? first.longitude
+        let center = CLLocationCoordinate2D(latitude: (minLat + maxLat) / 2, longitude: (minLon + maxLon) / 2)
+        let span = MKCoordinateSpan(
+            latitudeDelta: max(0.01, (maxLat - minLat) * 1.8),
+            longitudeDelta: max(0.01, (maxLon - minLon) * 1.8)
+        )
+        liveMapPosition = .region(MKCoordinateRegion(center: center, span: span))
+    }
     
     private func handleAction() {
         guard !isActionLoading else { return }
@@ -807,7 +1001,9 @@ struct EventDetailView: View {
                     await MainActor.run {
                         self.isJoined = false
                         self.participantsCount = max(0, self.participantsCount - 1)
+                        self.isSharingLiveLocation = false
                     }
+                    await eventsViewModel.stopLiveLocation(eventID: event.id)
                     await loadParticipants()
                 }
             } else {

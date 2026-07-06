@@ -202,6 +202,32 @@ struct Participant: Codable, Identifiable, Hashable {
     }
 }
 
+struct EventLiveLocation: Codable, Identifiable, Hashable {
+    let userID: String
+    let username: String
+    let fullName: String
+    let avatarURL: String?
+    let latitude: Double
+    let longitude: Double
+    let accuracy: Double?
+    let updatedAt: Date
+    let expiresAt: Date
+
+    var id: String { userID }
+
+    enum CodingKeys: String, CodingKey {
+        case userID = "user_id"
+        case username
+        case fullName = "full_name"
+        case avatarURL = "avatar_url"
+        case latitude
+        case longitude
+        case accuracy
+        case updatedAt = "updated_at"
+        case expiresAt = "expires_at"
+    }
+}
+
 extension Event {
     var coordinate: CLLocationCoordinate2D {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
@@ -230,6 +256,12 @@ extension Event {
         }
 
         return true
+    }
+}
+
+extension EventLiveLocation {
+    var coordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 }
 

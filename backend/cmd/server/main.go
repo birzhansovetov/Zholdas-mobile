@@ -152,6 +152,9 @@ func main() {
 		protectedRoutes.POST("/events/:id/leave", eventHandler.LeaveEvent)
 		protectedRoutes.POST("/events/:id/arrive", eventHandler.MarkArrived)
 		protectedRoutes.GET("/events/:id/participants", eventHandler.GetEventParticipants)
+		protectedRoutes.POST("/events/:id/live-location", eventHandler.UpdateEventLiveLocation)
+		protectedRoutes.GET("/events/:id/live-locations", eventHandler.GetEventLiveLocations)
+		protectedRoutes.DELETE("/events/:id/live-location", eventHandler.DeleteEventLiveLocation)
 		protectedRoutes.POST("/events/:id/rate", authHandler.RateParticipant)
 
 		// Chat Room Routes

@@ -875,6 +875,205 @@ func (h *EventHandler) GetEventParticipants(c *gin.Context) {
 	c.JSON(http.StatusOK, participants)
 }
 
+type UpdateLiveLocationDTO struct {
+	Latitude  float64  `json:"latitude"`
+	Longitude float64  `json:"longitude"`
+	Accuracy  *float64 `json:"accuracy"`
+}
+
+type EventLiveLocationResponse struct {
+	UserID    string    `json:"user_id"`
+	Username  string    `json:"username"`
+	FullName  string    `json:"full_name"`
+	AvatarURL string    `json:"avatar_url"`
+	Latitude  float64   `json:"latitude"`
+	Longitude float64   `json:"longitude"`
+	Accuracy  *float64  `json:"accuracy"`
+	UpdatedAt time.Time `json:"updated_at"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
+func (h *EventHandler) canUseEventLiveLocation(ctx context.Context, eventID int, userID string) (bool, error) {
+	var allowed bool
+	err := h.pool.QueryRow(ctx, `
+		SELECT EXISTS(
+			SELECT 1
+			FROM events e
+			WHERE e.id = $1
+			  AND e.status = 'active'
+			  AND NOW() BETWEEN e.start_time - INTERVAL '1 hour' AND e.end_time + INTERVAL '15 minutes'
+			  AND (
+				e.creator_id = $2::uuid
+				OR EXISTS (
+					SELECT 1
+					FROM event_participants ep
+					WHERE ep.event_id = e.id AND ep.user_id = $2::uuid
+				)
+			  )
+		)
+	`, eventID, userID).Scan(&allowed)
+	return allowed, err
+}
+
+// UpdateEventLiveLocation shares the current user's temporary location for one event.
+func (h *EventHandler) UpdateEventLiveLocation(c *gin.Context) {
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	userID := userIDVal.(string)
+
+	eventID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
+		return
+	}
+
+	var dto UpdateLiveLocationDTO
+	if err := c.ShouldBindJSON(&dto); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if dto.Latitude < -90 || dto.Latitude > 90 || dto.Longitude < -180 || dto.Longitude > 180 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid coordinates"})
+		return
+	}
+
+	ctx := c.Request.Context()
+	allowed, err := h.canUseEventLiveLocation(ctx, eventID, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check event access"})
+		return
+	}
+	if !allowed {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Live location is available only to participants during active events"})
+		return
+	}
+
+	var expiresAt time.Time
+	err = h.pool.QueryRow(ctx, `
+		INSERT INTO event_live_locations (event_id, user_id, latitude, longitude, accuracy, updated_at, expires_at)
+		VALUES ($1, $2, $3, $4, $5, NOW(), NOW() + INTERVAL '5 minutes')
+		ON CONFLICT (event_id, user_id) DO UPDATE
+		SET latitude = EXCLUDED.latitude,
+		    longitude = EXCLUDED.longitude,
+		    accuracy = EXCLUDED.accuracy,
+		    updated_at = NOW(),
+		    expires_at = NOW() + INTERVAL '5 minutes'
+		RETURNING expires_at
+	`, eventID, userID, dto.Latitude, dto.Longitude, dto.Accuracy).Scan(&expiresAt)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update live location"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":    "Live location updated",
+		"expires_at": expiresAt,
+	})
+}
+
+// GetEventLiveLocations returns non-expired live locations for event participants.
+func (h *EventHandler) GetEventLiveLocations(c *gin.Context) {
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	userID := userIDVal.(string)
+
+	eventID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
+		return
+	}
+
+	ctx := c.Request.Context()
+	allowed, err := h.canUseEventLiveLocation(ctx, eventID, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check event access"})
+		return
+	}
+	if !allowed {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Live location is available only to participants during active events"})
+		return
+	}
+
+	_, _ = h.pool.Exec(ctx, "DELETE FROM event_live_locations WHERE expires_at < NOW()")
+
+	rows, err := h.pool.Query(ctx, `
+		SELECT l.user_id::text,
+		       p.username,
+		       p.full_name,
+		       COALESCE(p.avatar_url, '') AS avatar_url,
+		       l.latitude,
+		       l.longitude,
+		       l.accuracy,
+		       l.updated_at,
+		       l.expires_at
+		FROM event_live_locations l
+		JOIN profiles p ON p.user_id = l.user_id
+		WHERE l.event_id = $1
+		  AND l.expires_at > NOW()
+		ORDER BY l.updated_at DESC
+	`, eventID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch live locations"})
+		return
+	}
+	defer rows.Close()
+
+	locations := []EventLiveLocationResponse{}
+	for rows.Next() {
+		var loc EventLiveLocationResponse
+		if err := rows.Scan(
+			&loc.UserID,
+			&loc.Username,
+			&loc.FullName,
+			&loc.AvatarURL,
+			&loc.Latitude,
+			&loc.Longitude,
+			&loc.Accuracy,
+			&loc.UpdatedAt,
+			&loc.ExpiresAt,
+		); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to scan live location"})
+			return
+		}
+		locations = append(locations, loc)
+	}
+
+	c.JSON(http.StatusOK, locations)
+}
+
+// DeleteEventLiveLocation stops sharing the current user's live location for an event.
+func (h *EventHandler) DeleteEventLiveLocation(c *gin.Context) {
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	userID := userIDVal.(string)
+
+	eventID, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
+		return
+	}
+
+	_, err = h.pool.Exec(c.Request.Context(), `
+		DELETE FROM event_live_locations
+		WHERE event_id = $1 AND user_id = $2
+	`, eventID, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to stop live location"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Live location stopped"})
+}
+
 type AIChatRequest struct {
 	Message string                  `json:"message" binding:"required"`
 	History []service.AIChatMessage `json:"history"`

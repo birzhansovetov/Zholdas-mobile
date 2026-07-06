@@ -315,6 +315,31 @@ class LocalizationManager: ObservableObject {
             "kk": "Жорик чеклист дайындап жатыр...",
             "en": "Joryk is preparing your checklist..."
         ],
+        "ev_live_location_title": [
+            "ru": "Локация участников",
+            "kk": "Қатысушылар локациясы",
+            "en": "Participant Locations"
+        ],
+        "ev_live_location_hint": [
+            "ru": "Включите, чтобы участники этой встречи видели вас на карте.",
+            "kk": "Осы кездесудің қатысушылары сізді картадан көруі үшін қосыңыз.",
+            "en": "Turn on sharing so this event's participants can see you on the map."
+        ],
+        "ev_live_location_empty": [
+            "ru": "Пока никто не делится локацией.",
+            "kk": "Әзірге ешкім локациясын бөліспеді.",
+            "en": "No one is sharing location yet."
+        ],
+        "ev_live_location_count": [
+            "ru": "На карте участников: %d",
+            "kk": "Картадағы қатысушылар: %d",
+            "en": "Participants on map: %d"
+        ],
+        "ev_live_location_you": [
+            "ru": "Вы",
+            "kk": "Сіз",
+            "en": "You"
+        ],
         "ev_restrictions": [
             "ru": "Ограничения: Все · Возраст 18 – 30 лет",
             "kk": "Шектеулер: Барлығы · Жас 18 – 30 жас",

@@ -237,9 +237,65 @@ class EventsViewModel: ObservableObject {
             return false
         }
     }
+
+    func updateLiveLocation(eventID: Int32, location: CLLocation) async -> Bool {
+        self.errorMessage = nil
+
+        let payload = UpdateLiveLocationRequest(
+            latitude: location.coordinate.latitude,
+            longitude: location.coordinate.longitude,
+            accuracy: location.horizontalAccuracy >= 0 ? location.horizontalAccuracy : nil
+        )
+
+        do {
+            let body = try JSONEncoder().encode(payload)
+            let _: [String: String] = try await APIClient.shared.request(
+                "/events/\(eventID)/live-location",
+                method: "POST",
+                body: body,
+                requiresAuth: true
+            )
+            return true
+        } catch {
+            self.errorMessage = "Не удалось обновить локацию: \(error.localizedDescription)"
+            return false
+        }
+    }
+
+    func fetchLiveLocations(eventID: Int32) async -> [EventLiveLocation] {
+        do {
+            let list: [EventLiveLocation] = try await APIClient.shared.request(
+                "/events/\(eventID)/live-locations",
+                method: "GET",
+                requiresAuth: true
+            )
+            return list
+        } catch {
+            self.errorMessage = "Не удалось загрузить локации участников: \(error.localizedDescription)"
+            return []
+        }
+    }
+
+    func stopLiveLocation(eventID: Int32) async {
+        do {
+            let _: [String: String] = try await APIClient.shared.request(
+                "/events/\(eventID)/live-location",
+                method: "DELETE",
+                requiresAuth: true
+            )
+        } catch {
+            print("Ошибка остановки live-локации: \(error.localizedDescription)")
+        }
+    }
 }
 
 // MARK: - Additional DTOs for Events
+
+struct UpdateLiveLocationRequest: Codable {
+    let latitude: Double
+    let longitude: Double
+    let accuracy: Double?
+}
 
 struct CreateEventRequest: Codable {
     let title: String
