@@ -28,7 +28,7 @@ struct FriendsListView: View {
                         .tint(ZholdasTheme.accent)
                         .scaleEffect(1.3)
                     Text("prof_loading".localized)
-                        .foregroundColor(.gray)
+                        .foregroundColor(ZholdasTheme.textSecondary)
                         .font(.subheadline)
                     Spacer()
                 } else {
@@ -67,19 +67,19 @@ struct FriendsListView: View {
                             .fontWeight(.bold)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 2)
-                            .background(index == 1 && count > 0 ? Color.red : (selectedTab == index ? ZholdasTheme.accent : Color.white.opacity(0.12)))
+                            .background(index == 1 && count > 0 ? Color.red : (selectedTab == index ? ZholdasTheme.accentDeep : ZholdasTheme.elevatedSurface))
                             .clipShape(Capsule())
                             .foregroundColor(.white)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
                     .contentShape(Rectangle())
-                    .foregroundColor(selectedTab == index ? .white : .gray)
+                    .foregroundColor(selectedTab == index ? .white : ZholdasTheme.textSecondary)
                     .background(
                         ZStack {
                             if selectedTab == index {
                                 RoundedRectangle(cornerRadius: 10)
-                                    .fill(Color.white.opacity(0.08))
+                                    .fill(ZholdasTheme.accent)
                                     .matchedGeometryEffect(id: "activeTabBackground", in: pickerNamespace)
                             }
                         }
@@ -88,11 +88,11 @@ struct FriendsListView: View {
             }
         }
         .padding(4)
-        .background(Color.black.opacity(0.25))
+        .background(ZholdasTheme.surface)
         .cornerRadius(12)
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.white.opacity(0.06), lineWidth: 1)
+                .stroke(ZholdasTheme.border, lineWidth: 1)
         )
     }
     
@@ -130,11 +130,11 @@ struct FriendsListView: View {
                 Text(friend.fullName)
                     .font(.body)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(ZholdasTheme.textPrimary)
                 
                 Text("@\(friend.username)")
                     .font(.footnote)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ZholdasTheme.textSecondary)
             }
             
             Spacer()
@@ -158,11 +158,11 @@ struct FriendsListView: View {
             }
         }
         .padding()
-        .background(Color.white.opacity(0.03))
+        .background(ZholdasTheme.surface.opacity(0.76))
         .cornerRadius(16)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.white.opacity(0.05), lineWidth: 1)
+                .stroke(ZholdasTheme.border, lineWidth: 1)
         )
     }
     
@@ -200,11 +200,11 @@ struct FriendsListView: View {
                 Text(request.fullName)
                     .font(.body)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(ZholdasTheme.textPrimary)
                 
                 Text("@\(request.username)")
                     .font(.footnote)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ZholdasTheme.textSecondary)
             }
             
             Spacer()
@@ -223,9 +223,9 @@ struct FriendsListView: View {
                     }
                 } label: {
                     Image(systemName: "xmark")
-                        .foregroundColor(.white)
+                        .foregroundColor(ZholdasTheme.textPrimary)
                         .padding(8)
-                        .background(Color.white.opacity(0.1))
+                        .background(ZholdasTheme.elevatedSurface)
                         .clipShape(Circle())
                 }
                 
@@ -258,11 +258,11 @@ struct FriendsListView: View {
             }
         }
         .padding()
-        .background(Color.white.opacity(0.03))
+        .background(ZholdasTheme.surface.opacity(0.76))
         .cornerRadius(16)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.white.opacity(0.05), lineWidth: 1)
+                .stroke(ZholdasTheme.border, lineWidth: 1)
         )
     }
     
@@ -311,11 +311,11 @@ struct FriendsListView: View {
             Text(title)
                 .font(.title3)
                 .fontWeight(.bold)
-                .foregroundColor(.white)
+                .foregroundColor(ZholdasTheme.textPrimary)
             
             Text(subtitle)
                 .font(.subheadline)
-                .foregroundColor(.gray)
+                .foregroundColor(ZholdasTheme.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
         }

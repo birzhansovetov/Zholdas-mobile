@@ -32,7 +32,7 @@ struct ReportView: View {
                 VStack(spacing: 20) {
                     Text("rep_info_text".localized)
                         .font(.footnote)
-                        .foregroundColor(.gray)
+                        .foregroundColor(ZholdasTheme.textSecondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 24)
                         .padding(.top, 16)
@@ -46,12 +46,12 @@ struct ReportView: View {
                                 HStack(spacing: 16) {
                                     Image(systemName: iconName)
                                         .font(.system(size: 18))
-                                        .foregroundColor(selectedReason == reasonKey ? ZholdasTheme.accent : .gray)
+                                        .foregroundColor(selectedReason == reasonKey ? ZholdasTheme.accent : ZholdasTheme.textSecondary)
                                         .frame(width: 24)
                                     
                                     Text(reasonTitle.localized)
                                         .font(.body)
-                                        .foregroundColor(.white)
+                                        .foregroundColor(ZholdasTheme.textPrimary)
                                     
                                     Spacer()
                                     
@@ -62,11 +62,11 @@ struct ReportView: View {
                                     }
                                 }
                                 .padding()
-                                .background(Color.white.opacity(selectedReason == reasonKey ? 0.06 : 0.02))
+                                .background(selectedReason == reasonKey ? ZholdasTheme.accent.opacity(0.10) : ZholdasTheme.surface.opacity(0.66))
                                 .cornerRadius(12)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .stroke(selectedReason == reasonKey ? ZholdasTheme.accent.opacity(0.3) : Color.white.opacity(0.04), lineWidth: 1)
+                                        .stroke(selectedReason == reasonKey ? ZholdasTheme.accent.opacity(0.45) : ZholdasTheme.border, lineWidth: 1)
                                 )
                             }
                         }
@@ -78,19 +78,13 @@ struct ReportView: View {
                         Text("rep_details_title".localized)
                             .font(.caption)
                             .fontWeight(.bold)
-                            .foregroundColor(.gray)
+                            .foregroundColor(ZholdasTheme.textSecondary)
                             .tracking(1.0)
                         
                         TextField("rep_details_placeholder".localized, text: $descriptionText, axis: .vertical)
                             .lineLimit(3...5)
-                            .padding()
-                            .background(Color.white.opacity(0.04))
-                            .foregroundColor(.white)
-                            .cornerRadius(12)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
-                            )
+                            .foregroundColor(ZholdasTheme.textPrimary)
+                            .modernFieldSurface()
                     }
                     .padding(.horizontal, 20)
                     

@@ -6,16 +6,6 @@ private struct SelectedUserForDetail: Identifiable {
     let id: String
 }
 
-private struct ActivityShareSheet: UIViewControllerRepresentable {
-    let items: [Any]
-
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
-    }
-
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
-}
-
 private struct EventWeatherSummary: Equatable {
     let temperature: Double
     let apparentTemperature: Double?
@@ -117,8 +107,6 @@ struct EventDetailView: View {
     @State private var liveMapPosition: MapCameraPosition = .automatic
     @State private var weatherSummary: EventWeatherSummary?
     @State private var isLoadingWeather = false
-    @State private var isShowingShareSheet = false
-    @State private var shareItems: [Any] = []
     @State private var isShowingEditSheet = false
 
     private let liveLocationTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
@@ -474,12 +462,13 @@ struct EventDetailView: View {
                     
                     // 9. Bottom Action Buttons (Share & Route)
                     HStack(spacing: 12) {
-                        Button {
-                            shareEvent()
-                        } label: {
-                            Text("ev_share_btn".localized)
-                                .font(.subheadline)
-                                .fontWeight(.bold)
+                        ShareLink(
+                            item: publicEventURL,
+                            subject: Text(event.title),
+                            message: Text(eventShareMessage)
+                        ) {
+                            Label("ev_share_btn".localized, systemImage: "square.and.arrow.up")
+                                .font(.subheadline.weight(.bold))
                                 .foregroundColor(ZholdasTheme.textPrimary)
                                 .frame(maxWidth: .infinity)
                                 .padding()
@@ -581,9 +570,6 @@ struct EventDetailView: View {
                 isLoading: isLoadingPreparation
             )
         }
-        .sheet(isPresented: $isShowingShareSheet) {
-            ActivityShareSheet(items: shareItems)
-        }
         .sheet(isPresented: $isShowingEditSheet) {
             EditEventView(event: event, eventsViewModel: eventsViewModel) {
                 Task {
@@ -613,14 +599,11 @@ struct EventDetailView: View {
         AppConfig.publicBackendBaseURL.appendingPathComponent("events/\(event.id)")
     }
 
-    private func shareEvent() {
-        let shareText = """
+    private var eventShareMessage: String {
+        """
         \("ev_share_prefix".localized): \(event.title)
         \("ev_share_at".localized) \(event.locationName)
-        \(publicEventURL.absoluteString)
         """
-        shareItems = [shareText, publicEventURL]
-        isShowingShareSheet = true
     }
 
     private func openRouteToEvent() {

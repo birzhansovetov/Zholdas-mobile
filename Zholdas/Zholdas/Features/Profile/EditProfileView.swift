@@ -67,7 +67,7 @@ struct EditProfileView: View {
                             .ignoresSafeArea()
                         ProgressView("edit_prof_saving".localized)
                             .tint(ZholdasTheme.accent)
-                            .foregroundColor(.white)
+                            .foregroundColor(ZholdasTheme.textPrimary)
                             .scaleEffect(1.2)
                             .padding()
                             .background(Color(red: 0.15, green: 0.17, blue: 0.22))
@@ -130,7 +130,7 @@ struct EditProfileView: View {
 
             Text("edit_prof_change_avatar".localized)
                 .font(.caption)
-                .foregroundColor(.gray)
+                .foregroundColor(ZholdasTheme.textSecondary)
         }
     }
     
@@ -140,18 +140,12 @@ struct EditProfileView: View {
             Text(title)
                 .font(.caption)
                 .fontWeight(.bold)
-                .foregroundColor(.gray)
+                .foregroundColor(ZholdasTheme.textSecondary)
                 .tracking(1.5)
             
             TextField(placeholder, text: text)
-                .padding()
-                .background(Color.white.opacity(0.04))
-                .cornerRadius(12)
-                .foregroundColor(.white)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.white.opacity(0.06), lineWidth: 1)
-                )
+                .foregroundColor(ZholdasTheme.textPrimary)
+                .modernFieldSurface()
         }
     }
     
@@ -161,7 +155,7 @@ struct EditProfileView: View {
             Text("edit_prof_city_title".localized)
                 .font(.caption)
                 .fontWeight(.bold)
-                .foregroundColor(.gray)
+                .foregroundColor(ZholdasTheme.textSecondary)
                 .tracking(1.5)
             
             Menu {
@@ -172,19 +166,13 @@ struct EditProfileView: View {
             } label: {
                 HStack {
                     Text(city.isEmpty ? "edit_prof_city_placeholder".localized : city)
-                        .foregroundColor(city.isEmpty ? .gray : .white)
+                        .foregroundColor(city.isEmpty ? ZholdasTheme.textTertiary : ZholdasTheme.textPrimary)
                     Spacer()
                     Image(systemName: "chevron.down")
-                        .foregroundColor(.gray)
+                        .foregroundColor(ZholdasTheme.textSecondary)
                         .font(.caption)
                 }
-                .padding()
-                .background(Color.white.opacity(0.04))
-                .cornerRadius(12)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.white.opacity(0.06), lineWidth: 1)
-                )
+                .modernFieldSurface()
             }
         }
     }
@@ -195,19 +183,13 @@ struct EditProfileView: View {
             Text("reg_bio_label".localized)
                 .font(.caption)
                 .fontWeight(.bold)
-                .foregroundColor(.gray)
+                .foregroundColor(ZholdasTheme.textSecondary)
                 .tracking(1.5)
             
             TextField("edit_prof_bio_placeholder".localized, text: $bio, axis: .vertical)
                 .lineLimit(4...8)
-                .padding()
-                .background(Color.white.opacity(0.04))
-                .cornerRadius(12)
-                .foregroundColor(.white)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.white.opacity(0.06), lineWidth: 1)
-                )
+                .foregroundColor(ZholdasTheme.textPrimary)
+                .modernFieldSurface()
         }
     }
     

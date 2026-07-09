@@ -119,7 +119,7 @@ struct ChatRoomView: View {
                     }
                 }
                 
-                Divider().background(Color.white.opacity(0.08))
+                Divider().background(ZholdasTheme.border)
                 
                 // Input Area
                 inputFieldView
@@ -195,7 +195,7 @@ struct ChatRoomView: View {
                 .foregroundColor(.gray)
             Text("Здесь пока пусто")
                 .font(.headline)
-                .foregroundColor(.white)
+                .foregroundColor(ZholdasTheme.textPrimary)
             Text("Напишите первое сообщение, чтобы начать общение!")
                 .font(.subheadline)
                 .foregroundColor(.gray)
@@ -308,8 +308,8 @@ struct ChatRoomView: View {
                             Text(message.text)
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 10)
-                                .background(Color.white.opacity(0.05))
-                                .foregroundColor(.white)
+                                .background(ZholdasTheme.surface)
+                                .foregroundColor(ZholdasTheme.textPrimary)
                                 .cornerRadius(16, corners: [.topLeft, .topRight, .bottomRight])
                                 .contextMenu {
                                     Button {
