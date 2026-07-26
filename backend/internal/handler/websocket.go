@@ -34,7 +34,7 @@ func (h *EventHandler) WebSocketChatUpgrader(c *gin.Context) {
 		return
 	}
 
-	claims, err := middleware.ParseToken(tokenStr, h.jwtSecret)
+	claims, err := middleware.ParseTokenWithConfig(tokenStr, h.tokenConfig)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
 		return

@@ -25,6 +25,12 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
+type TokenConfig struct {
+	Secret   string
+	Issuer   string
+	Audience string
+}
+
 type jwksResponse struct {
 	Keys []jwk `json:"keys"`
 }
@@ -54,21 +60,51 @@ var (
 // ParseToken parses and validates a Supabase JWT. The user UUID is in the
 // standard "sub" claim, which maps to auth.users.id.
 func ParseToken(tokenStr string, secret string) (*Claims, error) {
+	return ParseTokenWithConfig(tokenStr, TokenConfig{Secret: secret})
+}
+
+// ParseTokenWithConfig validates signature, lifetime, subject and, when set,
+// the exact Supabase issuer and audience. Pinning the issuer also prevents a
+// token from directing the backend to an attacker-controlled JWKS endpoint.
+func ParseTokenWithConfig(tokenStr string, config TokenConfig) (*Claims, error) {
+	unverified := &Claims{}
+	_, _, err := jwt.NewParser().ParseUnverified(tokenStr, unverified)
+	if err != nil {
+		return nil, fmt.Errorf("parse token claims: %w", err)
+	}
+	if config.Issuer != "" && unverified.Issuer != config.Issuer {
+		return nil, errors.New("invalid issuer")
+	}
+
 	claims := &Claims{}
+	options := []jwt.ParserOption{
+		jwt.WithValidMethods([]string{
+			jwt.SigningMethodHS256.Alg(),
+			jwt.SigningMethodRS256.Alg(),
+			jwt.SigningMethodES256.Alg(),
+		}),
+	}
+	if config.Issuer != "" {
+		options = append(options, jwt.WithIssuer(config.Issuer))
+	}
+	if config.Audience != "" {
+		options = append(options, jwt.WithAudience(config.Audience))
+	}
+
 	token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); ok {
-			return []byte(secret), nil
+			return []byte(config.Secret), nil
 		}
 
 		if _, ok := token.Method.(*jwt.SigningMethodRSA); ok {
-			return publicKeyForToken(tokenStr, token)
+			return publicKeyForToken(config.Issuer, unverified.Issuer, token)
 		}
 		if _, ok := token.Method.(*jwt.SigningMethodECDSA); ok {
-			return publicKeyForToken(tokenStr, token)
+			return publicKeyForToken(config.Issuer, unverified.Issuer, token)
 		}
 
 		return nil, fmt.Errorf("unexpected signing method: %s", token.Method.Alg())
-	})
+	}, options...)
 
 	if err != nil {
 		return nil, err
@@ -84,22 +120,21 @@ func ParseToken(tokenStr string, secret string) (*Claims, error) {
 	return claims, nil
 }
 
-func publicKeyForToken(tokenStr string, token *jwt.Token) (interface{}, error) {
+func publicKeyForToken(expectedIssuer, tokenIssuer string, token *jwt.Token) (interface{}, error) {
 	kid, _ := token.Header["kid"].(string)
 	if kid == "" {
 		return nil, errors.New("missing key id")
 	}
 
-	unverified := &Claims{}
-	_, _, err := jwt.NewParser().ParseUnverified(tokenStr, unverified)
-	if err != nil {
-		return nil, fmt.Errorf("parse unverified token: %w", err)
+	issuer := tokenIssuer
+	if expectedIssuer != "" {
+		issuer = expectedIssuer
 	}
-	if unverified.Issuer == "" {
+	if issuer == "" {
 		return nil, errors.New("missing issuer")
 	}
 
-	keys, err := jwksForIssuer(unverified.Issuer)
+	keys, err := jwksForIssuer(issuer)
 	if err != nil {
 		return nil, err
 	}
@@ -107,10 +142,10 @@ func publicKeyForToken(tokenStr string, token *jwt.Token) (interface{}, error) {
 	key, ok := keys[kid]
 	if !ok {
 		jwksCacheMu.Lock()
-		delete(jwksCache, unverified.Issuer)
+		delete(jwksCache, issuer)
 		jwksCacheMu.Unlock()
 
-		keys, err = jwksForIssuer(unverified.Issuer)
+		keys, err = jwksForIssuer(issuer)
 		if err != nil {
 			return nil, err
 		}
@@ -241,27 +276,28 @@ func decodeJWKBase64(value string) ([]byte, error) {
 
 // AuthMiddleware intercepts requests and validates access tokens
 func AuthMiddleware(jwtSecret string, pool *pgxpool.Pool) gin.HandlerFunc {
+	return AuthMiddlewareWithConfig(TokenConfig{Secret: jwtSecret}, pool)
+}
+
+func AuthMiddlewareWithConfig(tokenConfig TokenConfig, pool *pgxpool.Pool) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header is required"})
-			c.Abort()
+			AbortWithError(c, http.StatusUnauthorized, "AUTH_HEADER_MISSING", "Authorization header is required")
 			return
 		}
 
 		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header format must be Bearer <token>"})
-			c.Abort()
+		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") || strings.TrimSpace(parts[1]) == "" {
+			AbortWithError(c, http.StatusUnauthorized, "AUTH_HEADER_INVALID", "Authorization header format must be Bearer <token>")
 			return
 		}
 
 		tokenStr := parts[1]
-		claims, err := ParseToken(tokenStr, jwtSecret)
+		claims, err := ParseTokenWithConfig(tokenStr, tokenConfig)
 		if err != nil {
-			log.Printf("auth token validation failed: %v", err)
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired access token"})
-			c.Abort()
+			log.Printf("request_id=%s auth_token_validation_failed=%v", RequestID(c), err)
+			AbortWithError(c, http.StatusUnauthorized, "AUTH_TOKEN_INVALID", "Invalid or expired access token")
 			return
 		}
 
@@ -269,11 +305,16 @@ func AuthMiddleware(jwtSecret string, pool *pgxpool.Pool) gin.HandlerFunc {
 
 		// Ensure a local profile row exists for the Supabase Auth user.
 		if pool != nil {
-			_, _ = pool.Exec(c.Request.Context(), `
+			_, err = pool.Exec(c.Request.Context(), `
 				INSERT INTO profiles (user_id, username, full_name)
 				VALUES ($1, 'user_' || replace($1::text, '-', ''), COALESCE($2, 'Пользователь'))
 				ON CONFLICT (user_id) DO NOTHING
 			`, userID, claims.Email)
+			if err != nil {
+				log.Printf("request_id=%s profile_initialization_failed user_id=%s error=%v", RequestID(c), userID, err)
+				AbortWithError(c, http.StatusServiceUnavailable, "PROFILE_INITIALIZATION_FAILED", "User profile is temporarily unavailable")
+				return
+			}
 		}
 
 		// Perform database check to see if user is banned or get their role.
@@ -282,14 +323,14 @@ func AuthMiddleware(jwtSecret string, pool *pgxpool.Pool) gin.HandlerFunc {
 		if pool != nil {
 			err = pool.QueryRow(c.Request.Context(), "SELECT is_banned, role FROM profiles WHERE user_id = $1", userID).Scan(&isBanned, &role)
 			if err != nil {
-				isBanned = false
-				role = "user"
+				log.Printf("request_id=%s profile_lookup_failed user_id=%s error=%v", RequestID(c), userID, err)
+				AbortWithError(c, http.StatusServiceUnavailable, "PROFILE_LOOKUP_FAILED", "User profile is temporarily unavailable")
+				return
 			}
 		}
 
 		if isBanned {
-			c.JSON(http.StatusForbidden, gin.H{"error": "User is banned"})
-			c.Abort()
+			AbortWithError(c, http.StatusForbidden, "USER_BANNED", "User is banned")
 			return
 		}
 

@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/birzhansovetov/zholdas-backend/internal/database"
+	"github.com/birzhansovetov/zholdas-backend/internal/middleware"
 	"github.com/birzhansovetov/zholdas-backend/internal/service"
 )
 
@@ -27,7 +28,7 @@ type EventHandler struct {
 	aiService           *service.AIService
 	notificationService *service.NotificationService
 	ChatHub             *service.ChatHub
-	jwtSecret           string
+	tokenConfig         middleware.TokenConfig
 }
 
 func NewEventHandler(pool *pgxpool.Pool, aiService *service.AIService, notificationService *service.NotificationService) *EventHandler {
@@ -42,7 +43,12 @@ func NewEventHandler(pool *pgxpool.Pool, aiService *service.AIService, notificat
 
 // SetJWTSecret sets the JWT secret key for websocket auth
 func (h *EventHandler) SetJWTSecret(secret string) {
-	h.jwtSecret = secret
+	h.tokenConfig.Secret = secret
+}
+
+// SetJWTConfig configures strict Supabase token validation for websocket auth.
+func (h *EventHandler) SetJWTConfig(config middleware.TokenConfig) {
+	h.tokenConfig = config
 }
 
 func (h *EventHandler) isAIEnabled(ctx context.Context) bool {

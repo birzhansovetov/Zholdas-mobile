@@ -8,12 +8,15 @@ import (
 )
 
 type Config struct {
-	Port          string
-	DatabaseURL   string
-	JWTSecret     string
-	OpenAIAPIKey  string
-	AdminEmail    string
-	RunMigrations bool
+	Port           string
+	DatabaseURL    string
+	JWTSecret      string
+	JWTIssuer      string
+	JWTAudience    string
+	TrustedProxies []string
+	OpenAIAPIKey   string
+	AdminEmail     string
+	RunMigrations  bool
 }
 
 func loadDotEnv() {
@@ -56,18 +59,30 @@ func LoadConfig() *Config {
 	if jwtSecret == "" {
 		jwtSecret = "zholdas_secret_key_change_me"
 	}
+	jwtIssuer := strings.TrimRight(strings.TrimSpace(os.Getenv("JWT_ISSUER")), "/")
+	if jwtIssuer == "" {
+		jwtIssuer = "https://wqjaolhmpxanjvadxngn.supabase.co/auth/v1"
+	}
+	jwtAudience := strings.TrimSpace(os.Getenv("JWT_AUDIENCE"))
+	if jwtAudience == "" {
+		jwtAudience = "authenticated"
+	}
+	trustedProxies := splitCSV(os.Getenv("TRUSTED_PROXIES"))
 
 	openAIAPIKey := os.Getenv("OPENAI_API_KEY")
 	adminEmail := os.Getenv("ADMIN_EMAIL")
 	runMigrations := parseBoolEnv(os.Getenv("RUN_MIGRATIONS"), true)
 
 	return &Config{
-		Port:          port,
-		DatabaseURL:   dbURL,
-		JWTSecret:     jwtSecret,
-		OpenAIAPIKey:  openAIAPIKey,
-		AdminEmail:    adminEmail,
-		RunMigrations: runMigrations,
+		Port:           port,
+		DatabaseURL:    dbURL,
+		JWTSecret:      jwtSecret,
+		JWTIssuer:      jwtIssuer,
+		JWTAudience:    jwtAudience,
+		TrustedProxies: trustedProxies,
+		OpenAIAPIKey:   openAIAPIKey,
+		AdminEmail:     adminEmail,
+		RunMigrations:  runMigrations,
 	}
 }
 
@@ -85,6 +100,12 @@ func (c *Config) ValidateForRuntime() []string {
 	if strings.TrimSpace(c.JWTSecret) == "" || c.JWTSecret == "zholdas_secret_key_change_me" {
 		warnings = append(warnings, "JWT_SECRET is using the local default; set the Supabase JWT secret in production")
 	}
+	if strings.TrimSpace(c.JWTIssuer) == "" {
+		warnings = append(warnings, "JWT_ISSUER is empty; Supabase issuer validation will fail")
+	}
+	if strings.TrimSpace(c.JWTAudience) == "" {
+		warnings = append(warnings, "JWT_AUDIENCE is empty; Supabase audience validation will fail")
+	}
 
 	if strings.TrimSpace(c.OpenAIAPIKey) == "" {
 		warnings = append(warnings, "OPENAI_API_KEY is empty; AI features may fail")
@@ -99,12 +120,25 @@ func (c *Config) ValidateForRuntime() []string {
 
 func (c *Config) Summary() string {
 	return fmt.Sprintf(
-		"port=%s run_migrations=%t admin_email_set=%t openai_key_set=%t",
+		"port=%s run_migrations=%t jwt_issuer=%s jwt_audience=%s trusted_proxies=%d admin_email_set=%t openai_key_set=%t",
 		c.Port,
 		c.RunMigrations,
+		c.JWTIssuer,
+		c.JWTAudience,
+		len(c.TrustedProxies),
 		strings.TrimSpace(c.AdminEmail) != "",
 		strings.TrimSpace(c.OpenAIAPIKey) != "",
 	)
+}
+
+func splitCSV(value string) []string {
+	var result []string
+	for _, item := range strings.Split(value, ",") {
+		if trimmed := strings.TrimSpace(item); trimmed != "" {
+			result = append(result, trimmed)
+		}
+	}
+	return result
 }
 
 func isProductionRuntime() bool {

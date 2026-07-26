@@ -13,15 +13,26 @@ import (
 
 const testSecret = "my_secret_key_for_testing"
 const testUserID = "11111111-1111-1111-1111-111111111111"
+const testIssuer = "https://example.supabase.co/auth/v1"
+const testAudience = "authenticated"
 
 func generateSupabaseTestToken(subject string, secret string) (string, error) {
+	return generateSupabaseTestTokenWithIdentity(subject, secret, "", "")
+}
+
+func generateSupabaseTestTokenWithIdentity(subject, secret, issuer, audience string) (string, error) {
 	claims := &Claims{
 		Email: "test@example.com",
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   subject,
+			Issuer:    issuer,
+			Audience:  jwt.ClaimStrings{audience},
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(15 * time.Minute)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
+	}
+	if audience == "" {
+		claims.Audience = nil
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(secret))
@@ -40,6 +51,30 @@ func TestTokenGenerationAndParsing(t *testing.T) {
 
 	if claims.Subject != testUserID {
 		t.Errorf("Expected subject %s, got %s", testUserID, claims.Subject)
+	}
+}
+
+func TestParseTokenWithConfig_ValidatesIssuerAndAudience(t *testing.T) {
+	tokenStr, err := generateSupabaseTestTokenWithIdentity(testUserID, testSecret, testIssuer, testAudience)
+	if err != nil {
+		t.Fatal(err)
+	}
+	config := TokenConfig{Secret: testSecret, Issuer: testIssuer, Audience: testAudience}
+
+	if _, err := ParseTokenWithConfig(tokenStr, config); err != nil {
+		t.Fatalf("expected valid Supabase token, got %v", err)
+	}
+
+	wrongIssuer := config
+	wrongIssuer.Issuer = "https://other.supabase.co/auth/v1"
+	if _, err := ParseTokenWithConfig(tokenStr, wrongIssuer); err == nil {
+		t.Fatal("expected token with wrong issuer to fail")
+	}
+
+	wrongAudience := config
+	wrongAudience.Audience = "service_role"
+	if _, err := ParseTokenWithConfig(tokenStr, wrongAudience); err == nil {
+		t.Fatal("expected token with wrong audience to fail")
 	}
 }
 
@@ -139,4 +174,29 @@ func TestAuthMiddleware(t *testing.T) {
 			t.Errorf("Expected injected user_id %s, got %s", testUserID, res.UserID)
 		}
 	})
+}
+
+func TestAuthMiddlewareStructuredError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.Use(RequestIDMiddleware(), AuthMiddleware(testSecret, nil))
+	r.GET("/test", func(c *gin.Context) {
+		c.Status(http.StatusNoContent)
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req.Header.Set("X-Request-ID", "test-request")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401, got %d", w.Code)
+	}
+	var response ErrorResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatal(err)
+	}
+	if response.Error.Code != "AUTH_HEADER_MISSING" || response.Error.RequestID != "test-request" {
+		t.Fatalf("unexpected response: %+v", response)
+	}
 }

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"regexp"
@@ -9,9 +10,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/birzhansovetov/zholdas-backend/internal/database"
+	"github.com/birzhansovetov/zholdas-backend/internal/middleware"
 	"github.com/birzhansovetov/zholdas-backend/internal/service"
 )
 
@@ -88,13 +91,13 @@ func (h *AuthHandler) LogOut(c *gin.Context) {
 func (h *AuthHandler) GetProfile(c *gin.Context) {
 	userIDVal, exists := c.Get("user_id")
 	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		middleware.AbortWithError(c, http.StatusUnauthorized, "AUTH_REQUIRED", "Authentication is required")
 		return
 	}
 
 	userID, ok := userIDVal.(string)
 	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID type"})
+		middleware.AbortWithError(c, http.StatusInternalServerError, "AUTH_CONTEXT_INVALID", "Authentication context is invalid")
 		return
 	}
 
@@ -119,8 +122,13 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 			LEFT JOIN auth.users au ON au.id = p.user_id
 			WHERE p.user_id = $1
 		`, userID).Scan(&user.ID, &user.Email, &user.Username, &user.FullName, &user.AvatarURL, &user.Bio, &user.City, &user.Gender, &user.BirthYear, &user.Role, &user.IsBanned, &user.EmailConfirmedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		middleware.AbortWithError(c, http.StatusNotFound, "PROFILE_NOT_FOUND", "Profile not found")
+		return
+	}
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Profile not found"})
+		log.Printf("request_id=%s get_profile_failed user_id=%s error=%v", middleware.RequestID(c), userID, err)
+		middleware.AbortWithError(c, http.StatusServiceUnavailable, "PROFILE_LOOKUP_FAILED", "Profile is temporarily unavailable")
 		return
 	}
 

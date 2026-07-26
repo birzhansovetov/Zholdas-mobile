@@ -29,6 +29,9 @@ func TestLoadConfig_Defaults(t *testing.T) {
 	os.Unsetenv("PORT")
 	os.Unsetenv("DATABASE_URL")
 	os.Unsetenv("JWT_SECRET")
+	os.Unsetenv("JWT_ISSUER")
+	os.Unsetenv("JWT_AUDIENCE")
+	os.Unsetenv("TRUSTED_PROXIES")
 	os.Unsetenv("OPENAI_API_KEY")
 	os.Unsetenv("ADMIN_EMAIL")
 	os.Unsetenv("RUN_MIGRATIONS")
@@ -46,6 +49,12 @@ func TestLoadConfig_Defaults(t *testing.T) {
 
 	if cfg.JWTSecret != "zholdas_secret_key_change_me" {
 		t.Errorf("Expected default JWTSecret 'zholdas_secret_key_change_me', got '%s'", cfg.JWTSecret)
+	}
+	if cfg.JWTIssuer != "https://wqjaolhmpxanjvadxngn.supabase.co/auth/v1" {
+		t.Errorf("Unexpected default JWT issuer: %s", cfg.JWTIssuer)
+	}
+	if cfg.JWTAudience != "authenticated" {
+		t.Errorf("Unexpected default JWT audience: %s", cfg.JWTAudience)
 	}
 
 	if cfg.OpenAIAPIKey != "" {
@@ -68,6 +77,9 @@ func TestLoadConfig_Overrides(t *testing.T) {
 	os.Setenv("PORT", "9090")
 	os.Setenv("DATABASE_URL", "postgres://test_user@localhost:5432/test_db")
 	os.Setenv("JWT_SECRET", "custom_secret_key")
+	os.Setenv("JWT_ISSUER", "https://custom.supabase.co/auth/v1/")
+	os.Setenv("JWT_AUDIENCE", "custom-audience")
+	os.Setenv("TRUSTED_PROXIES", "10.0.0.0/8, 192.168.0.0/16")
 	os.Setenv("OPENAI_API_KEY", "openai_key_123")
 	os.Setenv("ADMIN_EMAIL", "owner@example.com")
 	os.Setenv("RUN_MIGRATIONS", "false")
@@ -77,6 +89,9 @@ func TestLoadConfig_Overrides(t *testing.T) {
 		os.Unsetenv("PORT")
 		os.Unsetenv("DATABASE_URL")
 		os.Unsetenv("JWT_SECRET")
+		os.Unsetenv("JWT_ISSUER")
+		os.Unsetenv("JWT_AUDIENCE")
+		os.Unsetenv("TRUSTED_PROXIES")
 		os.Unsetenv("OPENAI_API_KEY")
 		os.Unsetenv("ADMIN_EMAIL")
 		os.Unsetenv("RUN_MIGRATIONS")
@@ -95,6 +110,15 @@ func TestLoadConfig_Overrides(t *testing.T) {
 
 	if cfg.JWTSecret != "custom_secret_key" {
 		t.Errorf("Expected JWTSecret 'custom_secret_key', got '%s'", cfg.JWTSecret)
+	}
+	if cfg.JWTIssuer != "https://custom.supabase.co/auth/v1" {
+		t.Errorf("Unexpected JWT issuer: %s", cfg.JWTIssuer)
+	}
+	if cfg.JWTAudience != "custom-audience" {
+		t.Errorf("Unexpected JWT audience: %s", cfg.JWTAudience)
+	}
+	if len(cfg.TrustedProxies) != 2 {
+		t.Errorf("Expected two trusted proxies, got %d", len(cfg.TrustedProxies))
 	}
 
 	if cfg.OpenAIAPIKey != "openai_key_123" {

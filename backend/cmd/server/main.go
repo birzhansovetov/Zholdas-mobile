@@ -78,10 +78,20 @@ func main() {
 	authHandler := handler.NewAuthHandler(pool, cfg.JWTSecret)
 	authHandler.SetNotificationService(notificationService)
 	eventHandler := handler.NewEventHandler(pool, aiService, notificationService)
-	eventHandler.SetJWTSecret(cfg.JWTSecret)
+	eventHandler.SetJWTConfig(middleware.TokenConfig{
+		Secret:   cfg.JWTSecret,
+		Issuer:   cfg.JWTIssuer,
+		Audience: cfg.JWTAudience,
+	})
 
 	// 5. Setup Gin Router
-	router := gin.Default()
+	router := gin.New()
+	if err := router.SetTrustedProxies(cfg.TrustedProxies); err != nil {
+		log.Fatalf("Invalid TRUSTED_PROXIES configuration: %v", err)
+	}
+	router.Use(middleware.RequestIDMiddleware())
+	router.Use(middleware.AccessLogMiddleware())
+	router.Use(middleware.RecoveryMiddleware())
 
 	// CORS Middleware
 	router.Use(func(c *gin.Context) {
@@ -113,10 +123,11 @@ func main() {
 		defer cancel()
 
 		if err := pool.Ping(readyCtx); err != nil {
+			log.Printf("request_id=%s readiness_database_ping_failed=%v", middleware.RequestID(c), err)
 			c.JSON(http.StatusServiceUnavailable, gin.H{
-				"status":   "error",
-				"database": "down",
-				"error":    err.Error(),
+				"status":     "error",
+				"database":   "down",
+				"request_id": middleware.RequestID(c),
 			})
 			return
 		}
@@ -144,7 +155,11 @@ func main() {
 
 	// Protected Routes (JWT Auth)
 	protectedRoutes := router.Group("/")
-	protectedRoutes.Use(middleware.AuthMiddleware(cfg.JWTSecret, pool))
+	protectedRoutes.Use(middleware.AuthMiddlewareWithConfig(middleware.TokenConfig{
+		Secret:   cfg.JWTSecret,
+		Issuer:   cfg.JWTIssuer,
+		Audience: cfg.JWTAudience,
+	}, pool))
 	protectedRoutes.Use(middleware.RateLimitMiddleware(middleware.NewUserRateLimiter(rate.Limit(10), 30)))
 	{
 		protectedRoutes.POST("/auth/logout", authHandler.LogOut)
