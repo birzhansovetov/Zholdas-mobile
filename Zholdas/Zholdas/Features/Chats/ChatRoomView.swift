@@ -263,7 +263,7 @@ struct ChatRoomView: View {
                     if isPhoto {
                         photoMessageView(urlPath: message.text, isCurrentUser: true)
                     } else {
-                        Text(message.text)
+                        Text(displayText(for: message.text))
                             .padding(.horizontal, 16)
                             .padding(.vertical, 10)
                             .background(
@@ -304,8 +304,22 @@ struct ChatRoomView: View {
                                         Label("Пожаловаться", systemImage: "exclamationmark.triangle")
                                     }
                                 }
+                        } else if isJorykMessage(message) {
+                            VStack(alignment: .leading, spacing: 10) {
+                                jorykMessageCard(for: displayText(for: message.text))
+                                jorykFollowUpActions
+                            }
+                            .contextMenu {
+                                Button {
+                                    selectedReportMessageID = message.dbID
+                                    selectedReportSenderID = message.senderID
+                                    isShowingReportSheet = true
+                                } label: {
+                                    Label("Пожаловаться", systemImage: "exclamationmark.triangle")
+                                }
+                            }
                         } else {
-                            Text(message.text)
+                            Text(displayText(for: message.text))
                                 .padding(.horizontal, 16)
                                 .padding(.vertical, 10)
                                 .background(ZholdasTheme.surface)
@@ -352,60 +366,246 @@ struct ChatRoomView: View {
             .padding(.vertical, 16)
             .background(.ultraThinMaterial)
         } else {
-            HStack(spacing: 12) {
-                if session.id != 999 {
-                    PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                        Image(systemName: "photo.fill")
-                            .foregroundColor(.gray)
-                            .font(.system(size: 18))
-                            .padding(10)
-                            .glassBackground(cornerRadius: 20)
+            VStack(spacing: 10) {
+                if shouldShowJorykSuggestions {
+                    jorykSuggestionBar
+                }
+
+                HStack(spacing: 12) {
+                    if session.id != 999 {
+                        PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                            Image(systemName: "photo.fill")
+                                .foregroundColor(.gray)
+                                .font(.system(size: 18))
+                                .padding(10)
+                                .glassBackground(cornerRadius: 20)
+                        }
+                        .buttonStyle(SpringButtonStyle())
+
+                        Button {
+                            withAnimation(.spring(response: 0.25, dampingFraction: 0.82)) {
+                                isJorykMentionActive.toggle()
+                            }
+                            isMessageFieldFocused = true
+                        } label: {
+                            Text("@")
+                                .font(.system(size: 18, weight: .black))
+                                .foregroundColor(isJorykMentionActive ? .white : ZholdasTheme.accent)
+                                .frame(width: 40, height: 40)
+                                .background(
+                                    Circle()
+                                        .fill(isJorykMentionActive ? ZholdasTheme.accent : Color.white.opacity(0.06))
+                                )
+                                .overlay(
+                                    Circle()
+                                        .stroke(ZholdasTheme.accent.opacity(isJorykMentionActive ? 0.45 : 0.25), lineWidth: 1)
+                                )
+                        }
+                        .buttonStyle(SpringButtonStyle())
                     }
-                    .buttonStyle(SpringButtonStyle())
+
+                    TextField(isJorykMentionActive ? "Спросите Жорика..." : "chat_placeholder".localized, text: $messageText)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .glassBackground(cornerRadius: 12)
+                        .focused($isMessageFieldFocused)
 
                     Button {
-                        withAnimation(.spring(response: 0.25, dampingFraction: 0.82)) {
-                            isJorykMentionActive.toggle()
-                        }
-                        isMessageFieldFocused = true
+                        sendMessage()
                     } label: {
-                        Text("@")
-                            .font(.system(size: 18, weight: .black))
-                            .foregroundColor(isJorykMentionActive ? .white : ZholdasTheme.accent)
-                            .frame(width: 40, height: 40)
-                            .background(
-                                Circle()
-                                    .fill(isJorykMentionActive ? ZholdasTheme.accent : Color.white.opacity(0.06))
-                            )
-                            .overlay(
-                                Circle()
-                                    .stroke(ZholdasTheme.accent.opacity(isJorykMentionActive ? 0.45 : 0.25), lineWidth: 1)
-                            )
+                        Image(systemName: "paperplane.fill")
+                            .foregroundColor(.white)
+                            .padding(12)
+                            .background(ZholdasTheme.accent)
+                            .clipShape(Circle())
                     }
                     .buttonStyle(SpringButtonStyle())
+                    .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 }
-                
-                TextField(isJorykMentionActive ? "Спросите Жорика..." : "chat_placeholder".localized, text: $messageText)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .glassBackground(cornerRadius: 12)
-                    .focused($isMessageFieldFocused)
-                
-                Button {
-                    sendMessage()
-                } label: {
-                    Image(systemName: "paperplane.fill")
-                        .foregroundColor(.white)
-                        .padding(12)
-                        .background(ZholdasTheme.accent)
-                        .clipShape(Circle())
-                }
-                .buttonStyle(SpringButtonStyle())
-                .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             .background(.ultraThinMaterial)
+        }
+    }
+
+    private var shouldShowJorykSuggestions: Bool {
+        session.id == 999 || isJorykMentionActive
+    }
+
+    private var jorykSuggestionBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                jorykSuggestionButton("Активный отдых") {
+                    applyJorykSuggestion("Предложи активный отдых: 5 вариантов, что подготовить, сколько займет и как собрать людей.")
+                }
+                jorykSuggestionButton("Спокойный формат") {
+                    applyJorykSuggestion("Предложи спокойный формат встречи: 5 вариантов, без перегруза, с планом и вопросами для общения.")
+                }
+                jorykSuggestionButton("Бюджетно") {
+                    applyJorykSuggestion("Предложи бюджетный формат встречи: варианты без больших трат, что подготовить и как распределить роли.")
+                }
+                jorykSuggestionButton("С заведением") {
+                    applyJorykSuggestion("Предложи формат встречи с кафе или заведением: как выбрать место, бюджет, бронь и темы для общения.")
+                }
+                jorykSuggestionButton("Что взять") {
+                    applyJorykSuggestion("Составь короткий список что взять с собой: еда, напитки, одежда, вещи и что лучше не брать.")
+                }
+                jorykSuggestionButton("Игры") {
+                    applyJorykSuggestion("Предложи 5 игр или активностей для этой встречи: правила, время, количество людей и реквизит.")
+                }
+                jorykSuggestionButton("Маршрут") {
+                    applyJorykSuggestion("Помоги организовать маршрут: точка сбора, как дойти, запасной план и что написать участникам.")
+                }
+                jorykSuggestionButton("План") {
+                    applyJorykSuggestion("Сделай план организации встречи по шагам: до начала, на месте, после встречи.")
+                }
+            }
+            .padding(.horizontal, 2)
+        }
+    }
+
+    private func jorykSuggestionButton(_ title: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundColor(ZholdasTheme.accent)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(ZholdasTheme.accent.opacity(0.14))
+                .clipShape(Capsule())
+                .overlay(
+                    Capsule()
+                        .stroke(ZholdasTheme.accent.opacity(0.28), lineWidth: 1)
+                )
+        }
+        .buttonStyle(SpringButtonStyle())
+    }
+
+    private func applyJorykSuggestion(_ text: String) {
+        messageText = text
+        if session.id != 999 {
+            isJorykMentionActive = true
+        }
+        isMessageFieldFocused = true
+    }
+
+    private var jorykFollowUpActions: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                jorykSuggestionButton("Активнее") {
+                    applyJorykSuggestion("Сделай вариант активнее: больше движения, 3 сценария, что подготовить и как безопасно провести.")
+                }
+                jorykSuggestionButton("Спокойнее") {
+                    applyJorykSuggestion("Сделай спокойнее: меньше движения, уютный формат, вопросы для общения и простой план.")
+                }
+                jorykSuggestionButton("Дешевле") {
+                    applyJorykSuggestion("Сделай бюджетный план без лишних трат: что взять, где сэкономить и как распределить роли.")
+                }
+                jorykSuggestionButton("Финальный план") {
+                    applyJorykSuggestion("Собери финальный план встречи по шагам: до начала, на месте, после встречи и что написать в чат.")
+                }
+            }
+        }
+        .frame(maxWidth: 280, alignment: .leading)
+    }
+
+    private func jorykMessageCard(for text: String) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(parsedJorykSections(from: text), id: \.id) { section in
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        Image(systemName: iconName(forJorykSection: section.title))
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(ZholdasTheme.accent)
+                            .frame(width: 24, height: 24)
+                            .background(ZholdasTheme.accent.opacity(0.16))
+                            .clipShape(Circle())
+
+                        Text(section.title)
+                            .font(.caption)
+                            .fontWeight(.bold)
+                            .foregroundColor(ZholdasTheme.accent)
+                            .textCase(.uppercase)
+                            .tracking(0.8)
+                    }
+
+                    Text(section.body)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(ZholdasTheme.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .lineSpacing(3)
+                }
+                .padding(12)
+                .background(ZholdasTheme.surface)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(ZholdasTheme.border, lineWidth: 1)
+                )
+            }
+        }
+        .frame(maxWidth: 280, alignment: .leading)
+    }
+
+    private func parsedJorykSections(from text: String) -> [JorykDisplaySection] {
+        let knownTitles = [
+            "Варианты",
+            "Что сделать",
+            "Чеклист",
+            "Важно",
+            "Можно написать в чат",
+            "Вопрос"
+        ]
+
+        let blocks = text
+            .components(separatedBy: "\n\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        let sections = blocks.enumerated().map { index, block -> JorykDisplaySection in
+            var lines = block
+                .components(separatedBy: .newlines)
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+
+            let firstLine = lines.first ?? ""
+            if knownTitles.contains(firstLine) {
+                lines.removeFirst()
+                return JorykDisplaySection(
+                    id: "\(index)-\(firstLine)",
+                    title: firstLine,
+                    body: lines.joined(separator: "\n")
+                )
+            }
+
+            return JorykDisplaySection(
+                id: "\(index)-answer",
+                title: index == 0 ? "Ответ Жорика" : "Детали",
+                body: block
+            )
+        }
+
+        return sections.filter { !$0.body.isEmpty }
+    }
+
+    private func iconName(forJorykSection title: String) -> String {
+        switch title {
+        case "Варианты":
+            return "square.grid.2x2.fill"
+        case "Что сделать":
+            return "checklist"
+        case "Чеклист":
+            return "checkmark.circle.fill"
+        case "Важно":
+            return "exclamationmark.triangle.fill"
+        case "Можно написать в чат":
+            return "text.bubble.fill"
+        case "Вопрос":
+            return "questionmark.circle.fill"
+        default:
+            return "sparkles"
         }
     }
     
@@ -453,7 +653,7 @@ struct ChatRoomView: View {
                             id: UUID(),
                             senderName: "Жорик",
                             senderAvatarURL: nil,
-                            text: response.reply,
+                            text: response.displayText,
                             timestamp: Date(),
                             isCurrentUser: false
                         )
@@ -558,6 +758,21 @@ struct ChatRoomView: View {
             || lowercased.hasPrefix("@joryk ")
             || lowercased == "@jorik"
             || lowercased.hasPrefix("@jorik ")
+    }
+
+    private func isJorykMessage(_ message: ChatMessage) -> Bool {
+        let sender = message.senderName.lowercased()
+        return sender.contains("жорик") || sender.contains("joryk") || sender.contains("jorik")
+    }
+
+    private func displayText(for text: String) -> String {
+        text
+            .replacingOccurrences(of: "### ", with: "")
+            .replacingOccurrences(of: "## ", with: "")
+            .replacingOccurrences(of: "# ", with: "")
+            .replacingOccurrences(of: "**", with: "")
+            .replacingOccurrences(of: "__", with: "")
+            .replacingOccurrences(of: "`", with: "")
     }
     
     private func simulateReply() {
@@ -737,8 +952,117 @@ struct AIChatMessage: Codable {
     let text: String
 }
 
+struct JorykDisplaySection {
+    let id: String
+    let title: String
+    let body: String
+}
+
 struct AIChatResponse: Codable {
     let reply: String
+    let structured: AIStructuredReply?
+
+    var displayText: String {
+        guard let structured else { return reply }
+        let text = structured.formattedText
+        return text.isEmpty ? reply : text
+    }
+}
+
+struct AIStructuredReply: Codable {
+    let mode: String?
+    let summary: String?
+    let choices: [String]?
+    let actions: [AIActionCard]?
+    let checklist: [AIActionCard]?
+    let riskWarnings: [String]?
+    let moderatorPrompts: [AIActionCard]?
+    let followUpQuestion: String?
+
+    enum CodingKeys: String, CodingKey {
+        case mode
+        case summary
+        case choices
+        case actions
+        case checklist
+        case riskWarnings = "risk_warnings"
+        case moderatorPrompts = "moderator_prompts"
+        case followUpQuestion = "follow_up_question"
+    }
+
+    var formattedText: String {
+        var sections: [String] = []
+
+        if let summary = summary?.cleanAIText, !summary.isEmpty {
+            sections.append(summary)
+        }
+
+        let cleanChoices = (choices ?? []).map(\.cleanAIText).filter { !$0.isEmpty }
+        if !cleanChoices.isEmpty {
+            let lines = ["Варианты"] + cleanChoices.enumerated().map { "\($0.offset + 1). \($0.element)" }
+            sections.append(lines.joined(separator: "\n"))
+        }
+
+        let cleanActions = (actions ?? []).compactMap(\.formattedLine)
+        if !cleanActions.isEmpty {
+            sections.append((["Что сделать"] + cleanActions).joined(separator: "\n"))
+        }
+
+        let cleanChecklist = (checklist ?? []).compactMap(\.formattedLine)
+        if !cleanChecklist.isEmpty {
+            sections.append((["Чеклист"] + cleanChecklist).joined(separator: "\n"))
+        }
+
+        let cleanWarnings = (riskWarnings ?? []).map(\.cleanAIText).filter { !$0.isEmpty }
+        if !cleanWarnings.isEmpty {
+            sections.append((["Важно"] + cleanWarnings.map { "- \($0)" }).joined(separator: "\n"))
+        }
+
+        let cleanModeratorPrompts = (moderatorPrompts ?? []).compactMap(\.formattedLine)
+        if !cleanModeratorPrompts.isEmpty {
+            sections.append((["Можно написать в чат"] + cleanModeratorPrompts).joined(separator: "\n"))
+        }
+
+        if let question = followUpQuestion?.cleanAIText, !question.isEmpty {
+            sections.append("Вопрос\n\(question)")
+        }
+
+        return sections.joined(separator: "\n\n")
+    }
+}
+
+struct AIActionCard: Codable {
+    let title: String?
+    let body: String?
+    let action: String?
+
+    var formattedLine: String? {
+        let cleanTitle = title?.cleanAIText ?? ""
+        let cleanBody = body?.cleanAIText ?? ""
+        let cleanAction = action?.cleanAIText ?? ""
+        guard !cleanTitle.isEmpty || !cleanBody.isEmpty || !cleanAction.isEmpty else { return nil }
+
+        var line = "- \(cleanTitle)"
+        if !cleanBody.isEmpty {
+            line += cleanTitle.isEmpty ? cleanBody : ": \(cleanBody)"
+        }
+        if !cleanAction.isEmpty {
+            line += ". \(cleanAction)"
+        }
+        return line
+    }
+}
+
+private extension String {
+    var cleanAIText: String {
+        replacingOccurrences(of: "### ", with: "")
+            .replacingOccurrences(of: "## ", with: "")
+            .replacingOccurrences(of: "# ", with: "")
+            .replacingOccurrences(of: "**", with: "")
+            .replacingOccurrences(of: "__", with: "")
+            .replacingOccurrences(of: "`", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 }
 
 // MARK: - Event Chat Request / Response Models

@@ -8,6 +8,7 @@ struct FriendsListView: View {
     @State private var requests: [User] = []
     @State private var selectedTab = 0 // 0: Friends, 1: Requests
     @State private var isLoadingData = false
+    @State private var selectedUser: User?
     @Namespace private var pickerNamespace
     
     var body: some View {
@@ -44,6 +45,11 @@ struct FriendsListView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await loadData()
+        }
+        .sheet(item: $selectedUser) { user in
+            UserDetailView(userID: user.id)
+                .environmentObject(authViewModel)
+                .environmentObject(langManager)
         }
     }
     
@@ -122,22 +128,31 @@ struct FriendsListView: View {
     @ViewBuilder
     private func friendRow(for friend: User) -> some View {
         HStack(spacing: 16) {
-            // Avatar
-            avatarView(for: friend)
-            
-            // Text info
-            VStack(alignment: .leading, spacing: 4) {
-                Text(friend.fullName)
-                    .font(.body)
-                    .fontWeight(.bold)
-                    .foregroundColor(ZholdasTheme.textPrimary)
-                
-                Text("@\(friend.username)")
-                    .font(.footnote)
-                    .foregroundColor(ZholdasTheme.textSecondary)
+            Button {
+                selectedUser = friend
+            } label: {
+                HStack(spacing: 16) {
+                    avatarView(for: friend)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(friend.fullName)
+                            .font(.body)
+                            .fontWeight(.bold)
+                            .foregroundColor(ZholdasTheme.textPrimary)
+
+                        Text("@\(friend.username)")
+                            .font(.footnote)
+                            .foregroundColor(ZholdasTheme.textSecondary)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(ZholdasTheme.textSecondary)
+                }
             }
-            
-            Spacer()
+            .buttonStyle(PlainButtonStyle())
             
             // Delete Friend Button
             Button {
@@ -192,20 +207,25 @@ struct FriendsListView: View {
     @ViewBuilder
     private func requestRow(for request: User) -> some View {
         HStack(spacing: 16) {
-            // Avatar
-            avatarView(for: request)
-            
-            // Info
-            VStack(alignment: .leading, spacing: 4) {
-                Text(request.fullName)
-                    .font(.body)
-                    .fontWeight(.bold)
-                    .foregroundColor(ZholdasTheme.textPrimary)
-                
-                Text("@\(request.username)")
-                    .font(.footnote)
-                    .foregroundColor(ZholdasTheme.textSecondary)
+            Button {
+                selectedUser = request
+            } label: {
+                HStack(spacing: 16) {
+                    avatarView(for: request)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(request.fullName)
+                            .font(.body)
+                            .fontWeight(.bold)
+                            .foregroundColor(ZholdasTheme.textPrimary)
+
+                        Text("@\(request.username)")
+                            .font(.footnote)
+                            .foregroundColor(ZholdasTheme.textSecondary)
+                    }
+                }
             }
+            .buttonStyle(PlainButtonStyle())
             
             Spacer()
             

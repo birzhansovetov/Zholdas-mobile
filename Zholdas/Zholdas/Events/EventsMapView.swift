@@ -51,13 +51,15 @@ struct EventsMapView: View {
                               event.title.localizedCaseInsensitiveContains(searchQuery) ||
                               event.description.localizedCaseInsensitiveContains(searchQuery) ||
                               event.locationName.localizedCaseInsensitiveContains(searchQuery)
-            let matchesAudience = event.matchesAudienceFilters(
+            let isOwnEvent = event.creatorID == authViewModel.currentUserProfile?.id
+            let matchesAudience = isOwnEvent || event.matchesAudienceFilters(
                 gender: filterGender,
                 age: filterAge,
                 maxDistanceKm: maxDistanceKm,
                 distanceMetersOverride: localDistanceMeters(to: event)
             )
-            return matchesCat && matchesText && matchesAudience && matchesDateFilter(event) && matchesNearMeFilter(event)
+            let matchesNearby = isOwnEvent || matchesNearMeFilter(event)
+            return matchesCat && matchesText && matchesAudience && matchesDateFilter(event) && matchesNearby
         }
     }
     
@@ -111,9 +113,7 @@ struct EventsMapView: View {
                     .presentationDetents([.fraction(0.4), .medium])
             }
             .sheet(isPresented: $showCreateEventSheet) {
-                CreateEventView {
-                    loadEvents()
-                }
+                CreateEventView(eventsViewModel: eventsViewModel) {}
             }
             .sheet(isPresented: $showAIRecommendationsSheet) {
                 AIRecommendationView(viewModel: eventsViewModel)
@@ -187,9 +187,7 @@ struct EventsMapView: View {
     }
 
     private func localDistanceMeters(to event: Event) -> Double? {
-        guard let coordinate = userCoordinate else {
-            return nil
-        }
+        let coordinate = effectiveCoordinate
         let userLocation = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
         let eventLocation = CLLocation(latitude: event.latitude, longitude: event.longitude)
         return eventLocation.distance(from: userLocation)

@@ -6,7 +6,7 @@ import PhotosUI
 struct CreateEventView: View {
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject var langManager: LocalizationManager
-    @StateObject private var eventsViewModel = EventsViewModel()
+    @ObservedObject var eventsViewModel: EventsViewModel
     @StateObject private var locationManager = LocationManager()
     
     var onCreateSuccess: () -> Void
@@ -869,6 +869,6 @@ struct EventLocationPickerView: View {
 }
 
 #Preview {
-    CreateEventView {}
+    CreateEventView(eventsViewModel: EventsViewModel()) {}
         .environmentObject(LocalizationManager.shared)
 }

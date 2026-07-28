@@ -79,13 +79,22 @@ class EventsViewModel: ObservableObject {
             let encoder = JSONEncoder()
             encoder.dateEncodingStrategy = .iso8601
             let body = try encoder.encode(request)
-            let _: Event = try await APIClient.shared.request("/events", method: "POST", body: body, requiresAuth: true)
+            let createdEvent: Event = try await APIClient.shared.request("/events", method: "POST", body: body, requiresAuth: true)
+            upsertEvent(createdEvent)
             self.isLoading = false
             return true
         } catch {
             self.errorMessage = "Ошибка при создании события: \(error.localizedDescription)"
             self.isLoading = false
             return false
+        }
+    }
+
+    private func upsertEvent(_ event: Event) {
+        if let index = events.firstIndex(where: { $0.id == event.id }) {
+            events[index] = event
+        } else {
+            events.insert(event, at: 0)
         }
     }
 
@@ -132,9 +141,7 @@ class EventsViewModel: ObservableObject {
             let body = try encoder.encode(request)
             let updatedEvent: Event = try await APIClient.shared.request("/events/\(id)", method: "PUT", body: body, requiresAuth: true)
 
-            if let index = events.firstIndex(where: { $0.id == id }) {
-                events[index] = updatedEvent
-            }
+            upsertEvent(updatedEvent)
 
             self.isLoading = false
             return true

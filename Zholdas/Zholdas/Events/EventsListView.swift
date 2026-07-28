@@ -15,17 +15,37 @@ struct EventsListView: View {
     @State private var nearMeOnly = false
     
     let categories = ["cat_all", "cat_mountains", "cat_walks", "cat_sports", "cat_theater", "cat_restaurant", "cat_games", "cat_networking", "cat_other"]
+
+    private var userCoordinate: CLLocationCoordinate2D? {
+        guard let loc = locationManager.location else { return nil }
+        let lat = loc.coordinate.latitude
+        let lon = loc.coordinate.longitude
+        if abs(lat - 37.33) < 0.5 && abs(lon - (-122.03)) < 0.5 {
+            return nil
+        }
+        return loc.coordinate
+    }
+
+    private var defaultAlmatyCoordinate: CLLocationCoordinate2D {
+        CLLocationCoordinate2D(latitude: 43.2389, longitude: 76.8897)
+    }
+
+    private var effectiveCoordinate: CLLocationCoordinate2D {
+        userCoordinate ?? defaultAlmatyCoordinate
+    }
     
     var filteredEvents: [Event] {
         eventsViewModel.events.filter { event in
             let matchesCategory = matchesCategory(eventCategory: event.category, filterCategory: selectedCategory)
-            let matchesAudience = event.matchesAudienceFilters(
+            let isOwnEvent = event.creatorID == authViewModel.currentUserProfile?.id
+            let matchesAudience = isOwnEvent || event.matchesAudienceFilters(
                 gender: filterGender,
                 age: filterAge,
                 maxDistanceKm: maxDistanceKm,
                 distanceMetersOverride: localDistanceMeters(to: event)
             )
-            return matchesCategory && matchesAudience && matchesDateFilter(event) && matchesNearMeFilter(event)
+            let matchesNearby = isOwnEvent || matchesNearMeFilter(event)
+            return matchesCategory && matchesAudience && matchesDateFilter(event) && matchesNearby
         }
     }
     
@@ -155,27 +175,55 @@ struct EventsListView: View {
                 filterAge = profileAge
             }
             locationManager.requestLocation()
+            loadEvents()
         }
         .onChange(of: locationManager.location) { location in
-            guard let location else { return }
-            Task {
-                await eventsViewModel.fetchNearbyEvents(
-                    latitude: location.coordinate.latitude,
-                    longitude: location.coordinate.longitude,
-                    radiusMeters: Int(maxDistanceKm * 1000)
-                )
-            }
+            guard location != nil else { return }
+            loadEvents()
         }
         .onChange(of: maxDistanceKm) { _ in
-            guard let location = locationManager.location else { return }
-            Task {
-                await eventsViewModel.fetchNearbyEvents(
-                    latitude: location.coordinate.latitude,
-                    longitude: location.coordinate.longitude,
-                    radiusMeters: Int(maxDistanceKm * 1000)
-                )
-            }
+            loadEvents()
         }
+    }
+
+    private func loadEvents() {
+        let coordinate = effectiveCoordinate
+
+        Task {
+            await eventsViewModel.fetchNearbyEvents(
+                latitude: coordinate.latitude,
+                longitude: coordinate.longitude,
+                radiusMeters: Int(maxDistanceKm * 1000)
+            )
+        }
+    }
+
+    private func localDistanceMeters(to event: Event) -> Double? {
+        let coordinate = effectiveCoordinate
+        let userLocation = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        let eventLocation = CLLocation(latitude: event.latitude, longitude: event.longitude)
+        return eventLocation.distance(from: userLocation)
+    }
+
+    private func matchesDateFilter(_ event: Event) -> Bool {
+        !onlyToday || Calendar.current.isDateInToday(event.startTime)
+    }
+
+    private func matchesNearMeFilter(_ event: Event) -> Bool {
+        guard nearMeOnly else { return true }
+        guard let distance = localDistanceMeters(to: event) else { return false }
+        return distance <= min(maxDistanceKm, 3) * 1000
+    }
+
+    private var filtersSummary: String {
+        var parts = ["\(Int(maxDistanceKm)) км", "\(filterAge) лет"]
+        if onlyToday {
+            parts.append("сегодня")
+        }
+        if nearMeOnly {
+            parts.append("рядом")
+        }
+        return "Фильтры: " + parts.joined(separator: " · ")
     }
     
     // MARK: - Helper matches category
@@ -214,35 +262,6 @@ struct EventsListView: View {
         default:
             return false
         }
-    }
-
-    private func localDistanceMeters(to event: Event) -> Double? {
-        guard let location = locationManager.location else {
-            return nil
-        }
-        let eventLocation = CLLocation(latitude: event.latitude, longitude: event.longitude)
-        return eventLocation.distance(from: location)
-    }
-
-    private var filtersSummary: String {
-        var parts = ["\(Int(maxDistanceKm)) км", "\(filterAge) лет"]
-        if onlyToday {
-            parts.append("сегодня")
-        }
-        if nearMeOnly {
-            parts.append("рядом")
-        }
-        return "Фильтры: " + parts.joined(separator: " · ")
-    }
-
-    private func matchesDateFilter(_ event: Event) -> Bool {
-        !onlyToday || Calendar.current.isDateInToday(event.startTime)
-    }
-
-    private func matchesNearMeFilter(_ event: Event) -> Bool {
-        guard nearMeOnly else { return true }
-        guard let distance = localDistanceMeters(to: event) else { return false }
-        return distance <= min(maxDistanceKm, 3) * 1000
     }
     
     private func getEventsWord(for count: Int) -> String {

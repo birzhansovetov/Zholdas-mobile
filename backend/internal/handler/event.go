@@ -730,7 +730,10 @@ func (h *EventHandler) GetNearbyEvents(c *gin.Context) {
 		       COALESCE(e.max_age, 0)::int AS max_age
 		FROM events e
 		WHERE e.status = 'active'
-		  AND ST_DWithin(e.location, ST_SetSRID(ST_MakePoint($1::float8, $2::float8), 4326)::geography, $3::float8)
+		  AND (
+		    ST_DWithin(e.location, ST_SetSRID(ST_MakePoint($1::float8, $2::float8), 4326)::geography, $3::float8)
+		    OR e.creator_id = $6::uuid
+		  )
 		ORDER BY distance_meters ASC
 		LIMIT $4 OFFSET $5;
 	`
@@ -1564,7 +1567,8 @@ type AIChatRequest struct {
 }
 
 type AIChatResponse struct {
-	Reply string `json:"reply"`
+	Reply      string                         `json:"reply"`
+	Structured *service.AIChatStructuredReply `json:"structured,omitempty"`
 }
 
 // ChatWithAI generates conversational replies using the configured AI provider.
@@ -1587,13 +1591,16 @@ func (h *EventHandler) ChatWithAI(c *gin.Context) {
 		return
 	}
 
-	reply, err := h.aiService.Chat(ctx, dto.Message, dto.History)
+	structured, err := h.aiService.ChatStructured(ctx, dto.Message, dto.History)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "AI error: " + err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, AIChatResponse{Reply: reply})
+	c.JSON(http.StatusOK, AIChatResponse{
+		Reply:      service.FormatStructuredReply(structured),
+		Structured: structured,
+	})
 }
 
 type ChatSessionResponse struct {
