@@ -385,6 +385,10 @@ struct ProfileTabView: View {
             cleanedBio = cleanedBio.replacingOccurrences(of: "[birth_year:\(birthYear)]", with: "")
         }
 
+        if let interests = extractProfileMetadata("interests", from: rawBio) {
+            cleanedBio = cleanedBio.replacingOccurrences(of: "[interests:\(interests)]", with: "")
+        }
+
         cleanedBio = cleanedBio.trimmingCharacters(in: .whitespacesAndNewlines)
         if cleanedBio.isEmpty {
             cleanedBio = "prof_default_bio".localized

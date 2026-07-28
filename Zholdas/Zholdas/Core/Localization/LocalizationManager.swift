@@ -1535,6 +1535,71 @@ class LocalizationManager: ObservableObject {
             "kk": "Құпия сөз кемінде 6 таңбадан тұруы керек",
             "en": "Password must be at least 6 characters"
         ],
+        "reg_step_user_info": [
+            "ru": "Данные",
+            "kk": "Деректер",
+            "en": "Info"
+        ],
+        "reg_step_interests": [
+            "ru": "Интересы",
+            "kk": "Қызығушылық",
+            "en": "Interests"
+        ],
+        "reg_step_email": [
+            "ru": "Почта",
+            "kk": "Пошта",
+            "en": "Email"
+        ],
+        "reg_next": [
+            "ru": "Далее",
+            "kk": "Келесі",
+            "en": "Next"
+        ],
+        "reg_send_code": [
+            "ru": "Отправить код",
+            "kk": "Код жіберу",
+            "en": "Send code"
+        ],
+        "reg_verify_code": [
+            "ru": "Подтвердить код",
+            "kk": "Кодты растау",
+            "en": "Verify code"
+        ],
+        "reg_interests_title": [
+            "ru": "Выбери интересы",
+            "kk": "Қызығушылықтарды таңдаңыз",
+            "en": "Choose interests"
+        ],
+        "reg_interests_subtitle": [
+            "ru": "Так Жолдас будет точнее подбирать встречи.",
+            "kk": "Осылай Жолдас кездесулерді дәлірек ұсынады.",
+            "en": "This helps Zholdas recommend better events."
+        ],
+        "reg_check_email_title": [
+            "ru": "Проверь почту",
+            "kk": "Поштаны тексеріңіз",
+            "en": "Check your email"
+        ],
+        "reg_check_email_subtitle": [
+            "ru": "Код отправлен на",
+            "kk": "Код жіберілді:",
+            "en": "Code sent to"
+        ],
+        "reg_email_code_label": [
+            "ru": "КОД ИЗ ПОЧТЫ",
+            "kk": "ПОШТАДАҒЫ КОД",
+            "en": "EMAIL CODE"
+        ],
+        "reg_email_code_placeholder": [
+            "ru": "Введите 6-значный код",
+            "kk": "6 таңбалы кодты енгізіңіз",
+            "en": "Enter 6-digit code"
+        ],
+        "reg_resend_code": [
+            "ru": "Отправить код еще раз",
+            "kk": "Кодты қайта жіберу",
+            "en": "Resend code"
+        ],
         "reg_already_have_account": [
             "ru": "Уже есть аккаунт?",
             "kk": "Аккаунтыңыз бар ма?",

@@ -237,6 +237,7 @@ struct EditProfileView: View {
         var cleanedBio = rawBio
         let gender = extractProfileMetadata("gender", from: rawBio)
         let birthYear = extractProfileMetadata("birth_year", from: rawBio)
+        let interests = extractProfileMetadata("interests", from: rawBio)
 
         if let gender {
             cleanedBio = cleanedBio.replacingOccurrences(of: "[gender:\(gender)]", with: "")
@@ -244,6 +245,10 @@ struct EditProfileView: View {
 
         if let birthYear {
             cleanedBio = cleanedBio.replacingOccurrences(of: "[birth_year:\(birthYear)]", with: "")
+        }
+
+        if let interests {
+            cleanedBio = cleanedBio.replacingOccurrences(of: "[interests:\(interests)]", with: "")
         }
 
         return (cleanedBio.trimmingCharacters(in: .whitespacesAndNewlines), gender, birthYear)

@@ -80,43 +80,20 @@ class AuthViewModel: ObservableObject {
         
         do {
             if let response = try await APIClient.shared.signUp(email: normalizedEmail, password: password, username: username, fullName: fullName) {
-                let saved = TokenStorage.shared.saveTokens(
-                    accessToken: response.accessToken,
-                    refreshToken: response.refreshToken
-                )
-                if saved {
-                    self.isAuthenticated = true
-                } else {
+                guard saveAuthTokens(response) else {
                     self.errorMessage = "Не удалось сохранить токены безопасности"
                     self.isLoading = false
                     return
                 }
+                self.isAuthenticated = true
             } else {
-                self.infoMessage = "Аккаунт создан. Подтвердите email через письмо, затем войдите."
+                self.infoMessage = "Аккаунт создан. Введите код из письма для подтверждения email."
                 self.isLoading = false
                 return
             }
             
-            // Если указаны дополнительные параметры, обновляем профиль
             if avatarURL != nil || bio != nil || city != nil || gender != nil || birthYear != nil {
-                struct UpdateProfileBody: Codable {
-                    let fullName: String
-                    let bio: String
-                    let city: String
-                    let avatarURL: String
-                    let gender: String?
-                    let birthYear: Int?
-                    
-                    enum CodingKeys: String, CodingKey {
-                        case fullName = "full_name"
-                        case bio
-                        case city
-                        case avatarURL = "avatar_url"
-                        case gender
-                        case birthYear = "birth_year"
-                    }
-                }
-                let updateBody = UpdateProfileBody(
+                try await updateProfileAfterAuth(
                     fullName: fullName,
                     bio: bio ?? "",
                     city: city ?? "Алматы",
@@ -124,19 +101,103 @@ class AuthViewModel: ObservableObject {
                     gender: gender,
                     birthYear: birthYear
                 )
-                let updateData = try JSONEncoder().encode(updateBody)
-                let _: [String: String] = try await APIClient.shared.request(
-                    "/auth/profile",
-                    method: "PUT",
-                    body: updateData,
-                    requiresAuth: true
-                )
                 await fetchUserProfile()
             }
         } catch {
             self.errorMessage = error.localizedDescription
             self.isLoading = false
         }
+    }
+
+    func verifySignupCode(
+        email: String,
+        code: String,
+        fullName: String,
+        avatarURL: String? = nil,
+        bio: String? = nil,
+        city: String? = nil,
+        gender: String? = nil,
+        birthYear: Int? = nil
+    ) async {
+        self.isLoading = true
+        self.errorMessage = nil
+        self.infoMessage = nil
+        let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        do {
+            let response = try await APIClient.shared.verifySignupCode(email: normalizedEmail, code: code)
+
+            guard saveAuthTokens(response) else {
+                self.errorMessage = "Не удалось сохранить токены безопасности"
+                self.isLoading = false
+                return
+            }
+
+            self.isAuthenticated = true
+
+            try await updateProfileAfterAuth(
+                fullName: fullName,
+                bio: bio ?? "",
+                city: city ?? "Алматы",
+                avatarURL: avatarURL ?? "",
+                gender: gender,
+                birthYear: birthYear
+            )
+            await fetchUserProfile()
+        } catch {
+            self.errorMessage = error.localizedDescription
+            self.isLoading = false
+        }
+    }
+
+    private func saveAuthTokens(_ response: TokenResponse) -> Bool {
+        TokenStorage.shared.saveTokens(
+            accessToken: response.accessToken,
+            refreshToken: response.refreshToken
+        )
+    }
+
+    private func updateProfileAfterAuth(
+        fullName: String,
+        bio: String,
+        city: String,
+        avatarURL: String,
+        gender: String?,
+        birthYear: Int?
+    ) async throws {
+        struct UpdateProfileBody: Codable {
+            let fullName: String
+            let bio: String
+            let city: String
+            let avatarURL: String
+            let gender: String?
+            let birthYear: Int?
+
+            enum CodingKeys: String, CodingKey {
+                case fullName = "full_name"
+                case bio
+                case city
+                case avatarURL = "avatar_url"
+                case gender
+                case birthYear = "birth_year"
+            }
+        }
+
+        let updateBody = UpdateProfileBody(
+            fullName: fullName,
+            bio: bio,
+            city: city,
+            avatarURL: avatarURL,
+            gender: gender,
+            birthYear: birthYear
+        )
+        let updateData = try JSONEncoder().encode(updateBody)
+        let _: [String: String] = try await APIClient.shared.request(
+            "/auth/profile",
+            method: "PUT",
+            body: updateData,
+            requiresAuth: true
+        )
     }
     
     func signOut() {

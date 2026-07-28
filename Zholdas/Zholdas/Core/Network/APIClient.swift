@@ -88,6 +88,52 @@ actor APIClient {
         return TokenResponse(accessToken: accessToken, refreshToken: refreshToken)
     }
 
+    func verifySignupCode(email: String, code: String) async throws -> TokenResponse {
+        struct VerifyRequest: Codable {
+            let type: String
+            let email: String
+            let token: String
+        }
+
+        struct VerifySession: Codable {
+            let accessToken: String?
+            let refreshToken: String?
+
+            enum CodingKeys: String, CodingKey {
+                case accessToken = "access_token"
+                case refreshToken = "refresh_token"
+            }
+        }
+
+        struct VerifyResponse: Codable {
+            let accessToken: String?
+            let refreshToken: String?
+            let session: VerifySession?
+
+            enum CodingKeys: String, CodingKey {
+                case accessToken = "access_token"
+                case refreshToken = "refresh_token"
+                case session
+            }
+        }
+
+        let payload = VerifyRequest(type: "signup", email: email, token: code)
+        let response: VerifyResponse = try await supabaseAuthRequest(
+            "/auth/v1/verify",
+            method: "POST",
+            body: try JSONEncoder().encode(payload)
+        )
+
+        let accessToken = response.accessToken ?? response.session?.accessToken
+        let refreshToken = response.refreshToken ?? response.session?.refreshToken
+
+        guard let accessToken, let refreshToken else {
+            throw APIError.noData
+        }
+
+        return TokenResponse(accessToken: accessToken, refreshToken: refreshToken)
+    }
+
     func sendPasswordResetEmail(email: String) async throws {
         struct RecoverRequest: Codable {
             let email: String
