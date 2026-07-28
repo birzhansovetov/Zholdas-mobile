@@ -132,6 +132,57 @@ type UpdateParticipantStatusDTO struct {
 	Status string `json:"status" binding:"required"`
 }
 
+func normalizeAudienceGender(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "men", "male", "m", "мужской", "мужчина", "мужчины":
+		return "men"
+	case "women", "female", "f", "женский", "женщина", "женщины":
+		return "women"
+	case "", "all", "any", "все":
+		return "all"
+	default:
+		return strings.ToLower(strings.TrimSpace(value))
+	}
+}
+
+func validateAudienceRestrictions(genderFilter string, minAge, maxAge int32) (string, error) {
+	normalizedGender := normalizeAudienceGender(genderFilter)
+	if normalizedGender != "all" && normalizedGender != "men" && normalizedGender != "women" {
+		return "", fmt.Errorf("invalid gender_filter")
+	}
+	if minAge < 0 || maxAge < 0 {
+		return "", fmt.Errorf("age limits cannot be negative")
+	}
+	if minAge > 0 && maxAge > 0 && minAge > maxAge {
+		return "", fmt.Errorf("min_age cannot be greater than max_age")
+	}
+	return normalizedGender, nil
+}
+
+func userMatchesAudienceRestrictions(userGender *string, birthYear *int32, genderFilter string, minAge, maxAge int32) bool {
+	eventGender := normalizeAudienceGender(genderFilter)
+	if eventGender != "all" {
+		if userGender == nil || normalizeAudienceGender(*userGender) != eventGender {
+			return false
+		}
+	}
+
+	if minAge > 0 || maxAge > 0 {
+		if birthYear == nil || *birthYear <= 0 {
+			return false
+		}
+		age := int32(time.Now().Year()) - *birthYear
+		if minAge > 0 && age < minAge {
+			return false
+		}
+		if maxAge > 0 && age > maxAge {
+			return false
+		}
+	}
+
+	return true
+}
+
 // CreateEvent creates an event with status 'active' and moderates it asynchronously
 func (h *EventHandler) CreateEvent(c *gin.Context) {
 	userIDVal, exists := c.Get("user_id")
@@ -149,6 +200,12 @@ func (h *EventHandler) CreateEvent(c *gin.Context) {
 
 	if dto.EndTime.Before(dto.StartTime) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "End time must be after start time"})
+		return
+	}
+
+	genderFilterVal, err := validateAudienceRestrictions(dto.GenderFilter, dto.MinAge, dto.MaxAge)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -188,12 +245,7 @@ func (h *EventHandler) CreateEvent(c *gin.Context) {
 		visibilityVal = dto.Visibility
 	}
 
-	genderFilterVal := "Все"
-	if dto.GenderFilter != "" {
-		genderFilterVal = dto.GenderFilter
-	}
-
-	err := h.pool.QueryRow(ctx, `
+	err = h.pool.QueryRow(ctx, `
 		INSERT INTO events (creator_id, title, description, category, location_name, location, start_time, end_time, max_participants, status, image_url, visibility, gender_filter, min_age, max_age)
 		VALUES ($1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6::float8, $7::float8), 4326)::geography, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 		RETURNING id, creator_id::text, title, description, category, location_name, 
@@ -285,6 +337,12 @@ func (h *EventHandler) UpdateEvent(c *gin.Context) {
 		return
 	}
 
+	genderFilterVal, err := validateAudienceRestrictions(dto.GenderFilter, dto.MinAge, dto.MaxAge)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	ctx := c.Request.Context()
 	tx, err := h.pool.Begin(ctx)
 	if err != nil {
@@ -356,11 +414,6 @@ func (h *EventHandler) UpdateEvent(c *gin.Context) {
 	visibilityVal := strings.TrimSpace(dto.Visibility)
 	if visibilityVal == "" {
 		visibilityVal = "public"
-	}
-
-	genderFilterVal := strings.TrimSpace(dto.GenderFilter)
-	if genderFilterVal == "" {
-		genderFilterVal = "all"
 	}
 
 	pgStartTime := pgtype.Timestamptz{Time: dto.StartTime, Valid: true}
@@ -723,16 +776,40 @@ func (h *EventHandler) GetNearbyEvents(c *gin.Context) {
 		       e.start_time, e.end_time, e.max_participants, e.status, e.image_url, e.created_at,
 		       ST_Distance(e.location, ST_SetSRID(ST_MakePoint($1::float8, $2::float8), 4326)::geography)::float8 AS distance_meters,
 		       (SELECT COUNT(*) FROM event_participants ep WHERE ep.event_id = e.id)::int AS participants_count,
-		       EXISTS(SELECT 1 FROM event_participants ep WHERE ep.event_id = e.id AND ep.user_id = $6)::bool AS is_joined,
+		       EXISTS(SELECT 1 FROM event_participants ep WHERE ep.event_id = e.id AND ep.user_id = NULLIF($6, '')::uuid)::bool AS is_joined,
 		       COALESCE(e.visibility, 'public') AS visibility,
 		       COALESCE(e.gender_filter, 'all') AS gender_filter,
 		       COALESCE(e.min_age, 0)::int AS min_age,
 		       COALESCE(e.max_age, 0)::int AS max_age
 		FROM events e
+		LEFT JOIN profiles viewer ON viewer.user_id = NULLIF($6, '')::uuid
 		WHERE e.status = 'active'
 		  AND (
-		    ST_DWithin(e.location, ST_SetSRID(ST_MakePoint($1::float8, $2::float8), 4326)::geography, $3::float8)
-		    OR e.creator_id = $6::uuid
+		    e.creator_id = NULLIF($6, '')::uuid
+		    OR (
+		      ST_DWithin(e.location, ST_SetSRID(ST_MakePoint($1::float8, $2::float8), 4326)::geography, $3::float8)
+		      AND (
+		        COALESCE(NULLIF(LOWER(e.gender_filter), ''), 'all') IN ('all', 'any', 'все')
+		        OR CASE
+		             WHEN LOWER(COALESCE(viewer.gender, '')) IN ('men', 'male', 'm', 'мужской', 'мужчина', 'мужчины') THEN 'men'
+		             WHEN LOWER(COALESCE(viewer.gender, '')) IN ('women', 'female', 'f', 'женский', 'женщина', 'женщины') THEN 'women'
+		             ELSE ''
+		           END =
+		           CASE
+		             WHEN LOWER(COALESCE(e.gender_filter, '')) IN ('men', 'male', 'm', 'мужской', 'мужчина', 'мужчины') THEN 'men'
+		             WHEN LOWER(COALESCE(e.gender_filter, '')) IN ('women', 'female', 'f', 'женский', 'женщина', 'женщины') THEN 'women'
+		             ELSE 'all'
+		           END
+		      )
+		      AND (
+		        COALESCE(e.min_age, 0) = 0
+		        OR (viewer.birth_year IS NOT NULL AND viewer.birth_year > 0 AND EXTRACT(YEAR FROM CURRENT_DATE)::int - viewer.birth_year >= COALESCE(e.min_age, 0))
+		      )
+		      AND (
+		        COALESCE(e.max_age, 0) = 0
+		        OR (viewer.birth_year IS NOT NULL AND viewer.birth_year > 0 AND EXTRACT(YEAR FROM CURRENT_DATE)::int - viewer.birth_year <= COALESCE(e.max_age, 0))
+		      )
+		    )
 		  )
 		ORDER BY distance_meters ASC
 		LIMIT $4 OFFSET $5;
@@ -923,12 +1000,19 @@ func (h *EventHandler) JoinEvent(c *gin.Context) {
 	var maxParticipants int32
 	var currentParticipants int32
 	var status string
+	var creatorID string
+	var genderFilter string
+	var minAge int32
+	var maxAge int32
 	err = tx.QueryRow(ctx, `
-		SELECT max_participants, status, 
+		SELECT max_participants, status, creator_id::text,
+		       COALESCE(gender_filter, 'all'),
+		       COALESCE(min_age, 0)::int,
+		       COALESCE(max_age, 0)::int,
 		       (SELECT COUNT(*) FROM event_participants WHERE event_id = id)::int
 		FROM events
 		WHERE id = $1
-	`, eventID).Scan(&maxParticipants, &status, &currentParticipants)
+	`, eventID).Scan(&maxParticipants, &status, &creatorID, &genderFilter, &minAge, &maxAge, &currentParticipants)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
 		return
@@ -944,6 +1028,37 @@ func (h *EventHandler) JoinEvent(c *gin.Context) {
 		return
 	}
 
+	if creatorID != userID {
+		var userGender pgtype.Text
+		var userBirthYear pgtype.Int4
+		err = tx.QueryRow(ctx, `
+			SELECT gender, birth_year
+			FROM profiles
+			WHERE user_id = $1
+		`, userID).Scan(&userGender, &userBirthYear)
+		if err != nil && err != pgx.ErrNoRows {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check profile restrictions"})
+			return
+		}
+
+		var genderPtr *string
+		if userGender.Valid && strings.TrimSpace(userGender.String) != "" {
+			gender := userGender.String
+			genderPtr = &gender
+		}
+
+		var birthYearPtr *int32
+		if userBirthYear.Valid && userBirthYear.Int32 > 0 {
+			birthYear := userBirthYear.Int32
+			birthYearPtr = &birthYear
+		}
+
+		if !userMatchesAudienceRestrictions(genderPtr, birthYearPtr, genderFilter, minAge, maxAge) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "You do not match this event audience restrictions"})
+			return
+		}
+	}
+
 	res, err := tx.Exec(ctx, `
 		INSERT INTO event_participants (event_id, user_id, participant_status)
 		VALUES ($1, $2, 'going')
@@ -957,7 +1072,6 @@ func (h *EventHandler) JoinEvent(c *gin.Context) {
 	rowsAffected := res.RowsAffected()
 	if rowsAffected > 0 {
 		var eventTitle string
-		var creatorID string
 		err = tx.QueryRow(ctx, "SELECT title, creator_id::text FROM events WHERE id = $1", eventID).Scan(&eventTitle, &creatorID)
 		if err == nil && creatorID != userID {
 			var actorName string

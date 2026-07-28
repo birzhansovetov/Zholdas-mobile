@@ -235,6 +235,24 @@ extension Event {
         CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
     }
 
+    private static func normalizedGender(_ value: String?) -> String {
+        let raw = (value ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        switch raw {
+        case "men", "male", "m", "мужской", "мужчина", "мужчины":
+            return "men"
+        case "women", "female", "f", "женский", "женщина", "женщины":
+            return "women"
+        case "all", "any", "все", "":
+            return "all"
+        default:
+            return raw
+        }
+    }
+
+    var normalizedGenderFilter: String {
+        Self.normalizedGender(genderFilter)
+    }
+
     func matchesAudienceFilters(gender: String, age: Int?, maxDistanceKm: Double, distanceMetersOverride: Double? = nil) -> Bool {
         let effectiveDistanceMeters = distanceMetersOverride ?? distanceMeters
         guard let effectiveDistanceMeters else {
@@ -244,15 +262,19 @@ extension Event {
             return false
         }
 
-        let eventGender = (genderFilter ?? "all").lowercased()
-        if gender != "all", eventGender != "all", eventGender != gender {
+        let viewerGender = Self.normalizedGender(gender)
+        let eventGender = normalizedGenderFilter
+        if eventGender != "all", viewerGender != eventGender {
             return false
         }
 
-        if let age {
-            let minAllowed = Int(minAge ?? 0)
-            let maxAllowed = Int(maxAge ?? 0)
+        let minAllowed = Int(minAge ?? 0)
+        let maxAllowed = Int(maxAge ?? 0)
 
+        if minAllowed > 0 || maxAllowed > 0 {
+            guard let age else {
+                return false
+            }
             if minAllowed > 0, age < minAllowed {
                 return false
             }

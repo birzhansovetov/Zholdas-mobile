@@ -33,19 +33,28 @@ struct EventsListView: View {
     private var effectiveCoordinate: CLLocationCoordinate2D {
         userCoordinate ?? defaultAlmatyCoordinate
     }
+
+    private var viewerGender: String {
+        authViewModel.currentUserProfile?.gender ?? "all"
+    }
+
+    private var viewerAge: Int? {
+        authViewModel.currentUserProfile?.age
+    }
     
     var filteredEvents: [Event] {
         eventsViewModel.events.filter { event in
             let matchesCategory = matchesCategory(eventCategory: event.category, filterCategory: selectedCategory)
             let isOwnEvent = event.creatorID == authViewModel.currentUserProfile?.id
             let matchesAudience = isOwnEvent || event.matchesAudienceFilters(
-                gender: filterGender,
-                age: filterAge,
+                gender: viewerGender,
+                age: viewerAge,
                 maxDistanceKm: maxDistanceKm,
                 distanceMetersOverride: localDistanceMeters(to: event)
             )
+            let matchesGenderFilter = filterGender == "all" || event.normalizedGenderFilter == "all" || event.normalizedGenderFilter == filterGender
             let matchesNearby = isOwnEvent || matchesNearMeFilter(event)
-            return matchesCategory && matchesAudience && matchesDateFilter(event) && matchesNearby
+            return matchesCategory && matchesAudience && matchesGenderFilter && matchesDateFilter(event) && matchesNearby
         }
     }
     
