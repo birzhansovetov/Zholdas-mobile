@@ -35,8 +35,11 @@ struct CreateEventView: View {
         ("hiking", "cat_mountains", "mountain.2.fill"),
         ("walk", "cat_walks", "tree.fill"),
         ("sports", "cat_sports", "soccerball"),
+        ("theater", "cat_theater", "theatermasks.fill"),
+        ("restaurant", "cat_restaurant", "fork.knife"),
         ("board_games", "cat_games", "dice.fill"),
-        ("networking", "cat_networking", "cup.and.saucer.fill")
+        ("networking", "cat_networking", "person.2.wave.2.fill"),
+        ("other", "cat_other", "sparkles")
     ]
     
     enum Field {

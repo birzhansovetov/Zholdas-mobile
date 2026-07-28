@@ -23,7 +23,16 @@ struct EditEventView: View {
     @State private var errorText: String?
     @State private var isSaving = false
 
-    private let categories = ["cat_mountains", "cat_walks", "cat_sports", "cat_theater", "cat_restaurant", "cat_games", "cat_networking", "cat_other"]
+    private let categories = [
+        (value: "hiking", titleKey: "cat_mountains"),
+        (value: "walk", titleKey: "cat_walks"),
+        (value: "sports", titleKey: "cat_sports"),
+        (value: "theater", titleKey: "cat_theater"),
+        (value: "restaurant", titleKey: "cat_restaurant"),
+        (value: "board_games", titleKey: "cat_games"),
+        (value: "networking", titleKey: "cat_networking"),
+        (value: "other", titleKey: "cat_other")
+    ]
     private let genderOptions = [("all", "Все"), ("men", "Мужчины"), ("women", "Женщины")]
 
     init(event: Event, eventsViewModel: EventsViewModel, onSaved: (() -> Void)? = nil) {
@@ -33,7 +42,7 @@ struct EditEventView: View {
 
         _title = State(initialValue: event.title)
         _description = State(initialValue: event.description)
-        _category = State(initialValue: event.category)
+        _category = State(initialValue: Self.canonicalCategory(event.category))
         _locationName = State(initialValue: event.locationName)
         _latitude = State(initialValue: String(format: "%.6f", event.latitude))
         _longitude = State(initialValue: String(format: "%.6f", event.longitude))
@@ -44,6 +53,29 @@ struct EditEventView: View {
         _genderFilter = State(initialValue: event.genderFilter ?? "all")
         _minAge = State(initialValue: Int(event.minAge ?? 0))
         _maxAge = State(initialValue: Int(event.maxAge ?? 0))
+    }
+
+    private static func canonicalCategory(_ category: String) -> String {
+        switch category.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+        case "cat_mountains", "mountains":
+            return "hiking"
+        case "cat_walks":
+            return "walk"
+        case "cat_sports":
+            return "sports"
+        case "cat_theater":
+            return "theater"
+        case "cat_restaurant":
+            return "restaurant"
+        case "cat_games", "games", "boardgames":
+            return "board_games"
+        case "cat_networking":
+            return "networking"
+        case "cat_other", "misc":
+            return "other"
+        default:
+            return category
+        }
     }
 
     var body: some View {
@@ -73,8 +105,8 @@ struct EditEventView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             sectionTitle("Категория")
                             Picker("Категория", selection: $category) {
-                                ForEach(categories, id: \.self) { item in
-                                    Text(item.localized).tag(item)
+                                ForEach(categories, id: \.value) { item in
+                                    Text(item.titleKey.localized).tag(item.value)
                                 }
                             }
                             .pickerStyle(.menu)
