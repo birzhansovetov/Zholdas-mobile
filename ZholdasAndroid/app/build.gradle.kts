@@ -24,10 +24,10 @@ android {
 
     buildTypes {
         debug {
-            buildConfigField("String", "BACKEND_BASE_URL", "\"https://zholdas-mobile.onrender.com\"")
+            buildConfigField("String", "BACKEND_BASE_URL", "\"https://zholdas-api-de89a64e4196.herokuapp.com\"")
         }
         release {
-            buildConfigField("String", "BACKEND_BASE_URL", "\"https://zholdas-mobile.onrender.com\"")
+            buildConfigField("String", "BACKEND_BASE_URL", "\"https://zholdas-api-de89a64e4196.herokuapp.com\"")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
