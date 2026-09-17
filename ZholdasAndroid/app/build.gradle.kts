@@ -24,7 +24,7 @@ android {
 
     buildTypes {
         debug {
-            buildConfigField("String", "BACKEND_BASE_URL", "\"http://10.0.2.2:8080\"")
+            buildConfigField("String", "BACKEND_BASE_URL", "\"https://zholdas-mobile.onrender.com\"")
         }
         release {
             buildConfigField("String", "BACKEND_BASE_URL", "\"https://zholdas-mobile.onrender.com\"")

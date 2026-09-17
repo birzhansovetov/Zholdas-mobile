@@ -24,6 +24,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
+import java.io.IOException
 
 class AuthViewModel(
     val apiClient: APIClient,
@@ -227,12 +229,21 @@ class AuthViewModel(
                 _currentUserProfile.value = profile
                 fetchNotificationsCount()
                 registerDeviceToken()
+            } catch (e: HttpException) {
+                Log.e(TAG, "Failed to fetch user profile: ${e.message}", e)
+                if (e.code() == 401 && tokenManager.currentTokens() == null) {
+                    _errorMessage.value = "Сессия истекла. Войдите заново"
+                    _isAuthenticated.value = false
+                    _currentUserProfile.value = null
+                } else {
+                    _errorMessage.value = "Не удалось загрузить профиль. Повторите попытку"
+                }
+            } catch (e: IOException) {
+                Log.e(TAG, "Network error while fetching user profile: ${e.message}", e)
+                _errorMessage.value = "Нет соединения с сервером. Проверьте интернет"
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to fetch user profile: ${e.message}", e)
-                _errorMessage.value = "Сессия истекла. Войдите заново"
-                tokenManager.clearTokens()
-                _isAuthenticated.value = false
-                _currentUserProfile.value = null
+                _errorMessage.value = "Не удалось загрузить профиль. Повторите попытку"
             }
         }
     }

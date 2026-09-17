@@ -332,8 +332,11 @@ class APIClient(
                 val refreshResponse = supabaseAuth.refreshSync(RefreshRequest(current.refreshToken)).execute()
                 val refreshed = refreshResponse.body()
                 if (!refreshResponse.isSuccessful || refreshed == null) {
+                    val refreshWasRejected = refreshResponse.code() in listOf(400, 401, 403)
                     refreshResponse.errorBody()?.close()
-                    tokenManager.clearTokensFromSyncContext()
+                    if (refreshWasRejected) {
+                        tokenManager.clearTokensFromSyncContext()
+                    }
                     return@synchronized null
                 }
                 tokenManager.saveTokensFromSyncContext(refreshed.accessToken, refreshed.refreshToken)
@@ -341,7 +344,7 @@ class APIClient(
                     .header("Authorization", "Bearer ${refreshed.accessToken}")
                     .build()
             } catch (_: Exception) {
-                tokenManager.clearTokensFromSyncContext()
+                // Keep the session on timeouts and connectivity failures. A later request can retry.
                 null
             }
         }
