@@ -36,8 +36,8 @@ import com.example.zholdas.ui.components.PrimaryButton
 import com.example.zholdas.ui.components.modernFieldSurface
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.ZonedDateTime
+import java.time.temporal.ChronoUnit
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,6 +67,13 @@ fun CreateEventScreen(
     var isUploadingImage by remember { mutableStateOf(false) }
     var imageUploadError by remember { mutableStateOf<String?>(null) }
     var showLocationPickerDialog by remember { mutableStateOf(false) }
+    val now = remember { ZonedDateTime.now() }
+    var startDateTime by remember {
+        mutableStateOf(now.plusHours(1).withMinute(0).withSecond(0).withNano(0))
+    }
+    var endDateTime by remember {
+        mutableStateOf(now.plusHours(2).withMinute(0).withSecond(0).withNano(0))
+    }
 
     val categoriesList = remember {
         listOf("hiking", "walk", "sports", "board_games", "networking", "theater", "restaurant")
@@ -388,6 +395,14 @@ fun CreateEventScreen(
                 }
             }
 
+            // Date & Time
+            EventDateTimeSection(
+                startDateTime = startDateTime,
+                endDateTime = endDateTime,
+                onStartDateTimeChange = { startDateTime = it },
+                onEndDateTimeChange = { endDateTime = it }
+            )
+
             // 7. Visibility
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
@@ -510,14 +525,15 @@ fun CreateEventScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Submit Button
-            val isFormValid = title.isNotBlank() && locationName.isNotBlank()
+            val isStartInFuture = startDateTime.isAfter(ZonedDateTime.now().minusMinutes(5))
+            val isEndAfterStart = endDateTime.isAfter(startDateTime)
+            val isDateTimeValid = isStartInFuture && isEndAfterStart
+            val isFormValid = title.isNotBlank() && locationName.isNotBlank() && isDateTimeValid
             PrimaryButton(
                 text = "create_ev_btn".localized,
                 onClick = {
-                    val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
-                    val now = System.currentTimeMillis()
-                    val startTimeStr = isoFormat.format(Date(now + 3600000L))
-                    val endTimeStr = isoFormat.format(Date(now + 7200000L))
+                    val startTimeStr = startDateTime.toInstant().truncatedTo(ChronoUnit.SECONDS).toString()
+                    val endTimeStr = endDateTime.toInstant().truncatedTo(ChronoUnit.SECONDS).toString()
 
                     coroutineScope.launch {
                         isUploadingImage = selectedImageUri != null
@@ -559,61 +575,18 @@ fun CreateEventScreen(
     }
 
     if (showLocationPickerDialog) {
-        AlertDialog(
-            onDismissRequest = { showLocationPickerDialog = false },
-            containerColor = ZholdasElevatedSurface,
-            title = {
-                Text(
-                    text = "create_ev_pick_location".localized,
-                    color = ZholdasTextPrimary,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        text = "create_ev_map_tap_hint".localized,
-                        color = ZholdasTextSecondary,
-                        fontSize = 14.sp
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        Button(
-                            onClick = {
-                                latitude = 43.1872
-                                longitude = 76.9531
-                                if (locationName.isBlank()) locationName = "Кок-Жайляу"
-                                showLocationPickerDialog = false
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = ZholdasAccent.copy(alpha = 0.25f))
-                        ) {
-                            Text("Горы (43.18, 76.95)", color = ZholdasTextPrimary)
-                        }
-                        Button(
-                            onClick = {
-                                latitude = 43.2567
-                                longitude = 76.9754
-                                if (locationName.isBlank()) locationName = "Парк Горького"
-                                showLocationPickerDialog = false
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = ZholdasAccent.copy(alpha = 0.25f))
-                        ) {
-                            Text("Центр (43.25, 76.97)", color = ZholdasTextPrimary)
-                        }
-                    }
+        EventLocationPickerDialog(
+            initialLatitude = latitude,
+            initialLongitude = longitude,
+            initialLocationName = locationName,
+            onDismiss = { showLocationPickerDialog = false },
+            onConfirm = { newLat, newLon, newName ->
+                latitude = newLat
+                longitude = newLon
+                if (locationName.isBlank() || locationName == "create_ev_selected_point_name".localized) {
+                    locationName = newName
                 }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showLocationPickerDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = ZholdasAccent)
-                ) {
-                    Text("create_ev_confirm_location".localized, color = Color.White)
-                }
+                showLocationPickerDialog = false
             }
         )
     }

@@ -44,6 +44,7 @@ fun MainAppShell(
 ) {
     var selectedTab by remember { mutableStateOf<TabItem>(TabItem.Map) }
     val unreadNotificationsCount by authViewModel.unreadNotificationsCount.collectAsState()
+    val currentUserProfile by authViewModel.currentUserProfile.collectAsState()
 
     val tabs = listOf(
         TabItem.Map,
@@ -118,7 +119,7 @@ fun MainAppShell(
             when (selectedTab) {
                 TabItem.Map -> MapScreen()
                 TabItem.Events -> EventListScreen()
-                TabItem.Chats -> ChatListScreen()
+                TabItem.Chats -> ChatListScreen(currentUserId = currentUserProfile?.id.orEmpty())
                 TabItem.Activity -> ActivityScreen(authViewModel)
                 TabItem.Profile -> ProfileScreen(authViewModel)
             }

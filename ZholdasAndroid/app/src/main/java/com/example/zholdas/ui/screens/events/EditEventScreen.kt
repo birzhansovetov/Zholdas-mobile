@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -15,6 +16,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,6 +30,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.zholdas.data.local.localized
 import com.example.zholdas.data.model.CreateEventRequest
 import com.example.zholdas.data.model.Event
@@ -36,6 +40,11 @@ import com.example.zholdas.ui.components.ModernCard
 import com.example.zholdas.ui.components.PrimaryButton
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZonedDateTime
+import java.time.temporal.ChronoUnit
+import java.util.Locale
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -61,6 +70,23 @@ fun EditEventScreen(
     var maxAgeText by remember { mutableStateOf(event.maxAge?.toString() ?: "") }
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
     var imageUploadError by remember { mutableStateOf<String?>(null) }
+    val initialStart = remember(event.startTime) {
+        try {
+            Instant.parse(event.startTime).atZone(ZoneId.systemDefault())
+        } catch (_: Exception) {
+            ZonedDateTime.now().plusHours(1)
+        }
+    }
+    val initialEnd = remember(event.endTime) {
+        try {
+            Instant.parse(event.endTime).atZone(ZoneId.systemDefault())
+        } catch (_: Exception) {
+            initialStart.plusHours(1)
+        }
+    }
+    var startDateTime by remember { mutableStateOf(initialStart) }
+    var endDateTime by remember { mutableStateOf(initialEnd) }
+    var showLocationPicker by remember { mutableStateOf(false) }
 
     var isSubmitting by remember { mutableStateOf(false) }
     val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
@@ -303,8 +329,57 @@ fun EditEventScreen(
                             )
                         )
                     }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(ZholdasElevatedSurface)
+                            .border(1.dp, ZholdasBorder, RoundedCornerShape(12.dp))
+                            .clickable { showLocationPicker = true }
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Place,
+                                contentDescription = null,
+                                tint = ZholdasAccent
+                            )
+                            Column {
+                                Text(
+                                    text = "create_ev_pick_location".localized,
+                                    color = ZholdasTextPrimary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = "${latitude.take(8)}, ${longitude.take(8)}",
+                                    color = ZholdasTextSecondary,
+                                    fontSize = 12.sp
+                                )
+                            }
+                        }
+                        Icon(
+                            imageVector = Icons.Default.ChevronRight,
+                            contentDescription = null,
+                            tint = ZholdasTextSecondary
+                        )
+                    }
                 }
             }
+
+            // Date & Time section
+            EventDateTimeSection(
+                startDateTime = startDateTime,
+                endDateTime = endDateTime,
+                onStartDateTimeChange = { startDateTime = it },
+                onEndDateTimeChange = { endDateTime = it },
+                allowPastStartDate = true
+            )
 
             // Max Participants Section
             ModernCard {
@@ -426,6 +501,10 @@ fun EditEventScreen(
                         Toast.makeText(context, "Заполните обязательные поля", Toast.LENGTH_SHORT).show()
                         return@PrimaryButton
                     }
+                    if (!endDateTime.isAfter(startDateTime)) {
+                        Toast.makeText(context, "ev_err_end_after_start".localized, Toast.LENGTH_SHORT).show()
+                        return@PrimaryButton
+                    }
                     val lat = latitude.toDoubleOrNull() ?: event.latitude
                     val lon = longitude.toDoubleOrNull() ?: event.longitude
                     val minAge = minAgeText.toIntOrNull()
@@ -445,6 +524,8 @@ fun EditEventScreen(
                                 uploadedUrl = uploadedUrl,
                                 selectedNewImage = selectedImageUri != null
                             )
+                            val startTimeStr = startDateTime.toInstant().truncatedTo(ChronoUnit.SECONDS).toString()
+                            val endTimeStr = endDateTime.toInstant().truncatedTo(ChronoUnit.SECONDS).toString()
                             val request = CreateEventRequest(
                                 title = title,
                                 description = description,
@@ -452,8 +533,8 @@ fun EditEventScreen(
                                 locationName = locationName,
                                 latitude = lat,
                                 longitude = lon,
-                                startTime = event.startTime,
-                                endTime = event.endTime,
+                                startTime = startTimeStr,
+                                endTime = endTimeStr,
                                 maxParticipants = maxParticipants,
                                 imageURL = finalImageUrl,
                                 visibility = event.visibility,
@@ -476,5 +557,24 @@ fun EditEventScreen(
                 isLoading = isSubmitting
             )
         }
+    }
+
+    if (showLocationPicker) {
+        val currentLat = latitude.toDoubleOrNull() ?: event.latitude
+        val currentLon = longitude.toDoubleOrNull() ?: event.longitude
+        EventLocationPickerDialog(
+            initialLatitude = currentLat,
+            initialLongitude = currentLon,
+            initialLocationName = locationName,
+            onDismiss = { showLocationPicker = false },
+            onConfirm = { newLat, newLon, newName ->
+                latitude = String.format(Locale.US, "%.6f", newLat)
+                longitude = String.format(Locale.US, "%.6f", newLon)
+                if (locationName.isBlank() || locationName == "create_ev_selected_point_name".localized) {
+                    locationName = newName
+                }
+                showLocationPicker = false
+            }
+        )
     }
 }

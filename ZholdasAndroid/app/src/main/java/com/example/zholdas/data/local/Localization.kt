@@ -18,6 +18,7 @@ object Localization {
         "login_no_account" to "Нет аккаунта?",
         "login_register_link" to "Зарегистрироваться",
         "login_forgot_password" to "Забыли пароль?",
+        "session_expired" to "Сессия истекла",
 
         "register_title" to "Регистрация",
         "register_subtitle" to "Создайте профиль, чтобы начать искать компанию",
@@ -177,6 +178,9 @@ object Localization {
         "create_ev_gender_women" to "Женщины",
         "create_ev_age_range_label" to "Возрастной диапазон (необязательно)",
         "create_ev_years" to "лет",
+        "create_ev_my_location" to "Мое местоположение",
+        "ev_err_start_future" to "Время начала должно быть в будущем",
+        "ev_err_end_after_start" to "Время окончания должно быть позже времени начала",
         "create_ev_nav_title" to "Новое событие",
         "create_ev_cancel" to "Отмена",
         "create_title" to "Создание события",
@@ -415,7 +419,19 @@ object Localization {
         "rate_star_5" to "Отлично! 🤩",
         "rate_comment_label" to "ОТЗЫВ (НЕОБЯЗАТЕЛЬНО)",
         "rate_comment_placeholder" to "Напишите пару слов о вашем впечатлении...",
-        "rate_submit_btn" to "Отправить оценку"
+        "rate_submit_btn" to "Отправить оценку",
+
+        // Errors
+        "error_invalid_credentials" to "Неверная почта или пароль",
+        "error_email_not_confirmed" to "Подтвердите email перед входом",
+        "error_user_already_exists" to "Пользователь с такой почтой уже зарегистрирован",
+        "error_weak_password" to "Слишком простой пароль",
+        "error_rate_limit" to "Слишком много попыток, попробуйте позже",
+        "error_forbidden" to "Недостаточно прав",
+        "error_not_found" to "Не найдено",
+        "error_server_unavailable" to "Сервер временно недоступен",
+        "error_network" to "Нет соединения с сервером. Проверьте интернет",
+        "error_generic" to "Произошла ошибка. Попробуйте позже"
     )
 
     private val kk = mapOf(
@@ -429,6 +445,7 @@ object Localization {
         "login_no_account" to "Аккаунт жоқ па?",
         "login_register_link" to "Тіркелу",
         "login_forgot_password" to "Құпия сөзді ұмыттыңыз ба?",
+        "session_expired" to "Сессия аяқталды",
 
         "register_title" to "Тіркелу",
         "register_subtitle" to "Серіктес табуды бастау үшін профиль жасаңыз",
@@ -588,6 +605,9 @@ object Localization {
         "create_ev_gender_women" to "Әйелдер",
         "create_ev_age_range_label" to "Жас аралығы (міндетті емес)",
         "create_ev_years" to "жас",
+        "create_ev_my_location" to "Менің орналасқан жерім",
+        "ev_err_start_future" to "Басталу уақыты болашақта болуы керек",
+        "ev_err_end_after_start" to "Аяқталу уақыты басталу уақытынан кейін болуы керек",
         "create_ev_nav_title" to "Жаңа оқиға",
         "create_ev_cancel" to "Бас тарту",
         "create_title" to "Оқиға жасау",
@@ -826,7 +846,19 @@ object Localization {
         "rate_star_5" to "Керемет! 🤩",
         "rate_comment_label" to "ПІКІР (МІНДЕТТІ ЕМЕС)",
         "rate_comment_placeholder" to "Әсеріңіз туралы бірнеше сөз жазыңыз...",
-        "rate_submit_btn" to "Бағаны жіберу"
+        "rate_submit_btn" to "Бағаны жіберу",
+
+        // Errors
+        "error_invalid_credentials" to "Қате электрондық пошта немесе құпия сөз",
+        "error_email_not_confirmed" to "Кіру алдында email-ді растаңыз",
+        "error_user_already_exists" to "Бұл поштасы бар пайдаланушы тіркеліп қойған",
+        "error_weak_password" to "Құпия сөз тым қарапайым",
+        "error_rate_limit" to "Тым көп әрекет жасалды, кейінірек қайталап көріңіз",
+        "error_forbidden" to "Құқықтар жеткіліксіз",
+        "error_not_found" to "Табылмады",
+        "error_server_unavailable" to "Сервер уақытша қолжетімсіз",
+        "error_network" to "Сервермен байланыс жоқ. Интернетті тексеріңіз",
+        "error_generic" to "Қате орын алды. Кейінірек қайталап көріңіз"
     )
 
     private val en = mapOf(
@@ -840,6 +872,7 @@ object Localization {
         "login_no_account" to "Don't have an account?",
         "login_register_link" to "Register",
         "login_forgot_password" to "Forgot password?",
+        "session_expired" to "Session expired",
 
         "register_title" to "Register",
         "register_subtitle" to "Create profile to start finding company",
@@ -999,6 +1032,9 @@ object Localization {
         "create_ev_gender_women" to "Women",
         "create_ev_age_range_label" to "Age Range (optional)",
         "create_ev_years" to "years",
+        "create_ev_my_location" to "My location",
+        "ev_err_start_future" to "Start time must be in the future",
+        "ev_err_end_after_start" to "End time must be after start time",
         "create_ev_nav_title" to "New Event",
         "create_ev_cancel" to "Cancel",
         "create_title" to "Create New Event",
@@ -1237,7 +1273,19 @@ object Localization {
         "rate_star_5" to "Excellent! 🤩",
         "rate_comment_label" to "REVIEW (OPTIONAL)",
         "rate_comment_placeholder" to "Write a few words about your impression...",
-        "rate_submit_btn" to "Submit Rating"
+        "rate_submit_btn" to "Submit Rating",
+
+        // Errors
+        "error_invalid_credentials" to "Invalid email or password",
+        "error_email_not_confirmed" to "Please confirm your email before signing in",
+        "error_user_already_exists" to "A user with this email is already registered",
+        "error_weak_password" to "Password is too weak",
+        "error_rate_limit" to "Too many attempts, please try again later",
+        "error_forbidden" to "Permission denied",
+        "error_not_found" to "Not found",
+        "error_server_unavailable" to "Server is temporarily unavailable",
+        "error_network" to "No connection to the server. Check your internet",
+        "error_generic" to "An error occurred. Please try again later"
     )
 
 
