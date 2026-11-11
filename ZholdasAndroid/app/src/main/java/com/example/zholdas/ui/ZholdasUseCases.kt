@@ -1,6 +1,7 @@
 package com.example.zholdas.ui
 
 import com.example.zholdas.data.model.Event
+import com.example.zholdas.ui.screens.map.EventCategories
 import java.util.Locale
 
 data class ValidationResult(
@@ -172,23 +173,7 @@ object EventsUseCases {
     }
 
     private fun matchesCategory(eventCategory: String, filterCategory: String): Boolean {
-        if (filterCategory == "cat_all") return true
-
-        val ec = eventCategory.lowercase(Locale.getDefault())
-        return when (filterCategory) {
-            "cat_mountains" -> ec.contains("hiking") || ec.contains("mountain") || ec.contains("гор")
-            "cat_theater" -> ec.contains("theater") || ec.contains("theatre") || ec.contains("театр")
-            "cat_restaurant" -> ec.contains("restaurant") || ec.contains("food") || ec.contains("cafe") || ec.contains("ресторан") || ec.contains("кафе")
-            "cat_sports" -> ec.contains("sport") || ec.contains("run") || ec.contains("football") || ec.contains("спорт") || ec.contains("футбол")
-            "cat_other" -> {
-                val matchesSpecific = ec.contains("hiking") || ec.contains("mountain") || ec.contains("гор") ||
-                        ec.contains("theater") || ec.contains("theatre") || ec.contains("театр") ||
-                        ec.contains("restaurant") || ec.contains("food") || ec.contains("cafe") || ec.contains("ресторан") || ec.contains("кафе") ||
-                        ec.contains("sport") || ec.contains("run") || ec.contains("football") || ec.contains("спорт") || ec.contains("футбол")
-                !matchesSpecific
-            }
-            else -> false
-        }
+        return EventCategories.matches(eventCategory, filterCategory)
     }
 
     fun validateCreateEvent(

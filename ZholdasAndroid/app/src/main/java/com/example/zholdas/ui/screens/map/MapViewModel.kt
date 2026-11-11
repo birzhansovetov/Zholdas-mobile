@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.AP
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.CreationExtras
 import com.example.zholdas.ZholdasApplication
+import com.example.zholdas.data.local.localized
 import com.example.zholdas.data.model.Event
 import com.example.zholdas.data.remote.APIClient
 import com.example.zholdas.data.remote.toUserMessage
@@ -27,7 +28,11 @@ data class MapUiState(
     val isAiLoading: Boolean = false,
     val aiAnswer: String? = null,
     val aiRecommendedEvents: List<Event> = emptyList(),
-    val aiError: String? = null
+    val aiError: String? = null,
+    val lastLoadedLat: Double = MapViewModel.DEFAULT_LATITUDE,
+    val lastLoadedLon: Double = MapViewModel.DEFAULT_LONGITUDE,
+    val lastRequestedLat: Double = MapViewModel.DEFAULT_LATITUDE,
+    val lastRequestedLon: Double = MapViewModel.DEFAULT_LONGITUDE
 )
 
 class MapViewModel(
@@ -44,10 +49,17 @@ class MapViewModel(
     fun loadNearbyEvents(
         latitude: Double = DEFAULT_LATITUDE,
         longitude: Double = DEFAULT_LONGITUDE,
-        radiusMeters: Double = DEFAULT_RADIUS_METERS
+        radiusMeters: Double = EVENTS_RADIUS_METERS
     ) {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _uiState.update {
+                it.copy(
+                    isLoading = true,
+                    errorMessage = null,
+                    lastRequestedLat = latitude,
+                    lastRequestedLon = longitude
+                )
+            }
             try {
                 val fetchedEvents = apiClient.apiService.getNearbyEvents(
                     latitude = latitude,
@@ -64,7 +76,9 @@ class MapViewModel(
                         events = fetchedEvents,
                         filteredEvents = updatedFiltered,
                         isLoading = false,
-                        errorMessage = null
+                        errorMessage = null,
+                        lastLoadedLat = latitude,
+                        lastLoadedLon = longitude
                     )
                 }
             } catch (e: Exception) {
@@ -77,6 +91,11 @@ class MapViewModel(
                 }
             }
         }
+    }
+
+    fun retryLoadNearbyEvents() {
+        val state = _uiState.value
+        loadNearbyEvents(state.lastRequestedLat, state.lastRequestedLon)
     }
 
     fun selectCategory(category: String) {
@@ -108,13 +127,13 @@ class MapViewModel(
     }
 
     fun requestAIRecommendations(
-        latitude: Double = DEFAULT_LATITUDE,
-        longitude: Double = DEFAULT_LONGITUDE,
-        radiusMeters: Double = DEFAULT_RADIUS_METERS
+        latitude: Double = _uiState.value.lastLoadedLat,
+        longitude: Double = _uiState.value.lastLoadedLon,
+        radiusMeters: Double = EVENTS_RADIUS_METERS
     ) {
         val query = _uiState.value.searchQuery.trim()
         if (query.isEmpty()) {
-            _uiState.update { it.copy(aiError = "Опишите, какое событие вы ищете") }
+            _uiState.update { it.copy(aiError = "map_ai_empty_query".localized) }
             return
         }
         viewModelScope.launch {
@@ -131,7 +150,12 @@ class MapViewModel(
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "AI recommendations failed", e)
-                _uiState.update { it.copy(isAiLoading = false, aiError = "Не удалось получить рекомендации. Проверьте подключение.") }
+                val msg = if (e is java.io.IOException || e is retrofit2.HttpException) {
+                    e.toUserMessage()
+                } else {
+                    "map_ai_error".localized
+                }
+                _uiState.update { it.copy(isAiLoading = false, aiError = msg) }
             }
         }
     }
@@ -164,7 +188,9 @@ class MapViewModel(
         private const val TAG = "MapViewModel"
         const val DEFAULT_LATITUDE = 43.2389
         const val DEFAULT_LONGITUDE = 76.8897
-        const val DEFAULT_RADIUS_METERS = 10000.0
+        const val EVENTS_RADIUS_METERS = 15000.0
+        @Deprecated("Use EVENTS_RADIUS_METERS instead", ReplaceWith("EVENTS_RADIUS_METERS"))
+        const val DEFAULT_RADIUS_METERS = EVENTS_RADIUS_METERS
 
         val categories = listOf(
             "cat_all",
@@ -176,22 +202,7 @@ class MapViewModel(
         )
 
         fun matchesCategory(eventCategory: String, filterCategory: String): Boolean {
-            if (filterCategory == "cat_all") return true
-            val ec = eventCategory.lowercase()
-            return when (filterCategory) {
-                "cat_mountains" -> ec.contains("hiking") || ec.contains("mountain") || ec.contains("гор")
-                "cat_theater" -> ec.contains("theater") || ec.contains("theatre") || ec.contains("театр")
-                "cat_restaurant" -> ec.contains("restaurant") || ec.contains("food") || ec.contains("cafe") || ec.contains("ресторан") || ec.contains("кафе")
-                "cat_sports" -> ec.contains("sport") || ec.contains("run") || ec.contains("football") || ec.contains("спорт") || ec.contains("футбол")
-                "cat_other" -> {
-                    val matchesSpecific = ec.contains("hiking") || ec.contains("mountain") || ec.contains("гор") ||
-                            ec.contains("theater") || ec.contains("theatre") || ec.contains("театр") ||
-                            ec.contains("restaurant") || ec.contains("food") || ec.contains("cafe") || ec.contains("ресторан") || ec.contains("кафе") ||
-                            ec.contains("sport") || ec.contains("run") || ec.contains("football") || ec.contains("спорт") || ec.contains("футбол")
-                    !matchesSpecific
-                }
-                else -> false
-            }
+            return EventCategories.matches(eventCategory, filterCategory)
         }
 
         fun resolveRecommendations(events: List<Event>, recommendedIds: List<Int>): List<Event> {

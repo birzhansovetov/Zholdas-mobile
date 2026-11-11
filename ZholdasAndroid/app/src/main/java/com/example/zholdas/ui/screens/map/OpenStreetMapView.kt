@@ -40,7 +40,10 @@ internal class OpenMapController(context: Context) {
     private var recommendedIds: Set<Int> = emptySet()
     private var onSelect: (Event) -> Unit = {}
     private val markerEvents = mutableMapOf<Long, Event>()
+    private var userLocation: LatLng? = null
+    private var userMarkerId: Long? = null
     private var styleUrl: String? = null
+    var onCameraIdle: ((LatLng) -> Unit)? = null
     var error by mutableStateOf(false)
         private set
 
@@ -60,7 +63,15 @@ internal class OpenMapController(context: Context) {
                 readyMap.cameraPosition = CameraPosition.Builder()
                     .target(LatLng(MapViewModel.DEFAULT_LATITUDE, MapViewModel.DEFAULT_LONGITUDE))
                     .zoom(12.0).build()
+                readyMap.addOnCameraIdleListener {
+                    readyMap.cameraPosition.target?.let { target ->
+                        onCameraIdle?.invoke(target)
+                    }
+                }
                 readyMap.setOnMarkerClickListener { marker ->
+                    if (marker.id == userMarkerId) {
+                        return@setOnMarkerClickListener true
+                    }
                     markerEvents[marker.id]?.let(onSelect)
                     true
                 }
@@ -87,6 +98,11 @@ internal class OpenMapController(context: Context) {
 
     fun retry() { styleUrl?.let(::loadStyle) }
 
+    fun updateUserLocation(location: LatLng?) {
+        userLocation = location
+        renderMarkers()
+    }
+
     fun updateEvents(items: List<Event>, selected: Event?, recommended: Set<Int>, callback: (Event) -> Unit) {
         onSelect = callback
         if (items == events && selected?.id == selectedId && recommended == recommendedIds) return
@@ -96,11 +112,40 @@ internal class OpenMapController(context: Context) {
         renderMarkers()
     }
 
+    private fun createUserLocationBitmap(): Bitmap {
+        val density = view.resources.displayMetrics.density
+        val size = (26 * density).toInt().coerceAtLeast(1)
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        val center = size / 2f
+
+        // White stroke border
+        val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = android.graphics.Color.WHITE
+        }
+        canvas.drawCircle(center, center, 11 * density, strokePaint)
+
+        // Blue filled circle (ZholdasAccent)
+        val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = android.graphics.Color.rgb(37, 99, 235)
+        }
+        canvas.drawCircle(center, center, 8.5f * density, fillPaint)
+
+        // Small white center dot for precision
+        val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = android.graphics.Color.WHITE
+        }
+        canvas.drawCircle(center, center, 2.5f * density, dotPaint)
+
+        return bitmap
+    }
+
     private fun renderMarkers() {
         val readyMap = map ?: return
         if (readyMap.style?.isFullyLoaded != true) return
         readyMap.removeAnnotations()
         markerEvents.clear()
+        userMarkerId = null
         val density = view.resources.displayMetrics.density
         readyMap.uiSettings.setAttributionMargins(
             (8 * density).toInt(), 0, 0, ((if (selectedId == null) 8 else 230) * density).toInt()
@@ -124,11 +169,36 @@ internal class OpenMapController(context: Context) {
                 .icon(IconFactory.getInstance(view.context).fromBitmap(bitmap)))
             markerEvents[marker.id] = event
         }
+
+        userLocation?.let { loc ->
+            if (loc.latitude.isFinite() && loc.longitude.isFinite() &&
+                loc.latitude in -90.0..90.0 && loc.longitude in -180.0..180.0
+            ) {
+                val bitmap = createUserLocationBitmap()
+                val marker = readyMap.addMarker(
+                    MarkerOptions()
+                        .position(loc)
+                        .title("user_location")
+                        .icon(IconFactory.getInstance(view.context).fromBitmap(bitmap))
+                )
+                userMarkerId = marker.id
+            }
+        }
     }
 
+    fun moveTo(location: LatLng, zoom: Double = 13.0, animate: Boolean = true) {
+        val update = CameraUpdateFactory.newLatLngZoom(location, zoom)
+        if (animate) {
+            map?.animateCamera(update)
+        } else {
+            map?.moveCamera(update)
+        }
+    }
+
+    fun getCameraTarget(): LatLng? = map?.cameraPosition?.target
+
     fun recenter() {
-        map?.animateCamera(CameraUpdateFactory.newLatLngZoom(
-            LatLng(MapViewModel.DEFAULT_LATITUDE, MapViewModel.DEFAULT_LONGITUDE), 12.0))
+        moveTo(LatLng(MapViewModel.DEFAULT_LATITUDE, MapViewModel.DEFAULT_LONGITUDE), 12.0)
     }
 }
 
@@ -139,6 +209,7 @@ internal fun OpenStreetMapView(
     selectedEvent: Event?,
     recommendedIds: Set<Int>,
     onSelectEvent: (Event) -> Unit,
+    onCameraIdle: ((LatLng) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -165,6 +236,7 @@ internal fun OpenStreetMapView(
         }
     }
     LaunchedEffect(controller, dark) { controller.updateStyle(dark) }
+    LaunchedEffect(controller, onCameraIdle) { controller.onCameraIdle = onCameraIdle }
     Box(modifier) {
         AndroidView(factory = { controller.view }, modifier = Modifier.matchParentSize(), update = {
             controller.updateEvents(events, selectedEvent, recommendedIds, onSelectEvent)
