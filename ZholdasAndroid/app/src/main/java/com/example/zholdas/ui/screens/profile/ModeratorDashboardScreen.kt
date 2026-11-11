@@ -30,6 +30,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.zholdas.data.local.localized
+import com.example.zholdas.data.remote.toUserMessage
 import com.example.zholdas.data.model.*
 import com.example.zholdas.theme.*
 import com.example.zholdas.ui.AuthViewModel
@@ -115,13 +116,13 @@ fun ModeratorDashboardScreen(
                     defaultCity = settings.defaultCity
                     toolsError = null
                 } catch (e: Exception) {
-                    toolsError = e.message ?: "mod_settings_load_error".localized
+                    toolsError = e.toUserMessage("mod_settings_load_error")
                 }
                 try {
                     auditLogs = authViewModel.apiClient.apiService.getModerationAuditLogs()
                     auditError = null
                 } catch (e: Exception) {
-                    auditError = e.message ?: "mod_audit_load_error".localized
+                    auditError = e.toUserMessage("mod_audit_load_error")
                 }
             }
             isLoading = false
@@ -234,7 +235,7 @@ fun ModeratorDashboardScreen(
                                 authViewModel.apiClient.apiService.closeReport(reportId)
                                 refreshAllData()
                             } catch (e: Exception) {
-                                Toast.makeText(context, e.message ?: "Error", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, e.toUserMessage(), Toast.LENGTH_SHORT).show()
                             }
                         }
                     },
@@ -262,7 +263,7 @@ fun ModeratorDashboardScreen(
                                 authViewModel.apiClient.apiService.unbanUser(userId)
                                 refreshAllData()
                             } catch (e: Exception) {
-                                Toast.makeText(context, e.message ?: "Error", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, e.toUserMessage(), Toast.LENGTH_SHORT).show()
                             }
                         }
                     },
@@ -272,7 +273,7 @@ fun ModeratorDashboardScreen(
                                 authViewModel.apiClient.apiService.updateUserRole(userId, RoleRequest(newRole))
                                 refreshAllData()
                             } catch (e: Exception) {
-                                Toast.makeText(context, e.message ?: "Error", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, e.toUserMessage(), Toast.LENGTH_SHORT).show()
                             }
                         }
                     },
@@ -282,7 +283,7 @@ fun ModeratorDashboardScreen(
                                 authViewModel.apiClient.apiService.deleteUserPermanently(userId)
                                 refreshAllData()
                             } catch (e: Exception) {
-                                Toast.makeText(context, e.message ?: "Error", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, e.toUserMessage(), Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
@@ -299,7 +300,7 @@ fun ModeratorDashboardScreen(
                                 authViewModel.apiClient.apiService.updateEventStatus(eventId, StatusRequest(newStatus))
                                 refreshAllData()
                             } catch (e: Exception) {
-                                Toast.makeText(context, e.message ?: "Error", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, e.toUserMessage(), Toast.LENGTH_SHORT).show()
                             }
                         }
                     }
@@ -322,7 +323,7 @@ fun ModeratorDashboardScreen(
                                     broadcastText = ""
                                     Toast.makeText(context, "mod_tools_settings_saved_msg".localized, Toast.LENGTH_SHORT).show()
                                 } catch (e: Exception) {
-                                    Toast.makeText(context, e.message ?: "Error", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, e.toUserMessage(), Toast.LENGTH_SHORT).show()
                                 } finally {
                                     isSendingBroadcast = false
                                 }
@@ -357,7 +358,7 @@ fun ModeratorDashboardScreen(
                                 Toast.makeText(context, "mod_tools_settings_saved_msg".localized, Toast.LENGTH_SHORT).show()
                                 auditLogs = authViewModel.apiClient.apiService.getModerationAuditLogs()
                             } catch (e: Exception) {
-                                toolsError = e.message ?: "mod_settings_save_error".localized
+                                toolsError = e.toUserMessage("mod_settings_save_error")
                             } finally { isSavingSettings = false }
                         }
                     }
@@ -417,7 +418,7 @@ fun ModeratorDashboardScreen(
                                         }
                                         refreshAllData()
                                     } catch (e: Exception) {
-                                        Toast.makeText(context, e.message ?: "Error", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, e.toUserMessage(), Toast.LENGTH_SHORT).show()
                                     }
                                 }
                             },

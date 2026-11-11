@@ -124,6 +124,7 @@ class ChatViewModel(
     private val _isAiThinking = MutableStateFlow(false)
     val isAiThinking = _isAiThinking.asStateFlow()
     private var webSocketManager: ChatWebSocketManager? = null
+    private var currentRoomId: Int? = null
 
     init {
         fetchChatSessions()
@@ -166,9 +167,15 @@ class ChatViewModel(
 
     fun connectToRoom(eventId: Int) {
         disconnectFromRoom()
+        currentRoomId = eventId
         markSessionRead(eventId)
         loadRoomHistory(eventId)
-        ChatWebSocketManager(eventId, tokenManager, apiClient.backendBaseUrl.replaceFirst("http", "ws")).also { ws ->
+        ChatWebSocketManager(
+            eventId,
+            tokenManager,
+            apiClient.backendBaseUrl.replaceFirst("http", "ws"),
+            refreshSession = { runCatching { apiClient.apiService.getProfile() }.isSuccess }
+        ).also { ws ->
             webSocketManager = ws
             ws.onConnectionStateChanged = { _isRoomConnected.value = it }
             ws.onReconnected = {
@@ -200,6 +207,7 @@ class ChatViewModel(
     }
 
     fun disconnectFromRoom() {
+        currentRoomId = null
         webSocketManager?.disconnect()
         webSocketManager = null
         _isRoomConnected.value = false
@@ -220,7 +228,9 @@ class ChatViewModel(
                     Log.w(TAG, "Failed to load current user profile", e)
                 }
             }
-            _currentChatMessages.value = apiClient.apiService.getEventMessages(eventId).map { it.toChatMessage() }
+            val messages = apiClient.apiService.getEventMessages(eventId).map { it.toChatMessage() }
+            if (currentRoomId != eventId) return@launch
+            _currentChatMessages.value = messages
         } catch (e: Exception) {
             Log.w(TAG, "Failed to load room history", e)
             _roomError.value = "chat_messages_load_error".localized
@@ -240,6 +250,7 @@ class ChatViewModel(
                 }
             }
             val serverMessages = apiClient.apiService.getEventMessages(eventId).map { it.toChatMessage() }
+            if (currentRoomId != eventId) return@launch
             _currentChatMessages.update { currentList ->
                 val existingByDbId = currentList.filter { it.dbID != null }.associateBy { it.dbID }
                 val pendingMessages = currentList.filter { it.dbID == null }.toMutableList()
@@ -263,8 +274,9 @@ class ChatViewModel(
 
                 val serverDbIds = serverMessages.mapNotNull { it.dbID }.toSet()
                 val unrepresented = currentList.filter { it.dbID != null && it.dbID !in serverDbIds }
+                val confirmedMessages = (mergedServerMessages + unrepresented).sortedBy { it.dbID ?: 0 }
 
-                unrepresented + mergedServerMessages + pendingMessages
+                confirmedMessages + pendingMessages
             }
         } catch (e: Exception) {
             Log.w(TAG, "Failed to reload and merge room history on reconnect", e)

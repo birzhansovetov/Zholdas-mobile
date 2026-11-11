@@ -32,6 +32,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.zholdas.data.local.localized
+import com.example.zholdas.data.remote.toUserMessage
 import com.example.zholdas.data.model.CreateEventRequest
 import com.example.zholdas.data.model.Event
 import com.example.zholdas.theme.*
@@ -546,9 +547,9 @@ fun EditEventScreen(
                             onSuccess(updated)
                         } catch (e: Exception) {
                             if (uploadInProgress) {
-                                imageUploadError = e.message ?: "Не удалось загрузить фотографию. Повторите попытку."
+                                imageUploadError = e.toUserMessage()
                             }
-                            Toast.makeText(context, e.message ?: "Error saving event", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, e.toUserMessage(), Toast.LENGTH_SHORT).show()
                         } finally {
                             isSubmitting = false
                         }

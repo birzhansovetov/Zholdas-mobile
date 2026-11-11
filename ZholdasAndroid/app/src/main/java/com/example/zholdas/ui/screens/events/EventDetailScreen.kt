@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.content.Intent
 import android.location.Location
 import android.net.Uri
+import android.widget.Toast
 import java.util.Locale
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -37,6 +38,7 @@ import androidx.core.content.ContextCompat
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.example.zholdas.data.local.localized
+import com.example.zholdas.data.remote.toUserMessage
 import com.example.zholdas.data.model.Event
 import com.example.zholdas.data.model.EventLiveLocation
 import com.example.zholdas.data.model.Participant
@@ -71,6 +73,7 @@ fun EventDetailScreen(
     var showPreparation by remember { mutableStateOf(false) }
     var reminderText by remember { mutableStateOf<String?>(null) }
     var pendingLocationAction by remember { mutableStateOf<((Location) -> Unit)?>(null) }
+    var showLeaveConfirmDialog by remember { mutableStateOf(false) }
 
     fun readCurrentLocation(action: (Location) -> Unit) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
@@ -83,7 +86,7 @@ fun EventDetailScreen(
             .addOnSuccessListener { location ->
                 if (location != null) action(location) else actionError = "Не удалось получить текущую геопозицию"
             }
-            .addOnFailureListener { actionError = it.message ?: "Не удалось получить текущую геопозицию" }
+            .addOnFailureListener { actionError = it.toUserMessage() }
     }
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
@@ -633,12 +636,7 @@ fun EventDetailScreen(
 
                 Button(
                     onClick = {
-                        viewModel.leaveEvent(event.id) { success ->
-                            if (success) {
-                                isJoined = false
-                                participantsCount = (participantsCount - 1).coerceAtLeast(0)
-                            }
-                        }
+                        showLeaveConfirmDialog = true
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -853,6 +851,63 @@ fun EventDetailScreen(
                 Spacer(Modifier.height(20.dp))
             }
         }
+    }
+
+    if (showLeaveConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showLeaveConfirmDialog = false },
+            title = {
+                Text(
+                    text = "ev_leave_confirm_title".localized,
+                    color = ZholdasTextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "ev_leave_confirm_desc".localized,
+                    color = ZholdasTextSecondary
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showLeaveConfirmDialog = false
+                        viewModel.leaveEvent(event.id) { success ->
+                            if (success) {
+                                isJoined = false
+                                participantsCount = (participantsCount - 1).coerceAtLeast(0)
+                            } else {
+                                val errorMsg = "ev_leave_error".localized
+                                actionError = errorMsg
+                                Toast.makeText(context, errorMsg, Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ZholdasDanger,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text(
+                        text = "ev_leave_btn".localized,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLeaveConfirmDialog = false }) {
+                    Text(
+                        text = "btn_cancel".localized,
+                        color = ZholdasTextSecondary
+                    )
+                }
+            },
+            containerColor = ZholdasSurface,
+            titleContentColor = ZholdasTextPrimary,
+            textContentColor = ZholdasTextSecondary
+        )
     }
 }
 

@@ -64,7 +64,7 @@ fun RegisterScreen(
 
     // Steppers and selectors
     var selectedAge by remember { mutableStateOf(20) }
-    var selectedGender by remember { mutableStateOf("Мужской") }
+    var selectedGender by remember { mutableStateOf("male") }
     var selectedPhotoUri by remember { mutableStateOf<Uri?>(null) }
     var selectedPhotoBytes by remember { mutableStateOf<ByteArray?>(null) }
 
@@ -463,8 +463,8 @@ fun RegisterScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         val genders = listOf(
-                            Pair("Мужской", "reg_gender_male"),
-                            Pair("Женский", "reg_gender_female")
+                            Pair("male", "reg_gender_male"),
+                            Pair("female", "reg_gender_female")
                         )
 
                         genders.forEach { (genderKey, genderLabel) ->
@@ -715,7 +715,6 @@ fun RegisterScreen(
                         
                         val currentYear = Calendar.getInstance().get(Calendar.YEAR)
                         val birthYear = currentYear - selectedAge
-                        val formattedBio = "[gender:$selectedGender][birth_year:$birthYear]$bio"
 
                         authViewModel.signUp(
                             email = email,
@@ -723,9 +722,11 @@ fun RegisterScreen(
                             username = username,
                             fullName = fullName,
                             avatarURL = avatarURL,
-                            bio = formattedBio,
+                            bio = bio.trim().ifEmpty { null },
                             city = "Алматы",
-                            photoData = selectedPhotoBytes
+                            photoData = selectedPhotoBytes,
+                            gender = selectedGender,
+                            birthYear = birthYear
                         )
                     }
                 },

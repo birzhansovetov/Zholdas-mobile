@@ -431,7 +431,24 @@ object Localization {
         "error_not_found" to "Не найдено",
         "error_server_unavailable" to "Сервер временно недоступен",
         "error_network" to "Нет соединения с сервером. Проверьте интернет",
-        "error_generic" to "Произошла ошибка. Попробуйте позже"
+        "error_generic" to "Произошла ошибка. Попробуйте позже",
+
+        // Dangerous Actions & Confirmations
+        "ev_leave_confirm_title" to "Покинуть событие",
+        "ev_leave_confirm_desc" to "Вы уверены, что хотите покинуть это событие?",
+        "ev_leave_error" to "Не удалось покинуть событие",
+        "prof_signout_confirm_title" to "Выход из аккаунта",
+        "prof_signout_confirm_desc" to "Вы уверены, что хотите выйти из аккаунта?",
+        "user_detail_block_confirm_title" to "Заблокировать пользователя",
+        "user_detail_block_confirm_desc" to "Вы уверены, что хотите заблокировать этого пользователя?",
+        "user_detail_block_error" to "Не удалось заблокировать пользователя",
+        "friends_remove_confirm_title" to "Удалить из друзей",
+        "friends_remove_confirm_desc" to "Вы уверены, что хотите удалить этого пользователя из друзей?",
+        "friends_remove_error" to "Не удалось удалить из друзей",
+
+        // Gender Badges
+        "profile_gender_male" to "Мужчина",
+        "profile_gender_female" to "Женщина"
     )
 
     private val kk = mapOf(
@@ -858,7 +875,24 @@ object Localization {
         "error_not_found" to "Табылмады",
         "error_server_unavailable" to "Сервер уақытша қолжетімсіз",
         "error_network" to "Сервермен байланыс жоқ. Интернетті тексеріңіз",
-        "error_generic" to "Қате орын алды. Кейінірек қайталап көріңіз"
+        "error_generic" to "Қате орын алды. Кейінірек қайталап көріңіз",
+
+        // Dangerous Actions & Confirmations
+        "ev_leave_confirm_title" to "Іс-шарадан шығу",
+        "ev_leave_confirm_desc" to "Бұл іс-шарадан шыққыңыз келетініне сенімдісіз бе?",
+        "ev_leave_error" to "Іс-шарадан шығу мүмкін болмады",
+        "prof_signout_confirm_title" to "Аккаунттан шығу",
+        "prof_signout_confirm_desc" to "Аккаунтыңыздан шыққыңыз келетініне сенімдісіз бе?",
+        "user_detail_block_confirm_title" to "Пайдаланушыны бұғаттау",
+        "user_detail_block_confirm_desc" to "Бұл пайдаланушыны бұғаттағыңыз келетініне сенімдісіз бе?",
+        "user_detail_block_error" to "Пайдаланушыны бұғаттау мүмкін болмады",
+        "friends_remove_confirm_title" to "Достардан өшіру",
+        "friends_remove_confirm_desc" to "Бұл пайдаланушыны достардан өшіргіңіз келетініне сенімдісіз бе?",
+        "friends_remove_error" to "Достардан өшіру мүмкін болмады",
+
+        // Gender Badges
+        "profile_gender_male" to "Ер адам",
+        "profile_gender_female" to "Әйел адам"
     )
 
     private val en = mapOf(
@@ -1285,7 +1319,24 @@ object Localization {
         "error_not_found" to "Not found",
         "error_server_unavailable" to "Server is temporarily unavailable",
         "error_network" to "No connection to the server. Check your internet",
-        "error_generic" to "An error occurred. Please try again later"
+        "error_generic" to "An error occurred. Please try again later",
+
+        // Dangerous Actions & Confirmations
+        "ev_leave_confirm_title" to "Leave Event",
+        "ev_leave_confirm_desc" to "Are you sure you want to leave this event?",
+        "ev_leave_error" to "Failed to leave event",
+        "prof_signout_confirm_title" to "Sign Out",
+        "prof_signout_confirm_desc" to "Are you sure you want to sign out of your account?",
+        "user_detail_block_confirm_title" to "Block User",
+        "user_detail_block_confirm_desc" to "Are you sure you want to block this user?",
+        "user_detail_block_error" to "Failed to block user",
+        "friends_remove_confirm_title" to "Remove from Friends",
+        "friends_remove_confirm_desc" to "Are you sure you want to remove this user from friends?",
+        "friends_remove_error" to "Failed to remove friend",
+
+        // Gender Badges
+        "profile_gender_male" to "Man",
+        "profile_gender_female" to "Woman"
     )
 
 

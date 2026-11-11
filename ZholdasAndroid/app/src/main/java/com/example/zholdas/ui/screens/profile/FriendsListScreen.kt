@@ -1,5 +1,6 @@
 package com.example.zholdas.ui.screens.profile
 
+import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -24,6 +25,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -41,11 +43,13 @@ fun FriendsListScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var friends by remember { mutableStateOf<List<User>>(emptyList()) }
     var requests by remember { mutableStateOf<List<User>>(emptyList()) }
     var selectedTab by remember { mutableStateOf(0) } // 0: Friends, 1: Requests
     var isLoadingData by remember { mutableStateOf(true) }
+    var friendToRemove by remember { mutableStateOf<User?>(null) }
 
     LaunchedEffect(Unit) {
         isLoadingData = true
@@ -128,12 +132,7 @@ fun FriendsListScreen(
                     FriendsListContent(
                         friends = friends,
                         onRemoveFriend = { friend ->
-                            scope.launch {
-                                val success = authViewModel.rejectFriendRequest(friend.id)
-                                if (success) {
-                                    friends = friends.filterNot { it.id == friend.id }
-                                }
-                            }
+                            friendToRemove = friend
                         }
                     )
                 } else {
@@ -163,6 +162,62 @@ fun FriendsListScreen(
                 }
             }
         }
+    }
+
+    friendToRemove?.let { friend ->
+        AlertDialog(
+            onDismissRequest = { friendToRemove = null },
+            title = {
+                Text(
+                    text = "friends_remove_confirm_title".localized,
+                    color = ZholdasTextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "friends_remove_confirm_desc".localized,
+                    color = ZholdasTextSecondary
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val target = friend
+                        friendToRemove = null
+                        scope.launch {
+                            val success = authViewModel.rejectFriendRequest(target.id)
+                            if (success) {
+                                friends = friends.filterNot { it.id == target.id }
+                            } else {
+                                Toast.makeText(context, "friends_remove_error".localized, Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ZholdasDanger,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text(
+                        text = "user_detail_unfriend".localized,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { friendToRemove = null }) {
+                    Text(
+                        text = "btn_cancel".localized,
+                        color = ZholdasTextSecondary
+                    )
+                }
+            },
+            containerColor = ZholdasSurface,
+            titleContentColor = ZholdasTextPrimary,
+            textContentColor = ZholdasTextSecondary
+        )
     }
 }
 

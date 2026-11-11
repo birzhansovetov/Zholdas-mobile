@@ -1,5 +1,6 @@
 package com.example.zholdas.ui.screens.profile
 
+import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -21,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -42,6 +44,7 @@ fun UserDetailScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
 
@@ -56,6 +59,7 @@ fun UserDetailScreen(
     var reportSubmitted by remember { mutableStateOf(false) }
 
     var isBlocked by remember { mutableStateOf(false) }
+    var showBlockConfirmDialog by remember { mutableStateOf(false) }
 
     val currentUserProfile by authViewModel.currentUserProfile.collectAsState()
 
@@ -271,6 +275,7 @@ fun UserDetailScreen(
                 }
 
                 // Bio Section
+                val details = parsedProfileDetails(user, "user_detail_default_bio".localized)
                 ModernCard {
                     Text(
                         text = "prof_about_me".localized,
@@ -279,8 +284,33 @@ fun UserDetailScreen(
                         fontWeight = FontWeight.Bold
                     )
                     Spacer(modifier = Modifier.height(6.dp))
+
+                    if (details.badges.isNotEmpty()) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            details.badges.forEach { badge ->
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(50))
+                                        .background(ZholdasAccent.copy(alpha = 0.13f))
+                                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                                ) {
+                                    Text(
+                                        text = badge,
+                                        color = ZholdasAccent,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+
                     Text(
-                        text = user?.bio?.takeIf { it.isNotBlank() } ?: "user_detail_default_bio".localized,
+                        text = details.bio,
                         color = ZholdasTextPrimary,
                         fontSize = 14.sp,
                         lineHeight = 20.sp
@@ -438,13 +468,7 @@ fun UserDetailScreen(
                         // Block User Button
                         Button(
                             onClick = {
-                                coroutineScope.launch {
-                                    actionLoading = true
-                                    if (authViewModel.blockUser(userID)) {
-                                        isBlocked = true
-                                    }
-                                    actionLoading = false
-                                }
+                                showBlockConfirmDialog = true
                             },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
@@ -544,6 +568,63 @@ fun UserDetailScreen(
             reportedUserID = userID,
             authViewModel = authViewModel,
             onBack = { showReportDialog = false }
+        )
+    }
+
+    if (showBlockConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showBlockConfirmDialog = false },
+            title = {
+                Text(
+                    text = "user_detail_block_confirm_title".localized,
+                    color = ZholdasTextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "user_detail_block_confirm_desc".localized,
+                    color = ZholdasTextSecondary
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showBlockConfirmDialog = false
+                        coroutineScope.launch {
+                            actionLoading = true
+                            val success = authViewModel.blockUser(userID)
+                            if (success) {
+                                isBlocked = true
+                            } else {
+                                Toast.makeText(context, "user_detail_block_error".localized, Toast.LENGTH_SHORT).show()
+                            }
+                            actionLoading = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ZholdasDanger,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text(
+                        text = "user_detail_block".localized,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBlockConfirmDialog = false }) {
+                    Text(
+                        text = "btn_cancel".localized,
+                        color = ZholdasTextSecondary
+                    )
+                }
+            },
+            containerColor = ZholdasSurface,
+            titleContentColor = ZholdasTextPrimary,
+            textContentColor = ZholdasTextSecondary
         )
     }
 }

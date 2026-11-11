@@ -9,6 +9,7 @@ import androidx.lifecycle.viewmodel.CreationExtras
 import com.example.zholdas.ZholdasApplication
 import com.example.zholdas.data.model.Event
 import com.example.zholdas.data.remote.APIClient
+import com.example.zholdas.data.remote.toUserMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -69,16 +70,9 @@ class MapViewModel(
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to load nearby events via APIClient", e)
                 _uiState.update { state ->
-                    val updatedFiltered = filterEvents(
-                        events = emptyList(),
-                        category = state.selectedCategory,
-                        query = state.searchQuery
-                    )
                     state.copy(
-                        events = emptyList(),
-                        filteredEvents = updatedFiltered,
                         isLoading = false,
-                        errorMessage = "Офлайн-режим: показаны события Алматы"
+                        errorMessage = e.toUserMessage()
                     )
                 }
             }

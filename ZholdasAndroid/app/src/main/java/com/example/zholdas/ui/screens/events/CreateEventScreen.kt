@@ -30,6 +30,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.zholdas.data.local.localized
+import com.example.zholdas.data.remote.toUserMessage
 import com.example.zholdas.theme.*
 import com.example.zholdas.ui.components.ModernCard
 import com.example.zholdas.ui.components.PrimaryButton
@@ -541,7 +542,7 @@ fun CreateEventScreen(
                         val uploadedUrl = try {
                             selectedImageUri?.let { viewModel.uploadEventImage(context.contentResolver, it) }
                         } catch (error: Exception) {
-                            imageUploadError = error.message ?: "Не удалось загрузить фотографию. Повторите попытку."
+                            imageUploadError = error.toUserMessage()
                             null
                         } finally {
                             isUploadingImage = false

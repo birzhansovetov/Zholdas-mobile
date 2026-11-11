@@ -116,7 +116,9 @@ class AuthViewModel(
         avatarURL: String? = null,
         bio: String? = null,
         city: String? = null,
-        photoData: ByteArray? = null
+        photoData: ByteArray? = null,
+        gender: String? = null,
+        birthYear: Int? = null
     ) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -158,7 +160,7 @@ class AuthViewModel(
                         }
                     }
 
-                    if (finalAvatarURL.isNotEmpty() || !bio.isNullOrEmpty() || !city.isNullOrEmpty()) {
+                    if (finalAvatarURL.isNotEmpty() || !bio.isNullOrEmpty() || !city.isNullOrEmpty() || !gender.isNullOrEmpty() || birthYear != null) {
                         try {
                             val currentProfile = apiClient.apiService.getProfile()
                             apiClient.apiService.updateProfile(
@@ -166,7 +168,9 @@ class AuthViewModel(
                                     fullName = fullName,
                                     bio = if (!bio.isNullOrEmpty()) bio else currentProfile.bio,
                                     city = if (!city.isNullOrEmpty()) city else currentProfile.city ?: "Алматы",
-                                    avatarURL = if (finalAvatarURL.isNotEmpty()) finalAvatarURL else currentProfile.avatarURL
+                                    avatarURL = if (finalAvatarURL.isNotEmpty()) finalAvatarURL else currentProfile.avatarURL,
+                                    gender = gender ?: currentProfile.gender,
+                                    birthYear = birthYear ?: currentProfile.birthYear
                                 )
                             )
                         } catch (e: Exception) {
