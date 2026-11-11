@@ -1,17 +1,13 @@
 package com.example.zholdas.ui.screens.map
 
-import android.content.Context
-import android.content.pm.PackageManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -27,12 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
@@ -43,14 +35,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.zholdas.data.model.Event
 import com.example.zholdas.theme.*
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.android.gms.maps.model.LatLng
-import com.google.maps.android.compose.GoogleMap
-import com.google.maps.android.compose.MapProperties
-import com.google.maps.android.compose.MapUiSettings
-import com.google.maps.android.compose.MarkerComposable
-import com.google.maps.android.compose.rememberCameraPositionState
-import com.google.maps.android.compose.rememberMarkerState
 
 @Composable
 fun MapScreen(
@@ -60,87 +44,30 @@ fun MapScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
-
-    val isGoogleKeyConfigured = remember(context) {
-        isGoogleMapsApiKeyConfigured(context)
-    }
-
-    // Determine whether to show fallback map
-    val useFallbackMap = uiState.isFallbackMode || !isGoogleKeyConfigured
-
-    val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(
-            LatLng(MapViewModel.DEFAULT_LATITUDE, MapViewModel.DEFAULT_LONGITUDE),
-            12f
-        )
-    }
+    val mapController = remember(context) { OpenMapController(context) }
 
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(ZholdasBackground)
     ) {
-        // 1. Map Layer (Google Maps Compose OR Safe Interactive Fallback Map)
-        if (useFallbackMap) {
-            FallbackAlmatyMapView(
-                events = uiState.filteredEvents,
-                selectedEvent = uiState.selectedEvent,
-                onSelectEvent = { event -> viewModel.selectEvent(event) },
-                modifier = Modifier.fillMaxSize()
-            )
-        } else {
-            GoogleMap(
-                modifier = Modifier.fillMaxSize(),
-                cameraPositionState = cameraPositionState,
-                properties = MapProperties(isMyLocationEnabled = false),
-                uiSettings = MapUiSettings(
-                    zoomControlsEnabled = false,
-                    compassEnabled = false,
-                    myLocationButtonEnabled = false
-                )
-            ) {
-                // User location center annotation
-                MarkerComposable(
-                    state = rememberMarkerState(
-                        position = LatLng(MapViewModel.DEFAULT_LATITUDE, MapViewModel.DEFAULT_LONGITUDE)
-                    ),
-                    title = "Вы здесь"
-                ) {
-                    UserLocationMarker()
-                }
-
-                // Event markers
-                uiState.filteredEvents.forEach { event ->
-                    MarkerComposable(
-                        state = rememberMarkerState(
-                            position = LatLng(event.latitude, event.longitude)
-                        ),
-                        title = event.title,
-                        onClick = {
-                            viewModel.selectEvent(event)
-                            true
-                        }
-                    ) {
-                        EventMarkerIcon(
-                            category = event.category,
-                            isSelected = uiState.selectedEvent?.id == event.id
-                        )
-                    }
-                }
-            }
-        }
-
+        OpenStreetMapView(
+            controller = mapController,
+            events = uiState.filteredEvents,
+            selectedEvent = uiState.selectedEvent,
+            recommendedIds = uiState.aiRecommendedEvents.map { it.id }.toSet(),
+            onSelectEvent = viewModel::selectEvent,
+            modifier = Modifier.fillMaxSize()
+        )
         // 2. Top Filter Overlay (City Info, Search, Categories)
         MapTopFiltersSection(
             eventsCount = uiState.filteredEvents.count(),
             selectedCategory = uiState.selectedCategory,
             searchQuery = uiState.searchQuery,
             errorMessage = uiState.errorMessage,
-            isFallbackMode = useFallbackMap,
             onCategorySelected = { category -> viewModel.selectCategory(category) },
             onSearchQueryChanged = { query -> viewModel.updateSearchQuery(query) },
             onAIRecommendations = viewModel::requestAIRecommendations,
-            onToggleMapMode = { viewModel.toggleFallbackMode() },
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .statusBarsPadding()
@@ -160,7 +87,7 @@ fun MapScreen(
             )
         }
 
-        // 3. Control Buttons (Recenter, Mode Switch)
+        // Recenter control
         Column(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
@@ -170,10 +97,7 @@ fun MapScreen(
             // Recenter Button
             FloatingActionButton(
                 onClick = {
-                    cameraPositionState.position = CameraPosition.fromLatLngZoom(
-                        LatLng(MapViewModel.DEFAULT_LATITUDE, MapViewModel.DEFAULT_LONGITUDE),
-                        12f
-                    )
+                    mapController.recenter()
                 },
                 containerColor = ZholdasElevatedSurface,
                 contentColor = ZholdasAccent,
@@ -185,18 +109,6 @@ fun MapScreen(
                 )
             }
 
-            // Toggle Map Engine Button
-            FloatingActionButton(
-                onClick = { viewModel.toggleFallbackMode() },
-                containerColor = if (useFallbackMap) ZholdasAccent else ZholdasElevatedSurface,
-                contentColor = Color.White,
-                modifier = Modifier.size(48.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = "Переключить режим карты"
-                )
-            }
         }
 
         // 4. Selected Event Bottom Card
@@ -226,11 +138,9 @@ fun MapTopFiltersSection(
     selectedCategory: String,
     searchQuery: String,
     errorMessage: String?,
-    isFallbackMode: Boolean,
     onCategorySelected: (String) -> Unit,
     onSearchQueryChanged: (String) -> Unit,
     onAIRecommendations: () -> Unit,
-    onToggleMapMode: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val focusManager = LocalFocusManager.current
@@ -241,14 +151,14 @@ fun MapTopFiltersSection(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // Offline / Fallback banner if applicable
-        if (errorMessage != null || isFallbackMode) {
+        // Backend error banner
+        if (errorMessage != null) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
                     .background(ZholdasAccent.copy(alpha = 0.88f))
-                    .clickable { onToggleMapMode() }
+
                     .padding(horizontal = 14.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -260,7 +170,7 @@ fun MapTopFiltersSection(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = errorMessage ?: "Интерактивная карта Алматы (Фоллбэк режим без Google API)",
+                    text = errorMessage.orEmpty(),
                     color = Color.White,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -395,7 +305,7 @@ fun MapTopFiltersSection(
                 ) {
                     Text(
                         text = title,
-                        color = Color.White,
+                        color = if (isSelected) Color.White else ZholdasTextPrimary,
                         fontSize = 13.sp,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
@@ -527,12 +437,12 @@ fun SelectedEventBottomCard(
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = "?? ${event.locationName}",
+                        text = "📍 ${event.locationName}",
                         color = ZholdasTextSecondary,
                         fontSize = 12.sp
                     )
                     Text(
-                        text = "?? ${event.startTime}",
+                        text = "📅 ${event.startTime}",
                         color = ZholdasTextSecondary,
                         fontSize = 12.sp
                     )
@@ -540,7 +450,7 @@ fun SelectedEventBottomCard(
 
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = "?? ${event.participantsCount ?: 0} / ${event.maxParticipants}",
+                        text = "👥 ${event.participantsCount ?: 0} / ${event.maxParticipants}",
                         color = ZholdasTextSecondary,
                         fontSize = 12.sp
                     )
@@ -627,154 +537,6 @@ fun EventMarkerIcon(
     }
 }
 
-@Composable
-fun FallbackAlmatyMapView(
-    events: List<Event>,
-    selectedEvent: Event?,
-    onSelectEvent: (Event) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var panOffset by remember { mutableStateOf(Offset.Zero) }
-
-    Box(
-        modifier = modifier
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(ZholdasBackgroundDeep, ZholdasBackground)
-                )
-            )
-            .pointerInput(Unit) {
-                detectDragGestures { change, dragAmount ->
-                    change.consume()
-                    panOffset += dragAmount
-                }
-            }
-    ) {
-        // Decorative grid & Almaty schematic map background
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val w = size.width
-            val h = size.height
-
-            // Grid lines
-            val gridSize = 80f
-            var x = panOffset.x % gridSize
-            while (x < w) {
-                drawLine(
-                    color = Color.White.copy(alpha = 0.04f),
-                    start = Offset(x, 0f),
-                    end = Offset(x, h),
-                    strokeWidth = 1f
-                )
-                x += gridSize
-            }
-            var y = panOffset.y % gridSize
-            while (y < h) {
-                drawLine(
-                    color = Color.White.copy(alpha = 0.04f),
-                    start = Offset(0f, y),
-                    end = Offset(w, y),
-                    strokeWidth = 1f
-                )
-                y += gridSize
-            }
-
-            // Schematic Almaty main roads
-            val centerX = w / 2 + panOffset.x
-            val centerY = h / 2 + panOffset.y
-
-            // Al-Farabi Avenue (horizontal south)
-            drawLine(
-                color = Color.White.copy(alpha = 0.12f),
-                start = Offset(0f, centerY + 120f),
-                end = Offset(w, centerY + 120f),
-                strokeWidth = 4f
-            )
-
-            // Abay Avenue (horizontal middle)
-            drawLine(
-                color = Color.White.copy(alpha = 0.09f),
-                start = Offset(0f, centerY - 20f),
-                end = Offset(w, centerY - 20f),
-                strokeWidth = 3f
-            )
-
-            // Dostyk Avenue (vertical east)
-            drawLine(
-                color = Color.White.copy(alpha = 0.09f),
-                start = Offset(centerX + 90f, 0f),
-                end = Offset(centerX + 90f, h),
-                strokeWidth = 3f
-            )
-
-            // Mountains contour in South
-            val mountainsPath = Path().apply {
-                moveTo(0f, h - 30f)
-                lineTo(w * 0.2f, h - 90f)
-                lineTo(w * 0.4f, h - 60f)
-                lineTo(w * 0.65f, h - 130f)
-                lineTo(w * 0.85f, h - 80f)
-                lineTo(w, h - 110f)
-            }
-            drawPath(
-                path = mountainsPath,
-                color = ZholdasSuccess.copy(alpha = 0.2f),
-                style = Stroke(width = 3f)
-            )
-
-            // Center city ring (Almaty center 43.2389, 76.8897)
-            drawCircle(
-                color = ZholdasAccent.copy(alpha = 0.06f),
-                radius = 160f,
-                center = Offset(centerX, centerY)
-            )
-        }
-
-        // Center User location marker
-        Box(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .offset(x = panOffset.x.dp / 2, y = panOffset.y.dp / 2)
-        ) {
-            UserLocationMarker()
-        }
-
-        // Event Pins on fallback map
-        events.forEach { event ->
-            // Compute relative offset around Almaty center (43.2389, 76.8897)
-            val dLat = (event.latitude - MapViewModel.DEFAULT_LATITUDE) * 4500.0
-            val dLon = (event.longitude - MapViewModel.DEFAULT_LONGITUDE) * 3200.0
-
-            val offsetX = (dLon + panOffset.x).dp
-            val offsetY = (-dLat + panOffset.y).dp
-
-            Box(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .offset(x = offsetX, y = offsetY)
-                    .clickable { onSelectEvent(event) }
-            ) {
-                EventMarkerIcon(
-                    category = event.category,
-                    isSelected = selectedEvent?.id == event.id
-                )
-            }
-        }
-    }
-}
-
-fun isGoogleMapsApiKeyConfigured(context: Context): Boolean {
-    return try {
-        val appInfo = context.packageManager.getApplicationInfo(
-            context.packageName,
-            PackageManager.GET_META_DATA
-        )
-        val apiKey = appInfo.metaData?.getString("com.google.android.geo.API_KEY")
-        !apiKey.isNullOrBlank() && apiKey != "YOUR_GOOGLE_MAPS_API_KEY_HERE"
-    } catch (e: Exception) {
-        false
-    }
-}
-
 fun getCategoryTitle(cat: String): String {
     return when (cat.lowercase()) {
         "cat_all" -> "Все"
@@ -806,7 +568,7 @@ fun getCategoryEmoji(category: String): String {
         ec.contains("sport") || ec.contains("run") || ec.contains("football") || ec.contains("спорт") -> "🏃"
         ec.contains("theater") || ec.contains("театр") -> "🎭"
         ec.contains("restaurant") || ec.contains("food") || ec.contains("cafe") || ec.contains("ресторан") -> "🍴"
-        ec.contains("board_games") || ec.contains("game") -> "??"
-        else -> "?"
+        ec.contains("board_games") || ec.contains("game") -> "🎲"
+        else -> "📌"
     }
 }

@@ -23,7 +23,6 @@ data class MapUiState(
     val selectedCategory: String = "cat_all",
     val selectedEvent: Event? = null,
     val searchQuery: String = "",
-    val isFallbackMode: Boolean = false,
     val isAiLoading: Boolean = false,
     val aiAnswer: String? = null,
     val aiRecommendedEvents: List<Event> = emptyList(),
@@ -151,13 +150,6 @@ class MapViewModel(
         _uiState.update { it.copy(selectedEvent = event) }
     }
 
-    fun toggleFallbackMode() {
-        _uiState.update { it.copy(isFallbackMode = !it.isFallbackMode) }
-    }
-
-    fun setFallbackMode(enabled: Boolean) {
-        _uiState.update { it.copy(isFallbackMode = enabled) }
-    }
 
     private fun filterEvents(
         events: List<Event>,

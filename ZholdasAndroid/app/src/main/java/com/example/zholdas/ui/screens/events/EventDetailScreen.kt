@@ -189,8 +189,8 @@ fun EventDetailScreen(
                     .background(
                         brush = Brush.linearGradient(
                             colors = listOf(
-                                Color(0xFF3B2073),
-                                Color(0xFF1D133B)
+                                ZholdasElevatedSurface,
+                                ZholdasSurface
                             )
                         )
                     )
@@ -250,7 +250,7 @@ fun EventDetailScreen(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         modifier = Modifier
                             .background(
-                                if (event.status == "active") ZholdasSuccess.copy(alpha = 0.18f) else Color.White.copy(alpha = 0.1f),
+                                if (event.status == "active") ZholdasSuccess.copy(alpha = 0.18f) else ZholdasTextPrimary.copy(alpha = 0.1f),
                                 RoundedCornerShape(8.dp)
                             )
                             .padding(horizontal = 10.dp, vertical = 6.dp)
@@ -323,8 +323,8 @@ fun EventDetailScreen(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.08f))
-                            .border(1.dp, Color.White.copy(alpha = 0.1f), CircleShape),
+                            .background(ZholdasTextPrimary.copy(alpha = 0.08f))
+                            .border(1.dp, ZholdasTextPrimary.copy(alpha = 0.1f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -342,7 +342,7 @@ fun EventDetailScreen(
                         )
                         Text(
                             text = "Абылай Жолдас",
-                            color = Color.White,
+                            color = ZholdasTextPrimary,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -360,8 +360,8 @@ fun EventDetailScreen(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.08f))
-                            .border(1.dp, Color.White.copy(alpha = 0.1f), CircleShape),
+                            .background(ZholdasTextPrimary.copy(alpha = 0.08f))
+                            .border(1.dp, ZholdasTextPrimary.copy(alpha = 0.1f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -379,7 +379,7 @@ fun EventDetailScreen(
                         )
                         Text(
                             text = EventUtils.formatEventDateFull(event.startTime),
-                            color = Color.White,
+                            color = ZholdasTextPrimary,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -397,8 +397,8 @@ fun EventDetailScreen(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.08f))
-                            .border(1.dp, Color.White.copy(alpha = 0.1f), CircleShape),
+                            .background(ZholdasTextPrimary.copy(alpha = 0.08f))
+                            .border(1.dp, ZholdasTextPrimary.copy(alpha = 0.1f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -416,7 +416,7 @@ fun EventDetailScreen(
                         )
                         Text(
                             text = event.locationName,
-                            color = Color.White,
+                            color = ZholdasTextPrimary,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -458,7 +458,7 @@ fun EventDetailScreen(
                     )
                     Text(
                         text = "ev_restrictions".localized,
-                        color = Color.White,
+                        color = ZholdasTextPrimary,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -491,7 +491,7 @@ fun EventDetailScreen(
                 ) {
                     Text(
                         text = "ev_participants".localized,
-                        color = Color.White,
+                        color = ZholdasTextPrimary,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -510,7 +510,7 @@ fun EventDetailScreen(
                         .fillMaxWidth()
                         .height(6.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(Color.White.copy(alpha = 0.1f))
+                        .background(ZholdasTextPrimary.copy(alpha = 0.1f))
                 ) {
                     Box(
                         modifier = Modifier
@@ -528,8 +528,8 @@ fun EventDetailScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White.copy(alpha = 0.08f),
-                        contentColor = Color.White
+                        containerColor = ZholdasTextPrimary.copy(alpha = 0.08f),
+                        contentColor = ZholdasTextPrimary
                     )
                 ) {
                     Text(
@@ -543,7 +543,7 @@ fun EventDetailScreen(
             ModernCard {
                 Text(
                     text = "ev_how_it_runs".localized,
-                    color = Color.White,
+                    color = ZholdasTextPrimary,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -690,8 +690,8 @@ fun EventDetailScreen(
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White.copy(alpha = 0.08f),
-                        contentColor = Color.White
+                        containerColor = ZholdasTextPrimary.copy(alpha = 0.08f),
+                        contentColor = ZholdasTextPrimary
                     )
                 ) {
                     Text(
@@ -707,10 +707,10 @@ fun EventDetailScreen(
                         try {
                             context.startActivity(mapIntent)
                         } catch (e: Exception) {
-                            // Fallback web google maps
+                            // OpenStreetMap web fallback
                             val webIntent = Intent(
                                 Intent.ACTION_VIEW,
-                                Uri.parse("https://maps.google.com/?q=${event.latitude},${event.longitude}")
+                                Uri.parse("https://www.openstreetmap.org/?mlat=${event.latitude}&mlon=${event.longitude}#map=16/${event.latitude}/${event.longitude}")
                             )
                             context.startActivity(webIntent)
                         }
@@ -718,8 +718,8 @@ fun EventDetailScreen(
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White.copy(alpha = 0.08f),
-                        contentColor = Color.White
+                        containerColor = ZholdasTextPrimary.copy(alpha = 0.08f),
+                        contentColor = ZholdasTextPrimary
                     )
                 ) {
                     Text(
@@ -744,7 +744,7 @@ fun EventDetailScreen(
             ) {
                 Text(
                     text = "ev_participants".localized,
-                    color = Color.White,
+                    color = ZholdasTextPrimary,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -764,7 +764,7 @@ fun EventDetailScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(Color.White.copy(alpha = 0.04f))
+                                    .background(ZholdasTextPrimary.copy(alpha = 0.04f))
                                     .padding(12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -779,13 +779,13 @@ fun EventDetailScreen(
                                     Icon(
                                         imageVector = Icons.Default.Person,
                                         contentDescription = null,
-                                        tint = Color.White
+                                        tint = ZholdasTextPrimary
                                     )
                                 }
                                 Column {
                                     Text(
                                         text = participant.fullName.ifBlank { "Участник" },
-                                        color = Color.White,
+                                        color = ZholdasTextPrimary,
                                         fontWeight = FontWeight.SemiBold
                                     )
                                     Text(
@@ -897,14 +897,14 @@ private fun StatMiniCard(
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(Color.White.copy(alpha = 0.04f))
-            .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(12.dp))
+            .background(ZholdasTextPrimary.copy(alpha = 0.04f))
+            .border(1.dp, ZholdasTextPrimary.copy(alpha = 0.06f), RoundedCornerShape(12.dp))
             .padding(vertical = 10.dp, horizontal = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             text = title,
-            color = Color.White,
+            color = ZholdasTextPrimary,
             fontWeight = FontWeight.Bold,
             fontSize = 16.sp
         )

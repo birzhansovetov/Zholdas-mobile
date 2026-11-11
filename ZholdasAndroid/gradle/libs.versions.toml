@@ -19,8 +19,6 @@ kotlinxSerializationJson = "1.6.3"
 datastore = "1.1.1"
 coil = "2.6.0"
 playServicesLocation = "21.2.0"
-playServicesMaps = "19.0.0"
-mapsCompose = "4.3.3"
 firebaseBom = "34.15.0"
 googleServicesPlugin = "4.5.0"
 desugarJdkLibs = "2.0.3"
@@ -65,8 +63,6 @@ coil-compose = { module = "io.coil-kt:coil-compose", version.ref = "coil" }
 
 # Location & Maps
 play-services-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
-play-services-maps = { module = "com.google.android.gms:play-services-maps", version.ref = "playServicesMaps" }
-maps-compose = { module = "com.google.maps.android:maps-compose", version.ref = "mapsCompose" }
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
 firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
 desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugarJdkLibs" }
@@ -76,3 +72,7 @@ android-application = { id = "com.android.application", version.ref = "androidGr
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 google-services = { id = "com.google.gms.google-services", version.ref = "googleServicesPlugin" }
+
+[libraries.maplibre]
+module = "org.maplibre.gl:android-sdk-opengl"
+version = "13.4.1"

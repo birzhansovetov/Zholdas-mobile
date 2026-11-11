@@ -384,7 +384,7 @@ private fun RequestRow(
                 Icon(
                     imageVector = Icons.Default.Close,
                     contentDescription = null,
-                    tint = Color.White,
+                    tint = ZholdasTextPrimary,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -439,7 +439,7 @@ private fun AvatarView(
         } else {
             Text(
                 text = getInitials(user.fullName),
-                color = ZholdasTextPrimary,
+                color = Color.White,
                 fontSize = (size * 0.36).toInt().sp,
                 fontWeight = FontWeight.Bold
             )
@@ -473,7 +473,7 @@ private fun EmptyStateView(
 
             Text(
                 text = title,
-                color = Color.White,
+                color = ZholdasTextPrimary,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -493,6 +493,6 @@ private fun getInitials(name: String): String {
     return when {
         parts.size >= 2 -> "${parts[0].take(1)}${parts[1].take(1)}".uppercase()
         parts.isNotEmpty() -> parts[0].take(2).uppercase()
-        else -> "??"
+        else -> "ZH"
     }
 }

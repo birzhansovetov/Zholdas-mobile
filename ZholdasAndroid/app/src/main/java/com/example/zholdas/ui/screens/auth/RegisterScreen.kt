@@ -9,8 +9,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -66,8 +64,7 @@ fun RegisterScreen(
 
     // Steppers and selectors
     var selectedAge by remember { mutableStateOf(20) }
-    var selectedGender by remember { mutableStateOf("Не указывать") } // "Мужской", "Женский", "Не указывать"
-    var selectedAvatarPreset by remember { mutableStateOf("memoji_1") }
+    var selectedGender by remember { mutableStateOf("Мужской") }
     var selectedPhotoUri by remember { mutableStateOf<Uri?>(null) }
     var selectedPhotoBytes by remember { mutableStateOf<ByteArray?>(null) }
 
@@ -88,21 +85,21 @@ fun RegisterScreen(
     val isLoading by authViewModel.isLoading.collectAsState()
     val errorMessage by authViewModel.errorMessage.collectAsState()
 
-    val avatarPresets = listOf("memoji_1", "memoji_2", "memoji_3", "memoji_4", "memoji_5", "memoji_6")
 
     // Image Picker Launcher
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
-            selectedPhotoUri = uri
-            selectedAvatarPreset = ""
             try {
                 context.contentResolver.openInputStream(uri)?.use { inputStream ->
                     selectedPhotoBytes = inputStream.readBytes()
+                    selectedPhotoUri = uri
+                    localError = null
                 }
             } catch (e: Exception) {
-                Log.e("RegisterScreen", "Failed to read image bytes: ${e.message}", e)
+                Log.e("RegisterScreen", "Failed to read selected photo", e)
+                localError = "reg_photo_error".localized
             }
         }
     }
@@ -199,87 +196,45 @@ fun RegisterScreen(
                         letterSpacing = 1.5.sp
                     )
 
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(ZholdasElevatedSurface)
+                            .clickable { imagePickerLauncher.launch("image/*") }
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Custom Photo Picker Button
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .size(50.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.White.copy(alpha = 0.05f))
-                                    .border(
-                                        width = 2.dp,
-                                        color = if (selectedPhotoUri != null) ZholdasAccent else Color.White.copy(alpha = 0.1f),
-                                        shape = CircleShape
-                                    )
-                                    .clickable { imagePickerLauncher.launch("image/*") },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (selectedPhotoUri != null) {
-                                    AsyncImage(
-                                        model = selectedPhotoUri,
-                                        contentDescription = null,
-                                        modifier = Modifier.fillMaxSize().clip(CircleShape),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                } else {
-                                    Icon(
-                                        imageVector = Icons.Default.Add,
-                                        contentDescription = null,
-                                        tint = ZholdasAccent,
-                                        modifier = Modifier.size(24.dp)
-                                    )
-                                }
+                        Box(
+                            modifier = Modifier.size(64.dp).clip(CircleShape)
+                                .background(ZholdasAccent.copy(alpha = 0.12f))
+                                .border(1.dp, ZholdasBorder, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (selectedPhotoUri != null) {
+                                AsyncImage(
+                                    model = selectedPhotoUri,
+                                    contentDescription = "reg_choose_avatar".localized,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Icon(Icons.Default.AddAPhoto, contentDescription = null,
+                                    tint = ZholdasAccent, modifier = Modifier.size(28.dp))
                             }
                         }
-
-                        // Presets
-                        items(avatarPresets) { preset ->
-                            val resId = when (preset) {
-                                "memoji_1" -> com.example.zholdas.R.drawable.memoji_1
-                                "memoji_2" -> com.example.zholdas.R.drawable.memoji_2
-                                "memoji_3" -> com.example.zholdas.R.drawable.memoji_3
-                                "memoji_4" -> com.example.zholdas.R.drawable.memoji_4
-                                "memoji_5" -> com.example.zholdas.R.drawable.memoji_5
-                                "memoji_6" -> com.example.zholdas.R.drawable.memoji_6
-                                else -> 0
-                            }
-
-                            val isSelected = selectedAvatarPreset == preset
-                            Box(
-                                modifier = Modifier
-                                    .size(50.dp)
-                                    .clip(CircleShape)
-                                    .background(if (isSelected) ZholdasAccent.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.05f))
-                                    .border(
-                                        width = 2.dp,
-                                        color = if (isSelected) ZholdasAccent else Color.White.copy(alpha = 0.1f),
-                                        shape = CircleShape
-                                    )
-                                    .clickable {
-                                        selectedAvatarPreset = preset
-                                        selectedPhotoUri = null
-                                        selectedPhotoBytes = null
-                                    },
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (resId != 0) {
-                                    Image(
-                                        painter = painterResource(id = resId),
-                                        contentDescription = null,
-                                        modifier = Modifier.fillMaxSize().clip(CircleShape),
-                                        contentScale = ContentScale.Crop
-                                    )
-                                }
-                            }
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = if (selectedPhotoUri == null) "reg_add_photo".localized else "reg_change_photo".localized,
+                                color = ZholdasTextPrimary,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text("reg_photo_hint".localized, color = ZholdasTextSecondary, fontSize = 13.sp)
                         }
                     }
                 }
-
                 Spacer(modifier = Modifier.height(18.dp))
 
                 // 2. Full Name
@@ -508,21 +463,20 @@ fun RegisterScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         val genders = listOf(
-                            Triple("Мужской", "reg_gender_male", com.example.zholdas.R.drawable.gender_male),
-                            Triple("Женский", "reg_gender_female", com.example.zholdas.R.drawable.gender_female),
-                            Triple("Не указывать", "reg_gender_none", com.example.zholdas.R.drawable.gender_other)
+                            Pair("Мужской", "reg_gender_male"),
+                            Pair("Женский", "reg_gender_female")
                         )
 
-                        genders.forEach { (genderKey, genderLabel, drawableRes) ->
+                        genders.forEach { (genderKey, genderLabel) ->
                             val isSelected = selectedGender == genderKey
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isSelected) Color.White.copy(alpha = 0.1f) else Color.White.copy(alpha = 0.04f))
+                                    .background(if (isSelected) ZholdasTextPrimary.copy(alpha = 0.1f) else ZholdasTextPrimary.copy(alpha = 0.04f))
                                     .border(
                                         width = if (isSelected) 2.dp else 1.dp,
-                                        color = if (isSelected) ZholdasAccent else Color.White.copy(alpha = 0.06f),
+                                        color = if (isSelected) ZholdasAccent else ZholdasTextPrimary.copy(alpha = 0.06f),
                                         shape = RoundedCornerShape(12.dp)
                                     )
                                     .clickable { selectedGender = genderKey }
@@ -533,16 +487,9 @@ fun RegisterScreen(
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Image(
-                                        painter = painterResource(id = drawableRes),
-                                        contentDescription = null,
-                                        modifier = Modifier
-                                            .size(36.dp)
-                                            .clip(CircleShape)
-                                    )
                                     Text(
                                         text = genderLabel.localized,
-                                        color = if (isSelected) Color.White else Color.Gray,
+                                        color = if (isSelected) ZholdasAccent else ZholdasTextSecondary,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -579,14 +526,14 @@ fun RegisterScreen(
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = "$selectedAge",
-                            color = Color.White,
+                            color = ZholdasTextPrimary,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "reg_age_suffix".localized,
-                            color = Color.Gray,
+                            color = ZholdasTextSecondary,
                             fontSize = 14.sp
                         )
 
@@ -597,7 +544,7 @@ fun RegisterScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(Color.White.copy(alpha = 0.05f))
+                                .background(ZholdasTextPrimary.copy(alpha = 0.05f))
                                 .border(1.dp, ZholdasBorder, RoundedCornerShape(8.dp))
                         ) {
                             Box(
@@ -608,7 +555,7 @@ fun RegisterScreen(
                             ) {
                                 Text(
                                     text = "-",
-                                    color = if (selectedAge > 13) Color.White else Color.Gray,
+                                    color = if (selectedAge > 13) ZholdasTextPrimary else ZholdasTextTertiary,
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -622,7 +569,7 @@ fun RegisterScreen(
                             ) {
                                 Text(
                                     text = "+",
-                                    color = if (selectedAge < 80) Color.White else Color.Gray,
+                                    color = if (selectedAge < 80) ZholdasTextPrimary else ZholdasTextTertiary,
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -700,8 +647,8 @@ fun RegisterScreen(
                         modifier = Modifier
                             .size(60.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.1f))
-                            .border(1.dp, Color.White.copy(alpha = 0.15f), CircleShape),
+                            .background(ZholdasTextPrimary.copy(alpha = 0.1f))
+                            .border(1.dp, ZholdasTextPrimary.copy(alpha = 0.15f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         if (selectedPhotoUri != null) {
@@ -712,20 +659,11 @@ fun RegisterScreen(
                                 contentScale = ContentScale.Crop
                             )
                         } else {
-                            val resId = when (selectedAvatarPreset) {
-                                "memoji_1" -> com.example.zholdas.R.drawable.memoji_1
-                                "memoji_2" -> com.example.zholdas.R.drawable.memoji_2
-                                "memoji_3" -> com.example.zholdas.R.drawable.memoji_3
-                                "memoji_4" -> com.example.zholdas.R.drawable.memoji_4
-                                "memoji_5" -> com.example.zholdas.R.drawable.memoji_5
-                                "memoji_6" -> com.example.zholdas.R.drawable.memoji_6
-                                else -> com.example.zholdas.R.drawable.memoji_1
-                            }
-                            Image(
-                                painter = painterResource(id = resId),
+                            Icon(
+                                imageVector = Icons.Default.Person,
                                 contentDescription = null,
-                                modifier = Modifier.fillMaxSize().clip(CircleShape),
-                                contentScale = ContentScale.Crop
+                                tint = ZholdasTextSecondary,
+                                modifier = Modifier.size(32.dp)
                             )
                         }
                     }
@@ -734,13 +672,13 @@ fun RegisterScreen(
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
                             text = if (fullName.isEmpty()) "reg_preview_name".localized else fullName,
-                            color = Color.White,
+                            color = ZholdasTextPrimary,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = if (email.isEmpty()) "email@example.com" else email,
-                            color = Color.Gray,
+                            color = ZholdasTextSecondary,
                             fontSize = 14.sp
                         )
                     }
@@ -773,7 +711,7 @@ fun RegisterScreen(
                     } else {
                         localError = null
                         val username = email.substringBefore("@")
-                        val avatarURL = if (selectedPhotoUri != null) "" else "asset:$selectedAvatarPreset"
+                        val avatarURL = ""
                         
                         val currentYear = Calendar.getInstance().get(Calendar.YEAR)
                         val birthYear = currentYear - selectedAge

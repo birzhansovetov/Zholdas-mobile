@@ -404,7 +404,7 @@ fun EventMessageBubble(message: ChatMessage) {
                 .background(
                     when {
                         isUser -> Brush.linearGradient(listOf(ZholdasAccent, ZholdasAccentDeep))
-                        isAI -> Brush.linearGradient(listOf(Color(0xFF2E1A5A), ZholdasElevatedSurface))
+                        isAI -> Brush.linearGradient(listOf(ZholdasPanel, ZholdasElevatedSurface))
                         else -> Brush.linearGradient(listOf(ZholdasElevatedSurface, ZholdasSurface))
                     }
                 )
@@ -427,7 +427,7 @@ fun EventMessageBubble(message: ChatMessage) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = message.text,
-                    color = ZholdasTextPrimary,
+                    color = if (isUser) Color.White else ZholdasTextPrimary,
                     fontSize = 14.sp,
                     lineHeight = 20.sp
                 )

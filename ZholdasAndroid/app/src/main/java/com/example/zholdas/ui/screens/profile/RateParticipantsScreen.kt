@@ -70,7 +70,7 @@ fun RateParticipantsScreen(
                 title = {
                     Text(
                         text = "ev_rate_participants".localized,
-                        color = Color.White,
+                        color = ZholdasTextPrimary,
                         fontWeight = FontWeight.Bold
                     )
                 },
@@ -108,7 +108,7 @@ fun RateParticipantsScreen(
             ) {
                 Text(
                     text = "rate_subtitle".localized,
-                    color = Color.White,
+                    color = ZholdasTextPrimary,
                     fontSize = 14.sp,
                     lineHeight = 20.sp
                 )
@@ -139,7 +139,7 @@ fun RateParticipantsScreen(
                         )
                         Text(
                             text = "rate_no_participants_title".localized,
-                            color = Color.White,
+                            color = ZholdasTextPrimary,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             textAlign = TextAlign.Center
@@ -188,7 +188,7 @@ fun RateParticipantsScreen(
             ) {
                 Text(
                     text = "rate_sheet_title".localized,
-                    color = Color.White,
+                    color = ZholdasTextPrimary,
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -222,7 +222,7 @@ fun RateParticipantsScreen(
                     Column {
                         Text(
                             text = participant.fullName.ifBlank { "Участник" },
-                            color = Color.White,
+                            color = ZholdasTextPrimary,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -246,7 +246,7 @@ fun RateParticipantsScreen(
                         Icon(
                             imageVector = if (star <= selectedRating) Icons.Default.Star else Icons.Default.StarBorder,
                             contentDescription = null,
-                            tint = if (star <= selectedRating) Color(0xFFFFC107) else Color.White.copy(alpha = 0.3f),
+                            tint = if (star <= selectedRating) Color(0xFFFFC107) else ZholdasTextPrimary.copy(alpha = 0.3f),
                             modifier = Modifier
                                 .size(44.dp)
                                 .clickable { selectedRating = star }
@@ -258,7 +258,7 @@ fun RateParticipantsScreen(
                 // Star Rating Description
                 Text(
                     text = getRatingDescription(selectedRating),
-                    color = Color.White,
+                    color = ZholdasTextPrimary,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.fillMaxWidth(),
@@ -283,10 +283,10 @@ fun RateParticipantsScreen(
                             )
                         },
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
+                            focusedTextColor = ZholdasTextPrimary,
+                            unfocusedTextColor = ZholdasTextPrimary,
                             focusedBorderColor = ZholdasAccent,
-                            unfocusedBorderColor = Color.White.copy(alpha = 0.2f)
+                            unfocusedBorderColor = ZholdasTextPrimary.copy(alpha = 0.2f)
                         ),
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 3
@@ -350,7 +350,7 @@ private fun ParticipantRateRow(
             ) {
                 Text(
                     text = participant.fullName.take(2).uppercase().ifBlank { "ZH" },
-                    color = Color.White,
+                    color = ZholdasTextPrimary,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -358,7 +358,7 @@ private fun ParticipantRateRow(
             Column {
                 Text(
                     text = participant.fullName.ifBlank { "Участник" },
-                    color = Color.White,
+                    color = ZholdasTextPrimary,
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp
                 )

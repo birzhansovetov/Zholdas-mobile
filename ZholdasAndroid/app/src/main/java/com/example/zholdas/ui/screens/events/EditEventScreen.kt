@@ -239,7 +239,7 @@ fun EditEventScreen(
                                 Text(
                                     text = catKey.localized,
                                     style = MaterialTheme.typography.bodySmall.copy(
-                                        color = if (isSelected) Color.Black else ZholdasTextPrimary,
+                                        color = if (isSelected) Color.White else ZholdasTextPrimary,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                     )
                                 )
@@ -374,7 +374,7 @@ fun EditEventScreen(
                                 Text(
                                     text = label,
                                     style = MaterialTheme.typography.bodySmall.copy(
-                                        color = if (isSel) Color.Black else ZholdasTextPrimary,
+                                        color = if (isSel) Color.White else ZholdasTextPrimary,
                                         fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal
                                     )
                                 )

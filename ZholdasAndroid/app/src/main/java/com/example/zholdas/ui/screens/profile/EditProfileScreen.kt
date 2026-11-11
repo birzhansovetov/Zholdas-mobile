@@ -299,7 +299,7 @@ private fun ScrollViewContent(
 
         if (!errorMessage.isNullOrEmpty()) {
             Text(
-                text = "?? $errorMessage",
+                text = errorMessage,
                 color = ZholdasDanger,
                 fontSize = 14.sp,
                 modifier = Modifier.padding(horizontal = 24.dp)
@@ -466,6 +466,6 @@ private fun getInitials(name: String): String {
     return when {
         parts.size >= 2 -> "${parts[0].take(1)}${parts[1].take(1)}".uppercase()
         parts.isNotEmpty() -> parts[0].take(2).uppercase()
-        else -> "??"
+        else -> "ZH"
     }
 }

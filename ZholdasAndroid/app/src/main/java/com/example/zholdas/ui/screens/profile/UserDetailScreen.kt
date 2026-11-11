@@ -337,8 +337,8 @@ fun UserDetailScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(12.dp),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color.White.copy(alpha = 0.1f),
-                                        contentColor = Color.White
+                                        containerColor = ZholdasTextPrimary.copy(alpha = 0.1f),
+                                        contentColor = ZholdasTextPrimary
                                     )
                                 ) {
                                     Text("user_detail_cancel_request".localized)

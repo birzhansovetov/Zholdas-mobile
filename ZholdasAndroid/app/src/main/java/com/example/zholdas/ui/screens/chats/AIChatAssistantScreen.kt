@@ -319,7 +319,7 @@ fun AIMessageBubble(message: ChatMessage) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = message.text,
-                    color = ZholdasTextPrimary,
+                    color = if (isUser) Color.White else ZholdasTextPrimary,
                     fontSize = 14.sp,
                     lineHeight = 20.sp
                 )

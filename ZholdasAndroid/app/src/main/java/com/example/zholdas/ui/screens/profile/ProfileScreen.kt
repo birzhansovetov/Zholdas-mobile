@@ -550,7 +550,7 @@ private fun SettingsSection(
                         .padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("??", fontSize = 18.sp)
+                    Icon(Icons.Default.Language, contentDescription = null, tint = ZholdasTextSecondary, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = "prof_lang".localized,
@@ -577,21 +577,21 @@ private fun SettingsSection(
                     modifier = Modifier.background(ZholdasElevatedSurface)
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Русский", color = Color.White) },
+                        text = { Text("Русский", color = ZholdasTextPrimary) },
                         onClick = {
                             onLanguageSelected("ru")
                             onLanguageMenuExpandedChange(false)
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Қазақша", color = Color.White) },
+                        text = { Text("Қазақша", color = ZholdasTextPrimary) },
                         onClick = {
                             onLanguageSelected("kk")
                             onLanguageMenuExpandedChange(false)
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("English", color = Color.White) },
+                        text = { Text("English", color = ZholdasTextPrimary) },
                         onClick = {
                             onLanguageSelected("en")
                             onLanguageMenuExpandedChange(false)
@@ -644,7 +644,7 @@ private fun SettingsSection(
                         AppTheme.DARK to themeLabel(AppTheme.DARK)
                     ).forEach { (theme, label) ->
                         DropdownMenuItem(
-                            text = { Text(label, color = Color.White) },
+                            text = { Text(label, color = ZholdasTextPrimary) },
                             onClick = {
                                 onThemeSelected(theme)
                                 themeMenuExpanded = false
@@ -913,6 +913,6 @@ private fun getInitials(name: String): String {
     return when {
         parts.size >= 2 -> "${parts[0].take(1)}${parts[1].take(1)}".uppercase()
         parts.isNotEmpty() -> parts[0].take(2).uppercase()
-        else -> "??"
+        else -> "ZH"
     }
 }
