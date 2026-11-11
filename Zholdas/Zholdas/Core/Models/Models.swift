@@ -309,6 +309,8 @@ struct ChatMessage: Identifiable, Codable, Hashable {
 }
 
 struct ChatSession: Identifiable, Codable, Hashable {
+    static let aiChatSessionID: Int32 = -1
+    
     let id: Int32
     let title: String
     let timeLabel: String

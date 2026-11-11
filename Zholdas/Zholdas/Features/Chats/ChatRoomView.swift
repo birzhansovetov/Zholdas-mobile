@@ -139,11 +139,12 @@ struct ChatRoomView: View {
         .task {
             await fetchMessages()
             
-            if session.id != 999 {
+            if session.id != ChatSession.aiChatSessionID {
                 let manager = ChatWebSocketManager(eventID: session.id)
                 self.webSocketManager = manager
                 manager.onMessageReceived = { response in
                     let currentUserID = authViewModel.currentUserProfile?.id ?? ""
+                    let isCurrentUser = (response.senderID == currentUserID)
                     let msgUUID = UUID(uuidString: String(format: "00000000-0000-0000-0000-%012x", response.id)) ?? UUID()
                     
                     if !session.messages.contains(where: { $0.dbID == response.id }) {
@@ -153,14 +154,28 @@ struct ChatRoomView: View {
                             senderAvatarURL: response.senderAvatarURL.isEmpty ? nil : response.senderAvatarURL,
                             text: response.text,
                             timestamp: response.createdAt,
-                            isCurrentUser: response.senderID == currentUserID
+                            isCurrentUser: isCurrentUser
                         )
                         newMsg.dbID = response.id
                         newMsg.senderID = response.senderID
                         
-                        withAnimation {
-                            session.messages.append(newMsg)
+                        // Если это наше сообщение и есть временное без dbID — заменяем его на серверное
+                        if isCurrentUser, let tempIndex = session.messages.firstIndex(where: {
+                            $0.dbID == nil && $0.isCurrentUser && ($0.text == response.text || (response.text.hasPrefix("[photo]") && $0.text.hasPrefix("[photo]")))
+                        }) {
+                            withAnimation {
+                                session.messages[tempIndex] = newMsg
+                            }
+                        } else {
+                            withAnimation {
+                                session.messages.append(newMsg)
+                            }
                         }
+                    }
+                }
+                manager.onReconnected = {
+                    Task {
+                        await fetchMessages(silent: true)
                     }
                 }
                 manager.connect()
@@ -372,7 +387,7 @@ struct ChatRoomView: View {
                 }
 
                 HStack(spacing: 12) {
-                    if session.id != 999 {
+                    if session.id != ChatSession.aiChatSessionID {
                         PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
                             Image(systemName: "photo.fill")
                                 .foregroundColor(.gray)
@@ -430,7 +445,7 @@ struct ChatRoomView: View {
     }
 
     private var shouldShowJorykSuggestions: Bool {
-        session.id == 999 || isJorykMentionActive
+        session.id == ChatSession.aiChatSessionID || isJorykMentionActive
     }
 
     private var jorykSuggestionBar: some View {
@@ -485,7 +500,7 @@ struct ChatRoomView: View {
 
     private func applyJorykSuggestion(_ text: String) {
         messageText = text
-        if session.id != 999 {
+        if session.id != ChatSession.aiChatSessionID {
             isJorykMentionActive = true
         }
         isMessageFieldFocused = true
@@ -619,7 +634,7 @@ struct ChatRoomView: View {
         messageText = ""
         isJorykMentionActive = false
         
-        if session.id == 999 {
+        if session.id == ChatSession.aiChatSessionID {
             // Append user message locally first for AI assistant
             let newMsg = ChatMessage(
                 id: UUID(),
@@ -714,7 +729,9 @@ struct ChatRoomView: View {
                     newMsg.senderID = response.senderID
                     
                     // Replace the optimistic temp message with the actual message from server
-                    if let index = session.messages.firstIndex(where: { $0.id == tempUUID }) {
+                    if session.messages.contains(where: { $0.dbID == response.id }) {
+                        session.messages.removeAll(where: { $0.id == tempUUID })
+                    } else if let index = session.messages.firstIndex(where: { $0.id == tempUUID }) {
                         session.messages[index] = newMsg
                     } else {
                         session.messages.append(newMsg)
@@ -741,7 +758,7 @@ struct ChatRoomView: View {
     }
 
     private func normalizedEventChatText(_ text: String) -> String {
-        guard session.id != 999 else { return text }
+        guard session.id != ChatSession.aiChatSessionID else { return text }
         if isJorykMention(text) {
             return text
         }
@@ -801,7 +818,7 @@ struct ChatRoomView: View {
     }
     
     private func fetchMessages(silent: Bool = false) async {
-        guard session.id != 999 else { return }
+        guard session.id != ChatSession.aiChatSessionID else { return }
         
         if !silent {
             await MainActor.run {
@@ -830,12 +847,43 @@ struct ChatRoomView: View {
                     return msg
                 }
                 
-                if self.session.messages != mapped {
+                if self.session.messages.isEmpty {
                     self.session.messages = mapped
+                } else {
+                    var existingDbIDs = Set(self.session.messages.compactMap { $0.dbID })
+                    var newMessagesToAdd: [ChatMessage] = []
+                    
+                    for serverMsg in mapped {
+                        guard let dbID = serverMsg.dbID else { continue }
+                        if !existingDbIDs.contains(dbID) {
+                            if serverMsg.isCurrentUser,
+                               let tempIndex = self.session.messages.firstIndex(where: {
+                                   $0.dbID == nil && $0.isCurrentUser && ($0.text == serverMsg.text || (serverMsg.text.hasPrefix("[photo]") && $0.text.hasPrefix("[photo]")))
+                               }) {
+                                self.session.messages[tempIndex] = serverMsg
+                                existingDbIDs.insert(dbID)
+                            } else {
+                                newMessagesToAdd.append(serverMsg)
+                                existingDbIDs.insert(dbID)
+                            }
+                        }
+                    }
+                    
+                    if !newMessagesToAdd.isEmpty {
+                        let confirmed = (self.session.messages.filter { $0.dbID != nil } + newMessagesToAdd)
+                            .sorted { (m1, m2) -> Bool in
+                                if let id1 = m1.dbID, let id2 = m2.dbID {
+                                    return id1 < id2
+                                }
+                                return m1.timestamp < m2.timestamp
+                            }
+                        let pending = self.session.messages.filter { $0.dbID == nil }
+                        self.session.messages = confirmed + pending
+                    }
                 }
                 self.isLoadingHistory = false
                 
-                if let encoded = try? JSONEncoder().encode(mapped) {
+                if let encoded = try? JSONEncoder().encode(self.session.messages) {
                     UserDefaults.standard.set(encoded, forKey: "cached_messages_session_\(session.id)")
                 }
             }
@@ -896,7 +944,9 @@ struct ChatRoomView: View {
                     newMsg.dbID = response.id
                     newMsg.senderID = response.senderID
                     
-                    if let index = session.messages.firstIndex(where: { $0.id == tempUUID }) {
+                    if session.messages.contains(where: { $0.dbID == response.id }) {
+                        session.messages.removeAll(where: { $0.id == tempUUID })
+                    } else if let index = session.messages.firstIndex(where: { $0.id == tempUUID }) {
                         session.messages[index] = newMsg
                     } else {
                         session.messages.append(newMsg)

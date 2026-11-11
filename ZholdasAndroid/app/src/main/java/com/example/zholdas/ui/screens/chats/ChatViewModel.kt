@@ -18,8 +18,15 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.OffsetDateTime
+import java.time.ZoneId
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
 
@@ -30,15 +37,49 @@ class ChatViewModel(
 ) : ViewModel() {
     companion object {
         private const val TAG = "ChatViewModel"
-        const val AI_SESSION_ID = 999
-        fun formatCurrentTime() = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+        const val AI_SESSION_ID = -1
+
+        private val TIME_FORMAT_TODAY = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
+        private val TIME_FORMAT_OTHER_DAY = DateTimeFormatter.ofPattern("dd.MM HH:mm", Locale.getDefault())
+
+        fun formatCurrentTime(): String =
+            LocalTime.now(ZoneId.systemDefault()).format(TIME_FORMAT_TODAY)
+
         fun formatTimeFromIsoOrCurrent(value: String): String = try {
-            if (value.isBlank()) formatCurrentTime()
-            else if (value.length <= 5 && value.contains(":")) value
-            else SimpleDateFormat("HH:mm", Locale.getDefault()).format(
-                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).parse(value) ?: Date()
-            )
-        } catch (_: Exception) { formatCurrentTime() }
+            val trimmed = value.trim()
+            if (trimmed.isBlank()) {
+                formatCurrentTime()
+            } else if (trimmed.length <= 5 && trimmed.contains(":")) {
+                trimmed
+            } else {
+                val zone = ZoneId.systemDefault()
+                val zonedDateTime = parseIsoToZonedDateTime(trimmed, zone)
+                val today = LocalDate.now(zone)
+                if (zonedDateTime.toLocalDate() == today) {
+                    zonedDateTime.format(TIME_FORMAT_TODAY)
+                } else {
+                    zonedDateTime.format(TIME_FORMAT_OTHER_DAY)
+                }
+            }
+        } catch (_: Exception) {
+            formatCurrentTime()
+        }
+
+        private fun parseIsoToZonedDateTime(value: String, zone: ZoneId): ZonedDateTime {
+            return try {
+                Instant.parse(value).atZone(zone)
+            } catch (_: Exception) {
+                try {
+                    OffsetDateTime.parse(value).atZoneSameInstant(zone)
+                } catch (_: Exception) {
+                    try {
+                        LocalDateTime.parse(value).atZone(ZoneOffset.UTC).withZoneSameInstant(zone)
+                    } catch (_: Exception) {
+                        LocalDateTime.parse(value).atZone(zone)
+                    }
+                }
+            }
+        }
     }
 
     private var currentUserId: String = initialUserId
@@ -110,7 +151,7 @@ class ChatViewModel(
             _chatSessions.value = listOf(aiSession()) + apiClient.apiService.getChatSessions()
         } catch (e: Exception) {
             Log.w(TAG, "Failed to load chats", e)
-            _chatSessions.value = emptyList()
+            _chatSessions.value = listOf(aiSession())
             _errorMessage.value = "chat_load_error".localized
         } finally { _isLoading.value = false }
     }
@@ -130,6 +171,9 @@ class ChatViewModel(
         ChatWebSocketManager(eventId, tokenManager, apiClient.backendBaseUrl.replaceFirst("http", "ws")).also { ws ->
             webSocketManager = ws
             ws.onConnectionStateChanged = { _isRoomConnected.value = it }
+            ws.onReconnected = {
+                reloadAndMergeRoomHistory(eventId)
+            }
             ws.onMessageReceived = { response ->
                 val message = response.toChatMessage()
                 _currentChatMessages.update { list ->
@@ -181,6 +225,50 @@ class ChatViewModel(
             Log.w(TAG, "Failed to load room history", e)
             _roomError.value = "chat_messages_load_error".localized
         } finally { _isRoomLoading.value = false }
+    }
+
+    private fun reloadAndMergeRoomHistory(eventId: Int) = viewModelScope.launch {
+        try {
+            if (currentUserId.isBlank()) {
+                try {
+                    val profile = apiClient.apiService.getProfile()
+                    if (profile.id.isNotBlank()) {
+                        currentUserId = profile.id
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to load current user profile", e)
+                }
+            }
+            val serverMessages = apiClient.apiService.getEventMessages(eventId).map { it.toChatMessage() }
+            _currentChatMessages.update { currentList ->
+                val existingByDbId = currentList.filter { it.dbID != null }.associateBy { it.dbID }
+                val pendingMessages = currentList.filter { it.dbID == null }.toMutableList()
+
+                val mergedServerMessages = serverMessages.map { serverMsg ->
+                    val existing = existingByDbId[serverMsg.dbID]
+                    if (existing != null) {
+                        serverMsg.copy(id = existing.id)
+                    } else {
+                        val pendingIndex = pendingMessages.indexOfFirst {
+                            it.isCurrentUser && it.text == serverMsg.text
+                        }
+                        if (pendingIndex != -1) {
+                            val matchedPending = pendingMessages.removeAt(pendingIndex)
+                            serverMsg.copy(id = matchedPending.id, isCurrentUser = true)
+                        } else {
+                            serverMsg
+                        }
+                    }
+                }
+
+                val serverDbIds = serverMessages.mapNotNull { it.dbID }.toSet()
+                val unrepresented = currentList.filter { it.dbID != null && it.dbID !in serverDbIds }
+
+                unrepresented + mergedServerMessages + pendingMessages
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to reload and merge room history on reconnect", e)
+        }
     }
 
     private fun com.example.zholdas.data.model.EventMessageResponse.toChatMessage() = ChatMessage(

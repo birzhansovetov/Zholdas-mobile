@@ -5,20 +5,36 @@ class ChatWebSocketManager: NSObject {
     private let eventID: Int32
     private var isClosed = false
     
+    private lazy var session: URLSession = {
+        URLSession(configuration: .default, delegate: self, delegateQueue: OperationQueue())
+    }()
+    
     var onMessageReceived: ((EventMessageResponse) -> Void)?
+    var onReconnected: (() -> Void)?
+    
+    private var reconnectDelay: TimeInterval = 3.0
+    private var isFirstConnection = true
+    private var isReconnecting = false
     
     init(eventID: Int32) {
         self.eventID = eventID
         super.init()
     }
     
+    deinit {
+        webSocketTask?.cancel(with: .goingAway, reason: nil)
+        session.invalidateAndCancel()
+    }
+    
     func connect() {
+        guard !isClosed else { return }
+        
         guard let token = TokenStorage.shared.getAccessToken() else {
             print("ChatWebSocketManager: Access token missing, cannot connect.")
+            handleDisconnect()
             return
         }
         
-        isClosed = false
         var components = URLComponents(
             url: AppConfig.webSocketBaseURL.appendingPathComponent("events/\(eventID)/ws"),
             resolvingAgainstBaseURL: false
@@ -26,7 +42,7 @@ class ChatWebSocketManager: NSObject {
         components?.queryItems = [URLQueryItem(name: "token", value: token)]
         guard let url = components?.url else { return }
         
-        let session = URLSession(configuration: .default, delegate: self, delegateQueue: OperationQueue())
+        webSocketTask?.cancel()
         webSocketTask = session.webSocketTask(with: url)
         webSocketTask?.resume()
         
@@ -36,8 +52,10 @@ class ChatWebSocketManager: NSObject {
     
     func disconnect() {
         isClosed = true
+        isReconnecting = false
         webSocketTask?.cancel(with: .goingAway, reason: nil)
         webSocketTask = nil
+        session.invalidateAndCancel()
         print("ChatWebSocketManager: Disconnected from event \(eventID)")
     }
     
@@ -47,6 +65,10 @@ class ChatWebSocketManager: NSObject {
             
             switch result {
             case .failure(let error):
+                let nsError = error as NSError
+                if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+                    return
+                }
                 print("ChatWebSocketManager Error receiving: \(error)")
                 self.handleDisconnect()
             case .success(let message):
@@ -64,10 +86,18 @@ class ChatWebSocketManager: NSObject {
     }
     
     private func handleDisconnect() {
-        guard !isClosed else { return }
-        DispatchQueue.global().asyncAfter(deadline: .now() + 3.0) { [weak self] in
+        guard !isClosed, !isReconnecting else { return }
+        isReconnecting = true
+        
+        let delay = reconnectDelay
+        // 3 -> 6 -> 12 -> 24 -> 48 -> 60 с
+        reconnectDelay = min(reconnectDelay * 2, 60.0)
+        print("ChatWebSocketManager: Reconnecting in \(delay)s...")
+        
+        DispatchQueue.global().asyncAfter(deadline: .now() + delay) { [weak self] in
             guard let self = self, !self.isClosed else { return }
-            print("ChatWebSocketManager: Reconnecting...")
+            self.isReconnecting = false
+            print("ChatWebSocketManager: Reconnecting with fresh token...")
             self.connect()
         }
     }
@@ -101,8 +131,8 @@ class ChatWebSocketManager: NSObject {
         
         do {
             let messageRes = try decoder.decode(EventMessageResponse.self, from: data)
-            DispatchQueue.main.async {
-                self.onMessageReceived?(messageRes)
+            DispatchQueue.main.async { [weak self] in
+                self?.onMessageReceived?(messageRes)
             }
         } catch {
             print("ChatWebSocketManager: Failed to decode message: \(error)")
@@ -113,9 +143,20 @@ class ChatWebSocketManager: NSObject {
 extension ChatWebSocketManager: URLSessionWebSocketDelegate {
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didOpenWithProtocol protocol: String?) {
         print("ChatWebSocketManager: Socket opened")
+        reconnectDelay = 3.0
+        isReconnecting = false
+        
+        if isFirstConnection {
+            isFirstConnection = false
+        } else {
+            DispatchQueue.main.async { [weak self] in
+                self?.onReconnected?()
+            }
+        }
     }
     
     func urlSession(_ session: URLSession, webSocketTask: URLSessionWebSocketTask, didCloseWith closeCode: URLSessionWebSocketTask.CloseCode, reason: Data?) {
-        print("ChatWebSocketManager: Socket closed")
+        print("ChatWebSocketManager: Socket closed with code: \(closeCode)")
+        handleDisconnect()
     }
 }

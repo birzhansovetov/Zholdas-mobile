@@ -4,11 +4,20 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
 	"github.com/birzhansovetov/zholdas-backend/internal/middleware"
+	"github.com/birzhansovetov/zholdas-backend/internal/service"
+)
+
+const (
+	writeWait      = 10 * time.Second
+	pongWait       = 60 * time.Second
+	pingPeriod     = 25 * time.Second
+	maxMessageSize = 8192
 )
 
 var upgrader = websocket.Upgrader{
@@ -74,18 +83,57 @@ func (h *EventHandler) WebSocketChatUpgrader(c *gin.Context) {
 		return
 	}
 
-	h.ChatHub.Register(int32(eventID), conn)
+	client := h.ChatHub.Register(int32(eventID), conn)
 
-	go func(eventID int32, conn *websocket.Conn) {
-		defer func() {
-			h.ChatHub.Unregister(eventID, conn)
-		}()
+	go h.writePump(client)
+	go h.readPump(client)
+}
 
-		for {
-			_, _, err := conn.ReadMessage()
-			if err != nil {
-				break
+func (h *EventHandler) readPump(client *service.Client) {
+	defer func() {
+		h.ChatHub.Unregister(client)
+	}()
+
+	client.Conn.SetReadLimit(maxMessageSize)
+	_ = client.Conn.SetReadDeadline(time.Now().Add(pongWait))
+	client.Conn.SetPongHandler(func(string) error {
+		_ = client.Conn.SetReadDeadline(time.Now().Add(pongWait))
+		return nil
+	})
+
+	for {
+		_, _, err := client.Conn.ReadMessage()
+		if err != nil {
+			break
+		}
+	}
+}
+
+func (h *EventHandler) writePump(client *service.Client) {
+	ticker := time.NewTicker(pingPeriod)
+	defer func() {
+		ticker.Stop()
+		h.ChatHub.Unregister(client)
+	}()
+
+	for {
+		select {
+		case message, ok := <-client.Send:
+			_ = client.Conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if !ok {
+				_ = client.Conn.WriteMessage(websocket.CloseMessage, []byte{})
+				return
+			}
+
+			if err := client.Conn.WriteMessage(websocket.TextMessage, message); err != nil {
+				return
+			}
+
+		case <-ticker.C:
+			_ = client.Conn.SetWriteDeadline(time.Now().Add(writeWait))
+			if err := client.Conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				return
 			}
 		}
-	}(int32(eventID), conn)
+	}
 }
