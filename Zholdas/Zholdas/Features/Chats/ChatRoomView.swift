@@ -138,8 +138,10 @@ struct ChatRoomView: View {
         )
         .task {
             await fetchMessages()
+            guard !Task.isCancelled else { return }
             
             if session.id != ChatSession.aiChatSessionID {
+                webSocketManager?.disconnect()
                 let manager = ChatWebSocketManager(eventID: session.id)
                 self.webSocketManager = manager
                 manager.onMessageReceived = { response in
@@ -745,9 +747,9 @@ struct ChatRoomView: View {
                     
                     let errorMsg = ChatMessage(
                         id: UUID(),
-                        senderName: "Система",
+                        senderName: "chat_system_sender".localized,
                         senderAvatarURL: nil,
-                        text: "⚠️ Ошибка отправки: \(error.localizedDescription)",
+                        text: "\("chat_send_error_prefix".localized)\(error.localizedDescription)",
                         timestamp: Date(),
                         isCurrentUser: false
                     )
@@ -883,7 +885,8 @@ struct ChatRoomView: View {
                 }
                 self.isLoadingHistory = false
                 
-                if let encoded = try? JSONEncoder().encode(self.session.messages) {
+                let messagesToCache = self.session.messages.filter { $0.dbID != nil }
+                if let encoded = try? JSONEncoder().encode(messagesToCache) {
                     UserDefaults.standard.set(encoded, forKey: "cached_messages_session_\(session.id)")
                 }
             }

@@ -108,6 +108,9 @@ struct EventDetailView: View {
     @State private var weatherSummary: EventWeatherSummary?
     @State private var isLoadingWeather = false
     @State private var isShowingEditSheet = false
+    @State private var isShowingLeaveAlert = false
+    @State private var actionErrorMessage: String?
+    @State private var isShowingActionErrorAlert = false
 
     private let liveLocationTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
     
@@ -593,6 +596,19 @@ struct EventDetailView: View {
                 }
             }
         }
+        .alert("ev_leave_confirm_title".localized, isPresented: $isShowingLeaveAlert) {
+            Button("ev_leave_btn".localized, role: .destructive) {
+                handleAction()
+            }
+            Button("btn_cancel".localized, role: .cancel) {}
+        } message: {
+            Text("ev_leave_confirm_message".localized)
+        }
+        .alert("alert_error_title".localized, isPresented: $isShowingActionErrorAlert) {
+            Button("btn_ok".localized, role: .cancel) {}
+        } message: {
+            Text(actionErrorMessage ?? "error_generic".localized)
+        }
     }
 
     private var publicEventURL: URL {
@@ -983,7 +999,11 @@ struct EventDetailView: View {
                 )
             } else {
                 Button {
-                    handleAction()
+                    if isJoined {
+                        isShowingLeaveAlert = true
+                    } else {
+                        handleAction()
+                    }
                 } label: {
                     HStack {
                         if isActionLoading {
@@ -1247,6 +1267,7 @@ struct EventDetailView: View {
     private func handleAction() {
         guard !isActionLoading else { return }
         isActionLoading = true
+        actionErrorMessage = nil
         
         Task {
             let success: Bool
@@ -1260,6 +1281,11 @@ struct EventDetailView: View {
                     }
                     await eventsViewModel.stopLiveLocation(eventID: event.id)
                     await loadParticipants()
+                } else {
+                    await MainActor.run {
+                        self.actionErrorMessage = eventsViewModel.errorMessage ?? "error_generic".localized
+                        self.isShowingActionErrorAlert = true
+                    }
                 }
             } else {
                 success = await eventsViewModel.joinEvent(id: event.id)
@@ -1269,6 +1295,11 @@ struct EventDetailView: View {
                         self.participantsCount += 1
                     }
                     await loadParticipants()
+                } else {
+                    await MainActor.run {
+                        self.actionErrorMessage = eventsViewModel.errorMessage ?? "error_generic".localized
+                        self.isShowingActionErrorAlert = true
+                    }
                 }
             }
             

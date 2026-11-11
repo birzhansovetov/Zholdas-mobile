@@ -7,6 +7,7 @@ struct ProfileTabView: View {
     @State private var friendsCount = 0
     @State private var pendingRequestsCount = 0
     @State private var isShowingModeratorDashboard = false
+    @State private var isShowingSignOutConfirmation = false
     @AppStorage("app_language") private var selectedLanguage = "ru"
     @AppStorage("zholdas_theme_preference") private var themePreferenceRaw = ThemePreference.system.rawValue
     
@@ -140,6 +141,14 @@ struct ProfileTabView: View {
                 }
                 await loadFriendsStats()
             }
+            .alert("prof_signout_confirm_title".localized, isPresented: $isShowingSignOutConfirmation) {
+                Button("prof_signout".localized, role: .destructive) {
+                    authViewModel.signOut()
+                }
+                Button("btn_cancel".localized, role: .cancel) {}
+            } message: {
+                Text("prof_signout_confirm_message".localized)
+            }
         }
     }
     
@@ -205,8 +214,8 @@ struct ProfileTabView: View {
     @ViewBuilder
     private func profileMetaSection(for profile: UserProfile) -> some View {
         let details = parsedProfileDetails(from: profile.bio)
-        let age = formattedAge(profile.age) ?? details.age
-        let gender = nonEmpty(profile.gender) ?? details.gender
+        let age = profile.displayAge ?? details.age
+        let gender = profile.displayGender ?? formattedProfileGender(details.gender)
 
         if gender != nil || age != nil {
             HStack(spacing: 10) {
@@ -334,7 +343,7 @@ struct ProfileTabView: View {
     @ViewBuilder
     private var signOutButton: some View {
         Button {
-            authViewModel.signOut()
+            isShowingSignOutConfirmation = true
         } label: {
             HStack {
                 Image(systemName: "rectangle.portrait.and.arrow.right")
@@ -389,7 +398,9 @@ struct ProfileTabView: View {
             cleanedBio = cleanedBio.replacingOccurrences(of: "[interests:\(interests)]", with: "")
         }
 
-        cleanedBio = cleanedBio.trimmingCharacters(in: .whitespacesAndNewlines)
+        cleanedBio = cleanedBio
+            .replacingOccurrences(of: #"\[(gender|birth_year|interests):[^\]]*\]"#, with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
         if cleanedBio.isEmpty {
             cleanedBio = "prof_default_bio".localized
         }

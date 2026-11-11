@@ -11,6 +11,9 @@ struct UserDetailView: View {
     @State private var isLoading = true
     @State private var actionLoading = false
     @State private var isShowingReportSheet = false
+    @State private var isShowingBlockConfirmation = false
+    @State private var errorMessage: String? = nil
+    @State private var isShowingErrorAlert = false
     @State private var reviews: [UserReview] = []
     
     var body: some View {
@@ -99,15 +102,28 @@ struct UserDetailView: View {
                                 .padding(.horizontal, 24)
                             
                             if let currentUserID = authViewModel.currentUserProfile?.id, currentUserID != userID {
-                                Button {
-                                    isShowingReportSheet = true
-                                } label: {
-                                    HStack {
-                                        Image(systemName: "exclamationmark.triangle")
-                                        Text("Пожаловаться на пользователя")
+                                VStack(spacing: 14) {
+                                    Button {
+                                        isShowingReportSheet = true
+                                    } label: {
+                                        HStack {
+                                            Image(systemName: "exclamationmark.triangle")
+                                            Text("rep_title".localized)
+                                        }
+                                        .font(.subheadline)
+                                        .foregroundColor(.red.opacity(0.8))
                                     }
-                                    .font(.subheadline)
-                                    .foregroundColor(.red.opacity(0.8))
+
+                                    Button {
+                                        isShowingBlockConfirmation = true
+                                    } label: {
+                                        HStack {
+                                            Image(systemName: "hand.raised.fill")
+                                            Text("user_block_btn".localized)
+                                        }
+                                        .font(.subheadline)
+                                        .foregroundColor(.red.opacity(0.8))
+                                    }
                                 }
                                 .padding(.top, 8)
                                 .padding(.bottom, 20)
@@ -130,6 +146,19 @@ struct UserDetailView: View {
         .sheet(isPresented: $isShowingReportSheet) {
             ReportView(reportedUserID: userID, eventID: nil, messageID: nil)
                 .environmentObject(authViewModel)
+        }
+        .alert("user_block_confirm_title".localized, isPresented: $isShowingBlockConfirmation) {
+            Button("user_block_btn".localized, role: .destructive) {
+                blockUser()
+            }
+            Button("btn_cancel".localized, role: .cancel) {}
+        } message: {
+            Text("user_block_confirm_message".localized)
+        }
+        .alert("alert_error_title".localized, isPresented: $isShowingErrorAlert) {
+            Button("btn_ok".localized, role: .cancel) {}
+        } message: {
+            Text(errorMessage ?? "error_generic".localized)
         }
     }
     
@@ -171,8 +200,8 @@ struct UserDetailView: View {
     @ViewBuilder
     private func profileMetaSection(for user: User) -> some View {
         let details = parsedProfileDetails(from: user.bio)
-        let age = formattedAge(user.age) ?? details.age
-        let gender = nonEmpty(user.gender) ?? details.gender
+        let age = user.displayAge ?? details.age
+        let gender = user.displayGender ?? formattedProfileGender(details.gender)
 
         if gender != nil || age != nil {
             HStack(spacing: 10) {
@@ -481,10 +510,31 @@ struct UserDetailView: View {
         actionLoading = true
         Task {
             let success = await authViewModel.rejectFriendRequest(from: userID)
-            if success {
-                friendshipStatus = "none"
+            await MainActor.run {
+                if success {
+                    friendshipStatus = "none"
+                } else {
+                    errorMessage = authViewModel.errorMessage ?? "error_generic".localized
+                    isShowingErrorAlert = true
+                }
+                actionLoading = false
             }
-            actionLoading = false
+        }
+    }
+
+    private func blockUser() {
+        actionLoading = true
+        Task {
+            let success = await authViewModel.blockUser(userID: userID)
+            await MainActor.run {
+                actionLoading = false
+                if success {
+                    dismiss()
+                } else {
+                    errorMessage = authViewModel.errorMessage ?? "error_generic".localized
+                    isShowingErrorAlert = true
+                }
+            }
         }
     }
     
@@ -524,7 +574,9 @@ struct UserDetailView: View {
             cleanedBio = cleanedBio.replacingOccurrences(of: "[interests:\(interests)]", with: "")
         }
 
-        cleanedBio = cleanedBio.trimmingCharacters(in: .whitespacesAndNewlines)
+        cleanedBio = cleanedBio
+            .replacingOccurrences(of: #"\[(gender|birth_year|interests):[^\]]*\]"#, with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
         if cleanedBio.isEmpty {
             cleanedBio = "prof_default_bio".localized
         }
