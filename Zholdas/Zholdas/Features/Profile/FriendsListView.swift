@@ -9,6 +9,10 @@ struct FriendsListView: View {
     @State private var selectedTab = 0 // 0: Friends, 1: Requests
     @State private var isLoadingData = false
     @State private var selectedUser: User?
+    @State private var friendToRemove: User? = nil
+    @State private var isShowingDeleteConfirmation = false
+    @State private var errorMessage: String? = nil
+    @State private var isShowingErrorAlert = false
     @Namespace private var pickerNamespace
     
     var body: some View {
@@ -50,6 +54,25 @@ struct FriendsListView: View {
             UserDetailView(userID: user.id)
                 .environmentObject(authViewModel)
                 .environmentObject(langManager)
+        }
+        .alert("friends_unfriend_confirm_title".localized, isPresented: $isShowingDeleteConfirmation) {
+            Button("friends_unfriend_btn".localized, role: .destructive) {
+                if let friend = friendToRemove {
+                    deleteFriend(friend)
+                }
+            }
+            Button("btn_cancel".localized, role: .cancel) {}
+        } message: {
+            if let friend = friendToRemove {
+                Text(String(format: "friends_unfriend_confirm_message".localized, friend.fullName))
+            } else {
+                Text("friends_unfriend_confirm_generic".localized)
+            }
+        }
+        .alert("alert_error_title".localized, isPresented: $isShowingErrorAlert) {
+            Button("btn_ok".localized, role: .cancel) {}
+        } message: {
+            Text(errorMessage ?? "error_generic".localized)
         }
     }
     
@@ -156,14 +179,8 @@ struct FriendsListView: View {
             
             // Delete Friend Button
             Button {
-                Task {
-                    let success = await authViewModel.rejectFriendRequest(from: friend.id)
-                    if success {
-                        withAnimation {
-                            friends.removeAll { $0.id == friend.id }
-                        }
-                    }
-                }
+                friendToRemove = friend
+                isShowingDeleteConfirmation = true
             } label: {
                 Image(systemName: "person.badge.minus")
                     .foregroundColor(.red.opacity(0.8))
@@ -344,6 +361,22 @@ struct FriendsListView: View {
     }
     
     // MARK: - Helpers
+
+    private func deleteFriend(_ friend: User) {
+        Task {
+            let success = await authViewModel.rejectFriendRequest(from: friend.id)
+            await MainActor.run {
+                if success {
+                    withAnimation {
+                        friends.removeAll { $0.id == friend.id }
+                    }
+                } else {
+                    errorMessage = authViewModel.errorMessage ?? "error_generic".localized
+                    isShowingErrorAlert = true
+                }
+            }
+        }
+    }
     
     private func loadData() async {
         isLoadingData = true

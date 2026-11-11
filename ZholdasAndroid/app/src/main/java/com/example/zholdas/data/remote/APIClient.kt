@@ -336,6 +336,7 @@ class APIClient(
                     refreshResponse.errorBody()?.close()
                     if (refreshWasRejected) {
                         tokenManager.clearTokensFromSyncContext()
+                        tokenManager.notifySessionExpired()
                     }
                     return@synchronized null
                 }

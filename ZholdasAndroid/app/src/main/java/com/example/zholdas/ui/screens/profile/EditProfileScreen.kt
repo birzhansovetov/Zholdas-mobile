@@ -17,6 +17,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -45,10 +46,11 @@ fun EditProfileScreen(
     val errorMessage by authViewModel.errorMessage.collectAsState()
     val scope = rememberCoroutineScope()
 
-    var fullName by remember { mutableStateOf("") }
-    var bio by remember { mutableStateOf("") }
-    var city by remember { mutableStateOf("Алматы") }
-    var avatarURL by remember { mutableStateOf("") }
+    var isInitialized by rememberSaveable { mutableStateOf(false) }
+    var fullName by rememberSaveable { mutableStateOf("") }
+    var bio by rememberSaveable { mutableStateOf("") }
+    var city by rememberSaveable { mutableStateOf("Алматы") }
+    var avatarURL by rememberSaveable { mutableStateOf("") }
     var selectedAvatarUri by remember { mutableStateOf<Uri?>(null) }
     var isSaving by remember { mutableStateOf(false) }
     var cityExpanded by remember { mutableStateOf(false) }
@@ -61,11 +63,14 @@ fun EditProfileScreen(
     val cities = listOf("Алматы", "Астана", "Шымкент", "Караганда")
 
     LaunchedEffect(currentUserProfile) {
-        currentUserProfile?.let { profile ->
-            fullName = profile.fullName
-            bio = profile.bio ?: ""
-            city = profile.city ?: "Алматы"
-            avatarURL = profile.avatarURL ?: ""
+        if (!isInitialized) {
+            currentUserProfile?.let { profile ->
+                fullName = profile.fullName
+                bio = cleanBioText(profile.bio)
+                city = profile.city ?: "Алматы"
+                avatarURL = profile.avatarURL ?: ""
+                isInitialized = true
+            }
         }
     }
 
@@ -299,7 +304,7 @@ private fun ScrollViewContent(
 
         if (!errorMessage.isNullOrEmpty()) {
             Text(
-                text = "?? $errorMessage",
+                text = errorMessage,
                 color = ZholdasDanger,
                 fontSize = 14.sp,
                 modifier = Modifier.padding(horizontal = 24.dp)
@@ -466,6 +471,6 @@ private fun getInitials(name: String): String {
     return when {
         parts.size >= 2 -> "${parts[0].take(1)}${parts[1].take(1)}".uppercase()
         parts.isNotEmpty() -> parts[0].take(2).uppercase()
-        else -> "??"
+        else -> "ZH"
     }
 }

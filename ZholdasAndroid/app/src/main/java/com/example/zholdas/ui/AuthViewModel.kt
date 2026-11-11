@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.zholdas.data.AppContainer
 import com.example.zholdas.data.local.TokenManager
+import com.example.zholdas.data.local.localized
 import com.example.zholdas.data.model.DeviceTokenRequest
 import com.example.zholdas.data.model.SignInRequest
 import com.example.zholdas.data.model.*
@@ -16,6 +17,7 @@ import com.example.zholdas.data.remote.APIClient
 import com.example.zholdas.data.remote.SupabaseSignUpPayload
 import com.example.zholdas.data.remote.SupabaseUserData
 import com.example.zholdas.data.remote.UpdatePasswordPayload
+import com.example.zholdas.data.remote.toUserMessage
 import com.example.zholdas.notifications.PushTokenProvider
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MultipartBody
@@ -54,6 +56,22 @@ class AuthViewModel(
 
     init {
         checkAuth()
+        observeSessionExpiration()
+    }
+
+    private fun observeSessionExpiration() {
+        viewModelScope.launch {
+            tokenManager.sessionExpired.collect { expired ->
+                if (expired) {
+                    _currentUserProfile.value = null
+                    _unreadNotificationsCount.value = 0
+                    _isLoading.value = false
+                    _isAuthenticated.value = false
+                    _errorMessage.value = "session_expired".localized
+                    tokenManager.resetSessionExpired()
+                }
+            }
+        }
     }
 
     fun checkAuth() {
@@ -83,7 +101,7 @@ class AuthViewModel(
                 fetchUserProfile()
             } catch (e: Exception) {
                 Log.e(TAG, "Sign in failed: ${e.message}", e)
-                _errorMessage.value = mapErrorMessage(e.message ?: e.toString())
+                _errorMessage.value = e.toUserMessage()
             } finally {
                 _isLoading.value = false
             }
@@ -98,7 +116,9 @@ class AuthViewModel(
         avatarURL: String? = null,
         bio: String? = null,
         city: String? = null,
-        photoData: ByteArray? = null
+        photoData: ByteArray? = null,
+        gender: String? = null,
+        birthYear: Int? = null
     ) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -140,7 +160,7 @@ class AuthViewModel(
                         }
                     }
 
-                    if (finalAvatarURL.isNotEmpty() || !bio.isNullOrEmpty() || !city.isNullOrEmpty()) {
+                    if (finalAvatarURL.isNotEmpty() || !bio.isNullOrEmpty() || !city.isNullOrEmpty() || !gender.isNullOrEmpty() || birthYear != null) {
                         try {
                             val currentProfile = apiClient.apiService.getProfile()
                             apiClient.apiService.updateProfile(
@@ -148,7 +168,9 @@ class AuthViewModel(
                                     fullName = fullName,
                                     bio = if (!bio.isNullOrEmpty()) bio else currentProfile.bio,
                                     city = if (!city.isNullOrEmpty()) city else currentProfile.city ?: "Алматы",
-                                    avatarURL = if (finalAvatarURL.isNotEmpty()) finalAvatarURL else currentProfile.avatarURL
+                                    avatarURL = if (finalAvatarURL.isNotEmpty()) finalAvatarURL else currentProfile.avatarURL,
+                                    gender = gender ?: currentProfile.gender,
+                                    birthYear = birthYear ?: currentProfile.birthYear
                                 )
                             )
                         } catch (e: Exception) {
@@ -160,7 +182,7 @@ class AuthViewModel(
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Sign up failed: ${e.message}", e)
-                _errorMessage.value = mapErrorMessage(e.message ?: e.toString())
+                _errorMessage.value = e.toUserMessage()
             } finally {
                 _isLoading.value = false
             }
@@ -176,7 +198,7 @@ class AuthViewModel(
                 onSuccess()
             } catch (e: Exception) {
                 Log.e(TAG, "Password recovery failed: ${e.message}", e)
-                _errorMessage.value = mapErrorMessage(e.message ?: e.toString())
+                _errorMessage.value = e.toUserMessage()
             } finally {
                 _isLoading.value = false
             }
@@ -197,7 +219,7 @@ class AuthViewModel(
             true
         } catch (e: Exception) {
             Log.e(TAG, "Password reset failed: ${e.message}", e)
-            _errorMessage.value = mapErrorMessage(e.message ?: e.toString())
+            _errorMessage.value = e.toUserMessage()
             false
         } finally {
             _isLoading.value = false
@@ -232,7 +254,7 @@ class AuthViewModel(
             } catch (e: HttpException) {
                 Log.e(TAG, "Failed to fetch user profile: ${e.message}", e)
                 if (e.code() == 401 && tokenManager.currentTokens() == null) {
-                    _errorMessage.value = "Сессия истекла. Войдите заново"
+                    _errorMessage.value = "session_expired".localized
                     _isAuthenticated.value = false
                     _currentUserProfile.value = null
                 } else {
@@ -268,7 +290,7 @@ class AuthViewModel(
             true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to update profile: ${e.message}", e)
-            _errorMessage.value = e.message
+            _errorMessage.value = e.toUserMessage()
             false
         }
     }
@@ -290,7 +312,7 @@ class AuthViewModel(
             else apiClient.backendBaseUrl.trimEnd('/') + "/" + uploaded.trimStart('/')
         } catch (e: Exception) {
             Log.e(TAG, "Failed to upload profile image: ${e.message}", e)
-            _errorMessage.value = e.message
+            _errorMessage.value = e.toUserMessage()
             null
         }
     }
@@ -440,15 +462,6 @@ class AuthViewModel(
             _unreadNotificationsCount.value = 0
         } catch (e: Exception) {
             Log.e(TAG, "markAllNotificationsRead failed: ${e.message}", e)
-        }
-    }
-
-    private fun mapErrorMessage(message: String): String {
-        return when {
-            message.contains("Invalid login credentials") -> "Неверная почта или пароль"
-            message.contains("Email not confirmed") -> "Подтвердите email перед входом"
-            message.contains("Signup is disabled") -> "Регистрация отключена"
-            else -> message
         }
     }
 

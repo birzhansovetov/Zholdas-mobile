@@ -1614,6 +1614,148 @@ class LocalizationManager: ObservableObject {
             "ru": "Назад",
             "kk": "Артқа",
             "en": "Back"
+        ],
+        
+        // Errors & System
+        "error_invalid_credentials": [
+            "ru": "Неверная почта или пароль",
+            "kk": "Қате электрондық пошта немесе құпия сөз",
+            "en": "Invalid email or password"
+        ],
+        "error_email_not_confirmed": [
+            "ru": "Подтвердите email перед входом",
+            "kk": "Кіру алдында email-ді растаңыз",
+            "en": "Please confirm your email before signing in"
+        ],
+        "error_user_already_exists": [
+            "ru": "Пользователь с такой почтой уже зарегистрирован",
+            "kk": "Бұл поштасы бар пайдаланушы тіркеліп қойған",
+            "en": "A user with this email is already registered"
+        ],
+        "error_weak_password": [
+            "ru": "Слишком простой пароль",
+            "kk": "Құпия сөз тым қарапайым",
+            "en": "Password is too weak"
+        ],
+        "error_rate_limit": [
+            "ru": "Слишком много попыток, попробуйте позже",
+            "kk": "Тым көп әрекет жасалды, кейінірек қайталап көріңіз",
+            "en": "Too many attempts, please try again later"
+        ],
+        "error_forbidden": [
+            "ru": "Недостаточно прав",
+            "kk": "Құқықтар жеткіліксіз",
+            "en": "Permission denied"
+        ],
+        "error_not_found": [
+            "ru": "Не найдено",
+            "kk": "Табылмады",
+            "en": "Not found"
+        ],
+        "error_server_unavailable": [
+            "ru": "Сервер временно недоступен",
+            "kk": "Сервер уақытша қолжетімсіз",
+            "en": "Server is temporarily unavailable"
+        ],
+        "error_network": [
+            "ru": "Нет соединения с сервером. Проверьте интернет",
+            "kk": "Сервермен байланыс жоқ. Интернетті тексеріңіз",
+            "en": "No connection to the server. Check your internet"
+        ],
+        "error_decoding": [
+            "ru": "Сервер вернул неожиданные данные. Попробуйте позже",
+            "kk": "Сервер күтпеген деректерді қайтарды. Кейінірек қайталап көріңіз",
+            "en": "The server returned unexpected data. Please try again later"
+        ],
+        "error_generic": [
+            "ru": "Произошла ошибка. Попробуйте позже",
+            "kk": "Қате орын алды. Кейінірек қайталап көріңіз",
+            "en": "An error occurred. Please try again later"
+        ],
+        "session_expired": [
+            "ru": "Сессия истекла. Войдите заново",
+            "kk": "Сессия аяқталды. Қайта кіріңіз",
+            "en": "Session expired. Please sign in again"
+        ],
+        "chat_system_sender": [
+            "ru": "Система",
+            "kk": "Жүйе",
+            "en": "System"
+        ],
+        "chat_send_error_prefix": [
+            "ru": "⚠️ Ошибка отправки: ",
+            "kk": "⚠️ Жіберу қатесі: ",
+            "en": "⚠️ Failed to send: "
+        ],
+        "prof_gender_male": [
+            "ru": "Мужчина",
+            "kk": "Ер адам",
+            "en": "Male"
+        ],
+        "prof_gender_female": [
+            "ru": "Женщина",
+            "kk": "Әйел адам",
+            "en": "Female"
+        ],
+        "alert_error_title": [
+            "ru": "Ошибка",
+            "kk": "Қате",
+            "en": "Error"
+        ],
+        "ev_leave_confirm_title": [
+            "ru": "Покинуть событие?",
+            "kk": "Оқиғадан шығу керек пе?",
+            "en": "Leave Event?"
+        ],
+        "ev_leave_confirm_message": [
+            "ru": "Вы уверены, что хотите покинуть это событие?",
+            "kk": "Бұл оқиғадан шыққыңыз келетініне сенімдісіз бе?",
+            "en": "Are you sure you want to leave this event?"
+        ],
+        "prof_signout_confirm_title": [
+            "ru": "Выйти из аккаунта?",
+            "kk": "Аккаунттан шығу керек пе?",
+            "en": "Sign Out?"
+        ],
+        "prof_signout_confirm_message": [
+            "ru": "Вы уверены, что хотите выйти из своего аккаунта?",
+            "kk": "Аккаунтыңыздан шыққыңыз келетініне сенімдісіз бе?",
+            "en": "Are you sure you want to sign out?"
+        ],
+        "user_block_btn": [
+            "ru": "Заблокировать пользователя",
+            "kk": "Пайдаланушыны бұғаттау",
+            "en": "Block User"
+        ],
+        "user_block_confirm_title": [
+            "ru": "Заблокировать пользователя?",
+            "kk": "Пайдаланушыны бұғаттау керек пе?",
+            "en": "Block User?"
+        ],
+        "user_block_confirm_message": [
+            "ru": "Этот пользователь больше не сможет взаимодействовать с вами.",
+            "kk": "Бұл пайдаланушы бұдан былай сізбен байланыса алмайды.",
+            "en": "This user will no longer be able to interact with you."
+        ],
+        "friends_unfriend_confirm_title": [
+            "ru": "Удалить из друзей?",
+            "kk": "Достардан өшіру керек пе?",
+            "en": "Remove Friend?"
+        ],
+        "friends_unfriend_confirm_message": [
+            "ru": "Удалить %@ из списка друзей?",
+            "kk": "%@ достар тізімінен өшірілсін бе?",
+            "en": "Remove %@ from friends list?"
+        ],
+        "friends_unfriend_confirm_generic": [
+            "ru": "Вы уверены, что хотите удалить этого пользователя из друзей?",
+            "kk": "Бұл пайдаланушыны достардан өшіргіңіз келетініне сенімдісіз бе?",
+            "en": "Are you sure you want to remove this user from friends?"
+        ],
+        "friends_unfriend_btn": [
+            "ru": "Удалить",
+            "kk": "Өшіру",
+            "en": "Remove"
         ]
     ]
     

@@ -8,26 +8,15 @@ files below are included in `.gitignore`; still inspect the release bundle befor
 - Replace the temporary `com.example.zholdas` `applicationId` and namespace in
   `app/build.gradle.kts` before creating the Play Console application. Choose the final
   ID once: Google Play does not allow changing an application's package name later.
-- Update package declarations and any Firebase/Maps restrictions to the same ID.
+- Update package declarations and any Firebase restrictions to the same ID.
 - Increase `versionCode` for every Play upload and set the public `versionName`.
 
-## 2. Google Maps
+## 2. OpenStreetMap / MapLibre
 
-1. Enable **Maps SDK for Android** in the production Google Cloud project.
-2. Create an Android-restricted API key. Restrict it to the final package name and the
-   SHA-1 certificate fingerprint for every allowed signing certificate (debug only for
-   local testing; Play App Signing for production).
-3. Put the key outside the repository in the user Gradle properties file:
-   `%USERPROFILE%\.gradle\gradle.properties` on Windows or
-   `~/.gradle/gradle.properties` on macOS/Linux:
-
-   ```properties
-   MAPS_API_KEY=replace_with_the_local_value
-   ```
-
-   Alternatively pass `-PMAPS_API_KEY=...` from a protected CI secret.
-4. Confirm that the merged release manifest contains a non-empty
-   `com.google.android.geo.API_KEY` value and that the key works in a signed build.
+- The Android map uses MapLibre Native and OpenFreeMap vector styles; no API key is required.
+- Preserve the visible OpenStreetMap/OpenMapTiles attribution provided by the map SDK.
+- Verify https://tiles.openfreemap.org/styles/liberty and /styles/dark on real devices.
+- Map data is loaded online; this release does not promise offline map downloads.
 
 ## 3. Firebase Cloud Messaging
 
@@ -53,7 +42,7 @@ files below are included in `.gitignore`; still inspect the release bundle befor
    `local.properties` or protected environment variables. Never place passwords or an
    absolute personal keystore path in `build.gradle.kts`.
 4. Record the upload and Play App Signing SHA-1/SHA-256 fingerprints, then apply the
-   production fingerprint restrictions to Maps and Firebase.
+   production fingerprint restrictions to Firebase.
 5. Produce a signed Android App Bundle (`.aab`) and verify its certificate with
    `apksigner verify --print-certs` before upload.
 
@@ -68,7 +57,7 @@ files below are included in `.gitignore`; still inspect the release bundle befor
 - Verify Supabase Row Level Security for every table exposed by the public anon key.
   The anon key identifies the project; it must not grant privileged access.
 - Run unit tests, lint, release assembly/bundle, R8 checks, and a secret scan. Inspect the
-  merged release manifest and confirm no debug cleartext rule or empty Maps key remains.
+  merged release manifest and confirm no debug cleartext rule remains.
 - Test location only while the app is in use. If background location is introduced,
   redesign the user disclosure and Play permission declaration before adding the
   permission.

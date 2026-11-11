@@ -98,7 +98,7 @@ struct EditProfileView: View {
                     let details = parsedProfileDetails(from: profile.bio)
                     fullName = profile.fullName
                     bio = details.bio
-                    storedGender = profile.gender ?? details.gender
+                    storedGender = nonEmpty(profile.gender) ?? details.gender
                     storedBirthYear = profile.birthYear ?? intValue(details.birthYear)
                     city = profile.city ?? "Алматы"
                     avatarURL = profile.avatarURL ?? ""
@@ -251,7 +251,11 @@ struct EditProfileView: View {
             cleanedBio = cleanedBio.replacingOccurrences(of: "[interests:\(interests)]", with: "")
         }
 
-        return (cleanedBio.trimmingCharacters(in: .whitespacesAndNewlines), gender, birthYear)
+        cleanedBio = cleanedBio
+            .replacingOccurrences(of: #"\[(gender|birth_year|interests):[^\]]*\]"#, with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+
+        return (cleanedBio, gender, birthYear)
     }
 
     private func extractProfileMetadata(_ key: String, from text: String) -> String? {
@@ -274,5 +278,10 @@ struct EditProfileView: View {
             return nil
         }
         return Int(rawValue)
+    }
+
+    private func nonEmpty(_ value: String?) -> String? {
+        let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return trimmed.isEmpty ? nil : trimmed
     }
 }

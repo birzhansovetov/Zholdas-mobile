@@ -19,7 +19,6 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
-        manifestPlaceholders["MAPS_API_KEY"] = providers.gradleProperty("MAPS_API_KEY").orNull ?: ""
     }
 
     buildTypes {
@@ -114,8 +113,7 @@ dependencies {
 
   // Location & Maps
   implementation(libs.play.services.location)
-  implementation(libs.play.services.maps)
-  implementation(libs.maps.compose)
+  implementation(libs.maplibre)
   implementation(platform(libs.firebase.bom))
   implementation(libs.firebase.messaging)
 }

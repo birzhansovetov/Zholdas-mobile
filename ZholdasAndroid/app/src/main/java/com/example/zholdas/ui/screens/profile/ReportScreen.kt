@@ -218,7 +218,7 @@ fun ReportScreen(
                     ) {
                         Text(
                             text = "btn_ok".localized,
-                            color = Color.Black,
+                            color = Color.White,
                             fontWeight = FontWeight.Bold
                         )
                     }

@@ -33,8 +33,8 @@ fun MyEventsScreen(viewModel: EventsViewModel, onBack: () -> Unit, onEventClick:
         containerColor = ZholdasBackground,
         topBar = {
             TopAppBar(
-                title = { Text("Мои события", color = Color.White, fontWeight = FontWeight.Bold) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Назад", tint = Color.White) } },
+                title = { Text("Мои события", color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold) },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Назад", tint = MaterialTheme.colorScheme.onSurface) } },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = ZholdasBackground)
             )
         }

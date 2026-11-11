@@ -59,6 +59,7 @@ fun ProfileScreen(
     var isShowingFriendsList by remember { mutableStateOf(false) }
     var isShowingModeratorDashboard by remember { mutableStateOf(false) }
     var languageMenuExpanded by remember { mutableStateOf(false) }
+    var showSignOutConfirmDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(currentUserProfile, isShowingFriendsList, isShowingEditProfile) {
         val friends = authViewModel.fetchFriends()
@@ -275,7 +276,7 @@ fun ProfileScreen(
 
                     // Sign Out Button
                     SignOutButton(
-                        onSignOut = { authViewModel.signOut() },
+                        onSignOut = { showSignOutConfirmDialog = true },
                         modifier = Modifier.padding(horizontal = 24.dp)
                     )
 
@@ -320,6 +321,54 @@ fun ProfileScreen(
             }
         }
     }
+
+    if (showSignOutConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showSignOutConfirmDialog = false },
+            title = {
+                Text(
+                    text = "prof_signout_confirm_title".localized,
+                    color = ZholdasTextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "prof_signout_confirm_desc".localized,
+                    color = ZholdasTextSecondary
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showSignOutConfirmDialog = false
+                        authViewModel.signOut()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ZholdasDanger,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text(
+                        text = "prof_signout".localized,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showSignOutConfirmDialog = false }) {
+                    Text(
+                        text = "btn_cancel".localized,
+                        color = ZholdasTextSecondary
+                    )
+                }
+            },
+            containerColor = ZholdasSurface,
+            titleContentColor = ZholdasTextPrimary,
+            textContentColor = ZholdasTextSecondary
+        )
+    }
 }
 
 @Composable
@@ -358,7 +407,7 @@ private fun BioCard(
     profile: User,
     modifier: Modifier = Modifier
 ) {
-    val details = parsedProfileDetails(profile.bio)
+    val details = parsedProfileDetails(profile)
 
     ModernCard(modifier = modifier) {
         Text(
@@ -550,7 +599,7 @@ private fun SettingsSection(
                         .padding(horizontal = 16.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("??", fontSize = 18.sp)
+                    Icon(Icons.Default.Language, contentDescription = null, tint = ZholdasTextSecondary, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
                         text = "prof_lang".localized,
@@ -577,21 +626,21 @@ private fun SettingsSection(
                     modifier = Modifier.background(ZholdasElevatedSurface)
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Русский", color = Color.White) },
+                        text = { Text("Русский", color = ZholdasTextPrimary) },
                         onClick = {
                             onLanguageSelected("ru")
                             onLanguageMenuExpandedChange(false)
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("Қазақша", color = Color.White) },
+                        text = { Text("Қазақша", color = ZholdasTextPrimary) },
                         onClick = {
                             onLanguageSelected("kk")
                             onLanguageMenuExpandedChange(false)
                         }
                     )
                     DropdownMenuItem(
-                        text = { Text("English", color = Color.White) },
+                        text = { Text("English", color = ZholdasTextPrimary) },
                         onClick = {
                             onLanguageSelected("en")
                             onLanguageMenuExpandedChange(false)
@@ -644,7 +693,7 @@ private fun SettingsSection(
                         AppTheme.DARK to themeLabel(AppTheme.DARK)
                     ).forEach { (theme, label) ->
                         DropdownMenuItem(
-                            text = { Text(label, color = Color.White) },
+                            text = { Text(label, color = ZholdasTextPrimary) },
                             onClick = {
                                 onThemeSelected(theme)
                                 themeMenuExpanded = false
@@ -860,33 +909,62 @@ private fun SignOutButton(
 
 data class ParsedBio(val bio: String, val badges: List<String>)
 
-private fun parsedProfileDetails(rawBio: String?): ParsedBio {
-    val cleanRaw = rawBio?.trim() ?: ""
-    if (cleanRaw.isEmpty()) {
-        return ParsedBio("prof_default_bio".localized, emptyList())
+internal fun formatGender(gender: String?): String? {
+    if (gender.isNullOrBlank()) return null
+    return when (gender.trim().lowercase(Locale.ROOT)) {
+        "male", "m", "мужской", "мужчина", "ер", "ер адам" -> "profile_gender_male".localized
+        "female", "f", "женский", "женщина", "әйел", "әйел адам" -> "profile_gender_female".localized
+        else -> gender.trim()
+    }
+}
+
+internal fun formatUserAge(age: Int?, birthYear: Int?): String? {
+    if (age != null && age > 0) {
+        return "$age ${"reg_age_suffix".localized}"
+    }
+    if (birthYear != null && birthYear > 1900) {
+        val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+        val calculatedAge = (currentYear - birthYear).coerceAtLeast(0)
+        return "$calculatedAge ${"reg_age_suffix".localized}"
+    }
+    return null
+}
+
+internal fun cleanBioText(rawBio: String?): String {
+    if (rawBio.isNullOrBlank()) return ""
+    return rawBio
+        .replace(Regex("\\[gender:[^\\]]*\\]"), "")
+        .replace(Regex("\\[birth_year:[^\\]]*\\]"), "")
+        .trim()
+}
+
+internal fun parsedProfileDetails(user: User?, defaultBio: String = "prof_default_bio".localized): ParsedBio {
+    if (user == null) {
+        return ParsedBio(defaultBio, emptyList())
     }
 
-    var cleanedBio = cleanRaw
     val badges = mutableListOf<String>()
 
-    val gender = extractProfileMetadata("gender", cleanRaw)
-    if (gender != null) {
-        badges.add(gender)
-        cleanedBio = cleanedBio.replace("[gender:$gender]", "")
+    val rawGender = user.gender?.takeIf { it.isNotBlank() } ?: extractProfileMetadata("gender", user.bio ?: "")
+    val genderBadge = formatGender(rawGender)
+    if (genderBadge != null) {
+        badges.add(genderBadge)
     }
 
-    val birthYear = extractProfileMetadata("birth_year", cleanRaw)
-    if (birthYear != null) {
-        badges.add(ageBadge(birthYear))
-        cleanedBio = cleanedBio.replace("[birth_year:$birthYear]", "")
+    val ageBadgeText = formatUserAge(user.age, user.birthYear)
+        ?: extractProfileMetadata("birth_year", user.bio ?: "")?.let { ageBadge(it) }
+    if (ageBadgeText != null) {
+        badges.add(ageBadgeText)
     }
 
-    cleanedBio = cleanedBio.trim()
-    if (cleanedBio.isEmpty()) {
-        cleanedBio = "prof_default_bio".localized
-    }
+    val cleanedBio = cleanBioText(user.bio)
+    val displayBio = cleanedBio.ifEmpty { defaultBio }
 
-    return ParsedBio(cleanedBio, badges)
+    return ParsedBio(displayBio, badges)
+}
+
+internal fun parsedProfileDetails(rawBio: String?): ParsedBio {
+    return parsedProfileDetails(rawBio?.let { User(id = "", bio = it) })
 }
 
 private fun extractProfileMetadata(key: String, text: String): String? {
@@ -913,6 +991,6 @@ private fun getInitials(name: String): String {
     return when {
         parts.size >= 2 -> "${parts[0].take(1)}${parts[1].take(1)}".uppercase()
         parts.isNotEmpty() -> parts[0].take(2).uppercase()
-        else -> "??"
+        else -> "ZH"
     }
 }

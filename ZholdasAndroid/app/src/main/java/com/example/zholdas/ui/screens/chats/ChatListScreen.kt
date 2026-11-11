@@ -42,14 +42,21 @@ import com.example.zholdas.theme.*
 @Composable
 fun ChatListScreen(
     modifier: Modifier = Modifier,
+    currentUserId: String = "",
     onAIChatClick: (() -> Unit)? = null,
     onChatClick: ((ChatSession) -> Unit)? = null
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as ZholdasApplication
     val viewModel: ChatViewModel = viewModel(
-        factory = ChatViewModel.Factory(app.container.apiClient, app.container.tokenManager)
+        factory = ChatViewModel.Factory(app.container.apiClient, app.container.tokenManager, currentUserId)
     )
+
+    LaunchedEffect(currentUserId) {
+        if (currentUserId.isNotBlank()) {
+            viewModel.setCurrentUserId(currentUserId)
+        }
+    }
 
     val sessions by viewModel.chatSessions.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()

@@ -5,7 +5,7 @@ struct ChatsListView: View {
     @State private var searchQuery: String = ""
     @State private var sessions: [ChatSession] = [
         ChatSession(
-            id: 999,
+            id: ChatSession.aiChatSessionID,
             title: "Жорик (ИИ-помощник)",
             timeLabel: "Активен",
             lastMessage: "Привет! Я Жорик, твой ИИ-помощник. Задавай мне любые вопросы про Алматы!",
@@ -146,7 +146,7 @@ struct ChatsListView: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(alignment: .top) {
                     // Title
-                    Text(session.id == 999 ? "chat_ai_assistant_name".localized : session.title)
+                    Text(session.id == ChatSession.aiChatSessionID ? "chat_ai_assistant_name".localized : session.title)
                         .font(.headline)
                         .fontWeight(.bold)
                         .foregroundColor(ZholdasTheme.textPrimary)
@@ -176,7 +176,7 @@ struct ChatsListView: View {
                     .foregroundColor(ZholdasTheme.textSecondary)
                 
                 // Message Preview
-                Text(session.id == 999 ? "chat_ai_assistant_welcome".localized : (session.messages.isEmpty ? session.lastMessage : lastMessagePreview(for: session)))
+                Text(session.id == ChatSession.aiChatSessionID ? "chat_ai_assistant_welcome".localized : (session.messages.isEmpty ? session.lastMessage : lastMessagePreview(for: session)))
                     .font(.subheadline)
                     .foregroundColor(session.messages.isEmpty ? ZholdasTheme.textSecondary : ZholdasTheme.textSecondary)
                     .lineLimit(1)
@@ -237,11 +237,11 @@ struct ChatsListView: View {
             
             await MainActor.run {
                 var updatedSessions: [ChatSession] = []
-                if let aiSession = self.sessions.first(where: { $0.id == 999 }) {
+                if let aiSession = self.sessions.first(where: { $0.id == ChatSession.aiChatSessionID }) {
                     updatedSessions.append(aiSession)
                 } else {
                     updatedSessions.append(ChatSession(
-                        id: 999,
+                        id: ChatSession.aiChatSessionID,
                         title: "Жорик (ИИ-помощник)",
                         timeLabel: "Активен",
                         lastMessage: "Привет! Я Жорик, твой ИИ-помощник. Задавай мне любые вопросы про Алматы!",

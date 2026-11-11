@@ -5,6 +5,7 @@ import android.content.pm.PackageManager
 import android.content.Intent
 import android.location.Location
 import android.net.Uri
+import android.widget.Toast
 import java.util.Locale
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -37,6 +38,7 @@ import androidx.core.content.ContextCompat
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.example.zholdas.data.local.localized
+import com.example.zholdas.data.remote.toUserMessage
 import com.example.zholdas.data.model.Event
 import com.example.zholdas.data.model.EventLiveLocation
 import com.example.zholdas.data.model.Participant
@@ -71,6 +73,7 @@ fun EventDetailScreen(
     var showPreparation by remember { mutableStateOf(false) }
     var reminderText by remember { mutableStateOf<String?>(null) }
     var pendingLocationAction by remember { mutableStateOf<((Location) -> Unit)?>(null) }
+    var showLeaveConfirmDialog by remember { mutableStateOf(false) }
 
     fun readCurrentLocation(action: (Location) -> Unit) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
@@ -83,7 +86,7 @@ fun EventDetailScreen(
             .addOnSuccessListener { location ->
                 if (location != null) action(location) else actionError = "Не удалось получить текущую геопозицию"
             }
-            .addOnFailureListener { actionError = it.message ?: "Не удалось получить текущую геопозицию" }
+            .addOnFailureListener { actionError = it.toUserMessage() }
     }
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
@@ -189,8 +192,8 @@ fun EventDetailScreen(
                     .background(
                         brush = Brush.linearGradient(
                             colors = listOf(
-                                Color(0xFF3B2073),
-                                Color(0xFF1D133B)
+                                ZholdasElevatedSurface,
+                                ZholdasSurface
                             )
                         )
                     )
@@ -250,7 +253,7 @@ fun EventDetailScreen(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         modifier = Modifier
                             .background(
-                                if (event.status == "active") ZholdasSuccess.copy(alpha = 0.18f) else Color.White.copy(alpha = 0.1f),
+                                if (event.status == "active") ZholdasSuccess.copy(alpha = 0.18f) else ZholdasTextPrimary.copy(alpha = 0.1f),
                                 RoundedCornerShape(8.dp)
                             )
                             .padding(horizontal = 10.dp, vertical = 6.dp)
@@ -323,8 +326,8 @@ fun EventDetailScreen(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.08f))
-                            .border(1.dp, Color.White.copy(alpha = 0.1f), CircleShape),
+                            .background(ZholdasTextPrimary.copy(alpha = 0.08f))
+                            .border(1.dp, ZholdasTextPrimary.copy(alpha = 0.1f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -342,7 +345,7 @@ fun EventDetailScreen(
                         )
                         Text(
                             text = "Абылай Жолдас",
-                            color = Color.White,
+                            color = ZholdasTextPrimary,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -360,8 +363,8 @@ fun EventDetailScreen(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.08f))
-                            .border(1.dp, Color.White.copy(alpha = 0.1f), CircleShape),
+                            .background(ZholdasTextPrimary.copy(alpha = 0.08f))
+                            .border(1.dp, ZholdasTextPrimary.copy(alpha = 0.1f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -379,7 +382,7 @@ fun EventDetailScreen(
                         )
                         Text(
                             text = EventUtils.formatEventDateFull(event.startTime),
-                            color = Color.White,
+                            color = ZholdasTextPrimary,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -397,8 +400,8 @@ fun EventDetailScreen(
                         modifier = Modifier
                             .size(44.dp)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.08f))
-                            .border(1.dp, Color.White.copy(alpha = 0.1f), CircleShape),
+                            .background(ZholdasTextPrimary.copy(alpha = 0.08f))
+                            .border(1.dp, ZholdasTextPrimary.copy(alpha = 0.1f), CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -416,7 +419,7 @@ fun EventDetailScreen(
                         )
                         Text(
                             text = event.locationName,
-                            color = Color.White,
+                            color = ZholdasTextPrimary,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -458,7 +461,7 @@ fun EventDetailScreen(
                     )
                     Text(
                         text = "ev_restrictions".localized,
-                        color = Color.White,
+                        color = ZholdasTextPrimary,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -491,7 +494,7 @@ fun EventDetailScreen(
                 ) {
                     Text(
                         text = "ev_participants".localized,
-                        color = Color.White,
+                        color = ZholdasTextPrimary,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -510,7 +513,7 @@ fun EventDetailScreen(
                         .fillMaxWidth()
                         .height(6.dp)
                         .clip(RoundedCornerShape(4.dp))
-                        .background(Color.White.copy(alpha = 0.1f))
+                        .background(ZholdasTextPrimary.copy(alpha = 0.1f))
                 ) {
                     Box(
                         modifier = Modifier
@@ -528,8 +531,8 @@ fun EventDetailScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White.copy(alpha = 0.08f),
-                        contentColor = Color.White
+                        containerColor = ZholdasTextPrimary.copy(alpha = 0.08f),
+                        contentColor = ZholdasTextPrimary
                     )
                 ) {
                     Text(
@@ -543,7 +546,7 @@ fun EventDetailScreen(
             ModernCard {
                 Text(
                     text = "ev_how_it_runs".localized,
-                    color = Color.White,
+                    color = ZholdasTextPrimary,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -633,12 +636,7 @@ fun EventDetailScreen(
 
                 Button(
                     onClick = {
-                        viewModel.leaveEvent(event.id) { success ->
-                            if (success) {
-                                isJoined = false
-                                participantsCount = (participantsCount - 1).coerceAtLeast(0)
-                            }
-                        }
+                        showLeaveConfirmDialog = true
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -690,8 +688,8 @@ fun EventDetailScreen(
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White.copy(alpha = 0.08f),
-                        contentColor = Color.White
+                        containerColor = ZholdasTextPrimary.copy(alpha = 0.08f),
+                        contentColor = ZholdasTextPrimary
                     )
                 ) {
                     Text(
@@ -707,10 +705,10 @@ fun EventDetailScreen(
                         try {
                             context.startActivity(mapIntent)
                         } catch (e: Exception) {
-                            // Fallback web google maps
+                            // OpenStreetMap web fallback
                             val webIntent = Intent(
                                 Intent.ACTION_VIEW,
-                                Uri.parse("https://maps.google.com/?q=${event.latitude},${event.longitude}")
+                                Uri.parse("https://www.openstreetmap.org/?mlat=${event.latitude}&mlon=${event.longitude}#map=16/${event.latitude}/${event.longitude}")
                             )
                             context.startActivity(webIntent)
                         }
@@ -718,8 +716,8 @@ fun EventDetailScreen(
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Color.White.copy(alpha = 0.08f),
-                        contentColor = Color.White
+                        containerColor = ZholdasTextPrimary.copy(alpha = 0.08f),
+                        contentColor = ZholdasTextPrimary
                     )
                 ) {
                     Text(
@@ -744,7 +742,7 @@ fun EventDetailScreen(
             ) {
                 Text(
                     text = "ev_participants".localized,
-                    color = Color.White,
+                    color = ZholdasTextPrimary,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -764,7 +762,7 @@ fun EventDetailScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(Color.White.copy(alpha = 0.04f))
+                                    .background(ZholdasTextPrimary.copy(alpha = 0.04f))
                                     .padding(12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -779,13 +777,13 @@ fun EventDetailScreen(
                                     Icon(
                                         imageVector = Icons.Default.Person,
                                         contentDescription = null,
-                                        tint = Color.White
+                                        tint = ZholdasTextPrimary
                                     )
                                 }
                                 Column {
                                     Text(
                                         text = participant.fullName.ifBlank { "Участник" },
-                                        color = Color.White,
+                                        color = ZholdasTextPrimary,
                                         fontWeight = FontWeight.SemiBold
                                     )
                                     Text(
@@ -854,6 +852,63 @@ fun EventDetailScreen(
             }
         }
     }
+
+    if (showLeaveConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showLeaveConfirmDialog = false },
+            title = {
+                Text(
+                    text = "ev_leave_confirm_title".localized,
+                    color = ZholdasTextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "ev_leave_confirm_desc".localized,
+                    color = ZholdasTextSecondary
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showLeaveConfirmDialog = false
+                        viewModel.leaveEvent(event.id) { success ->
+                            if (success) {
+                                isJoined = false
+                                participantsCount = (participantsCount - 1).coerceAtLeast(0)
+                            } else {
+                                val errorMsg = "ev_leave_error".localized
+                                actionError = errorMsg
+                                Toast.makeText(context, errorMsg, Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ZholdasDanger,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Text(
+                        text = "ev_leave_btn".localized,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLeaveConfirmDialog = false }) {
+                    Text(
+                        text = "btn_cancel".localized,
+                        color = ZholdasTextSecondary
+                    )
+                }
+            },
+            containerColor = ZholdasSurface,
+            titleContentColor = ZholdasTextPrimary,
+            textContentColor = ZholdasTextSecondary
+        )
+    }
 }
 
 @Composable
@@ -897,14 +952,14 @@ private fun StatMiniCard(
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(Color.White.copy(alpha = 0.04f))
-            .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(12.dp))
+            .background(ZholdasTextPrimary.copy(alpha = 0.04f))
+            .border(1.dp, ZholdasTextPrimary.copy(alpha = 0.06f), RoundedCornerShape(12.dp))
             .padding(vertical = 10.dp, horizontal = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
             text = title,
-            color = Color.White,
+            color = ZholdasTextPrimary,
             fontWeight = FontWeight.Bold,
             fontSize = 16.sp
         )

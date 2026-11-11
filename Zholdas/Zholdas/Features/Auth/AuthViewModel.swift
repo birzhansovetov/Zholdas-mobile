@@ -324,7 +324,7 @@ class AuthViewModel: ObservableObject {
             .sink { [weak self] _ in
                 self?.isAuthenticated = false
                 self?.currentUserProfile = nil
-                self?.errorMessage = "Сессия истекла. Войдите заново"
+                self?.errorMessage = "session_expired".localized
             }
             .store(in: &cancellables)
     }
@@ -483,6 +483,7 @@ class AuthViewModel: ObservableObject {
             return true
         } catch {
             print("Failed to reject friend request: \(error)")
+            self.errorMessage = error.localizedDescription
             return false
         }
     }
@@ -693,6 +694,7 @@ class AuthViewModel: ObservableObject {
             return true
         } catch {
             print("Failed to block user: \(error)")
+            self.errorMessage = error.localizedDescription
             return false
         }
     }

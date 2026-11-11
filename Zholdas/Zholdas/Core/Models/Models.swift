@@ -297,6 +297,43 @@ extension EventLiveLocation {
 
 typealias UserProfile = User
 
+func formattedProfileGender(_ raw: String?) -> String? {
+    guard let raw = raw?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else {
+        return nil
+    }
+    let lower = raw.lowercased()
+    switch lower {
+    case "male", "m", "men", "мужской", "мужчина", "мужчины":
+        return "prof_gender_male".localized
+    case "female", "f", "women", "женский", "женщина", "женщины":
+        return "prof_gender_female".localized
+    default:
+        return raw
+    }
+}
+
+func formattedProfileAge(age: Int?, birthYear: Int?) -> String? {
+    if let age = age, age > 0 {
+        return "\(age) \("reg_age_suffix".localized)"
+    }
+    if let birthYear = birthYear, birthYear > 1900 {
+        let currentYear = Calendar.current.component(.year, from: Date())
+        let calculatedAge = max(0, currentYear - birthYear)
+        return "\(calculatedAge) \("reg_age_suffix".localized)"
+    }
+    return nil
+}
+
+extension User {
+    var displayGender: String? {
+        formattedProfileGender(gender)
+    }
+
+    var displayAge: String? {
+        formattedProfileAge(age: age, birthYear: birthYear)
+    }
+}
+
 struct ChatMessage: Identifiable, Codable, Hashable {
     let id: UUID
     let senderName: String
@@ -309,6 +346,8 @@ struct ChatMessage: Identifiable, Codable, Hashable {
 }
 
 struct ChatSession: Identifiable, Codable, Hashable {
+    static let aiChatSessionID: Int32 = -1
+    
     let id: Int32
     let title: String
     let timeLabel: String

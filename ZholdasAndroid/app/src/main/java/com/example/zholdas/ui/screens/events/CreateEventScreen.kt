@@ -30,14 +30,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.zholdas.data.local.localized
+import com.example.zholdas.data.remote.toUserMessage
 import com.example.zholdas.theme.*
 import com.example.zholdas.ui.components.ModernCard
 import com.example.zholdas.ui.components.PrimaryButton
 import com.example.zholdas.ui.components.modernFieldSurface
 import coil.compose.AsyncImage
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.ZonedDateTime
+import java.time.temporal.ChronoUnit
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,6 +68,13 @@ fun CreateEventScreen(
     var isUploadingImage by remember { mutableStateOf(false) }
     var imageUploadError by remember { mutableStateOf<String?>(null) }
     var showLocationPickerDialog by remember { mutableStateOf(false) }
+    val now = remember { ZonedDateTime.now() }
+    var startDateTime by remember {
+        mutableStateOf(now.plusHours(1).withMinute(0).withSecond(0).withNano(0))
+    }
+    var endDateTime by remember {
+        mutableStateOf(now.plusHours(2).withMinute(0).withSecond(0).withNano(0))
+    }
 
     val categoriesList = remember {
         listOf("hiking", "walk", "sports", "board_games", "networking", "theater", "restaurant")
@@ -129,7 +137,7 @@ fun CreateEventScreen(
                         .fillMaxWidth()
                         .height(140.dp)
                         .clip(RoundedCornerShape(14.dp))
-                        .background(if (hasSelectedCover) ZholdasAccent.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.05f))
+                        .background(if (hasSelectedCover) ZholdasAccent.copy(alpha = 0.25f) else ZholdasTextPrimary.copy(alpha = 0.05f))
                         .border(1.dp, if (hasSelectedCover) ZholdasAccent else ZholdasBorder, RoundedCornerShape(14.dp))
                         .clickable(enabled = !isUploadingImage) {
                             photoPicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
@@ -323,7 +331,7 @@ fun CreateEventScreen(
                         Column {
                             Text(
                                 text = "create_ev_pick_location".localized,
-                                color = Color.White,
+                                color = ZholdasTextPrimary,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Text(
@@ -361,7 +369,7 @@ fun CreateEventScreen(
                 ) {
                     Text(
                         text = "$maxParticipants ${"create_ev_people_count".localized}",
-                        color = Color.White,
+                        color = ZholdasTextPrimary,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -371,9 +379,9 @@ fun CreateEventScreen(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.1f))
+                                .background(ZholdasTextPrimary.copy(alpha = 0.1f))
                         ) {
-                            Text("-", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text("-", color = ZholdasTextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         }
                         IconButton(
                             onClick = { if (maxParticipants < 100) maxParticipants += 1 },
@@ -382,11 +390,19 @@ fun CreateEventScreen(
                                 .clip(CircleShape)
                                 .background(ZholdasAccent.copy(alpha = 0.3f))
                         ) {
-                            Text("+", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text("+", color = ZholdasTextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
             }
+
+            // Date & Time
+            EventDateTimeSection(
+                startDateTime = startDateTime,
+                endDateTime = endDateTime,
+                onStartDateTimeChange = { startDateTime = it },
+                onEndDateTimeChange = { endDateTime = it }
+            )
 
             // 7. Visibility
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -424,7 +440,7 @@ fun CreateEventScreen(
             ModernCard {
                 Text(
                     text = "create_ev_audience_header".localized,
-                    color = Color.White,
+                    color = ZholdasTextPrimary,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -473,10 +489,10 @@ fun CreateEventScreen(
                             .width(70.dp)
                             .height(48.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color.White.copy(alpha = 0.05f)),
+                            .background(ZholdasTextPrimary.copy(alpha = 0.05f)),
                         colors = TextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
+                            focusedTextColor = ZholdasTextPrimary,
+                            unfocusedTextColor = ZholdasTextPrimary,
                             focusedContainerColor = Color.Transparent,
                             unfocusedContainerColor = Color.Transparent,
                             focusedIndicatorColor = Color.Transparent,
@@ -493,10 +509,10 @@ fun CreateEventScreen(
                             .width(70.dp)
                             .height(48.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color.White.copy(alpha = 0.05f)),
+                            .background(ZholdasTextPrimary.copy(alpha = 0.05f)),
                         colors = TextFieldDefaults.colors(
-                            focusedTextColor = Color.White,
-                            unfocusedTextColor = Color.White,
+                            focusedTextColor = ZholdasTextPrimary,
+                            unfocusedTextColor = ZholdasTextPrimary,
                             focusedContainerColor = Color.Transparent,
                             unfocusedContainerColor = Color.Transparent,
                             focusedIndicatorColor = Color.Transparent,
@@ -510,14 +526,15 @@ fun CreateEventScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Submit Button
-            val isFormValid = title.isNotBlank() && locationName.isNotBlank()
+            val isStartInFuture = startDateTime.isAfter(ZonedDateTime.now().minusMinutes(5))
+            val isEndAfterStart = endDateTime.isAfter(startDateTime)
+            val isDateTimeValid = isStartInFuture && isEndAfterStart
+            val isFormValid = title.isNotBlank() && locationName.isNotBlank() && isDateTimeValid
             PrimaryButton(
                 text = "create_ev_btn".localized,
                 onClick = {
-                    val isoFormat = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US)
-                    val now = System.currentTimeMillis()
-                    val startTimeStr = isoFormat.format(Date(now + 3600000L))
-                    val endTimeStr = isoFormat.format(Date(now + 7200000L))
+                    val startTimeStr = startDateTime.toInstant().truncatedTo(ChronoUnit.SECONDS).toString()
+                    val endTimeStr = endDateTime.toInstant().truncatedTo(ChronoUnit.SECONDS).toString()
 
                     coroutineScope.launch {
                         isUploadingImage = selectedImageUri != null
@@ -525,7 +542,7 @@ fun CreateEventScreen(
                         val uploadedUrl = try {
                             selectedImageUri?.let { viewModel.uploadEventImage(context.contentResolver, it) }
                         } catch (error: Exception) {
-                            imageUploadError = error.message ?: "Не удалось загрузить фотографию. Повторите попытку."
+                            imageUploadError = error.toUserMessage()
                             null
                         } finally {
                             isUploadingImage = false
@@ -559,61 +576,18 @@ fun CreateEventScreen(
     }
 
     if (showLocationPickerDialog) {
-        AlertDialog(
-            onDismissRequest = { showLocationPickerDialog = false },
-            containerColor = ZholdasElevatedSurface,
-            title = {
-                Text(
-                    text = "create_ev_pick_location".localized,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        text = "create_ev_map_tap_hint".localized,
-                        color = ZholdasTextSecondary,
-                        fontSize = 14.sp
-                    )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        Button(
-                            onClick = {
-                                latitude = 43.1872
-                                longitude = 76.9531
-                                if (locationName.isBlank()) locationName = "Кок-Жайляу"
-                                showLocationPickerDialog = false
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = ZholdasAccent.copy(alpha = 0.25f))
-                        ) {
-                            Text("Горы (43.18, 76.95)", color = Color.White)
-                        }
-                        Button(
-                            onClick = {
-                                latitude = 43.2567
-                                longitude = 76.9754
-                                if (locationName.isBlank()) locationName = "Парк Горького"
-                                showLocationPickerDialog = false
-                            },
-                            colors = ButtonDefaults.buttonColors(containerColor = ZholdasAccent.copy(alpha = 0.25f))
-                        ) {
-                            Text("Центр (43.25, 76.97)", color = Color.White)
-                        }
-                    }
+        EventLocationPickerDialog(
+            initialLatitude = latitude,
+            initialLongitude = longitude,
+            initialLocationName = locationName,
+            onDismiss = { showLocationPickerDialog = false },
+            onConfirm = { newLat, newLon, newName ->
+                latitude = newLat
+                longitude = newLon
+                if (locationName.isBlank() || locationName == "create_ev_selected_point_name".localized) {
+                    locationName = newName
                 }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showLocationPickerDialog = false
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = ZholdasAccent)
-                ) {
-                    Text("create_ev_confirm_location".localized, color = Color.White)
-                }
+                showLocationPickerDialog = false
             }
         )
     }
@@ -629,8 +603,8 @@ private fun CategorySelectChip(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(10.dp))
-            .background(if (isSelected) ZholdasAccent else Color.White.copy(alpha = 0.05f))
-            .border(1.dp, if (isSelected) ZholdasAccent else Color.White.copy(alpha = 0.1f), RoundedCornerShape(10.dp))
+            .background(if (isSelected) ZholdasAccent else ZholdasTextPrimary.copy(alpha = 0.05f))
+            .border(1.dp, if (isSelected) ZholdasAccent else ZholdasTextPrimary.copy(alpha = 0.1f), RoundedCornerShape(10.dp))
             .clickable { onClick() }
             .padding(vertical = 10.dp, horizontal = 6.dp),
         contentAlignment = Alignment.Center
@@ -639,12 +613,12 @@ private fun CategorySelectChip(
             Icon(
                 imageVector = EventUtils.getCategoryIcon(category),
                 contentDescription = null,
-                tint = Color.White,
+                tint = if (isSelected) Color.White else ZholdasTextPrimary,
                 modifier = Modifier.size(18.dp)
             )
             Text(
                 text = EventUtils.getCategoryNameKey(category).localized,
-                color = Color.White,
+                color = if (isSelected) Color.White else ZholdasTextPrimary,
                 fontSize = 11.sp,
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
             )
@@ -663,8 +637,8 @@ private fun VisibilityOptionChip(
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(if (isSelected) ZholdasAccent.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.04f))
-            .border(1.dp, if (isSelected) ZholdasAccent else Color.White.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
+            .background(if (isSelected) ZholdasAccent.copy(alpha = 0.2f) else ZholdasTextPrimary.copy(alpha = 0.04f))
+            .border(1.dp, if (isSelected) ZholdasAccent else ZholdasTextPrimary.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
             .clickable { onClick() }
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -673,13 +647,13 @@ private fun VisibilityOptionChip(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = if (isSelected) ZholdasAccent else Color.Gray,
+            tint = if (isSelected) ZholdasAccent else ZholdasTextSecondary,
             modifier = Modifier.size(18.dp)
         )
         Spacer(modifier = Modifier.width(6.dp))
         Text(
             text = title,
-            color = if (isSelected) Color.White else Color.Gray,
+            color = if (isSelected) ZholdasAccent else ZholdasTextSecondary,
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold
         )
@@ -696,15 +670,15 @@ private fun GenderOptionChip(
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
-            .background(if (isSelected) ZholdasAccent.copy(alpha = 0.2f) else Color.White.copy(alpha = 0.04f))
-            .border(1.dp, if (isSelected) ZholdasAccent else Color.White.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
+            .background(if (isSelected) ZholdasAccent.copy(alpha = 0.2f) else ZholdasTextPrimary.copy(alpha = 0.04f))
+            .border(1.dp, if (isSelected) ZholdasAccent else ZholdasTextPrimary.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
             .clickable { onClick() }
             .padding(vertical = 10.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = title,
-            color = if (isSelected) Color.White else Color.Gray,
+            color = if (isSelected) ZholdasAccent else ZholdasTextSecondary,
             fontSize = 12.sp,
             fontWeight = FontWeight.Bold
         )

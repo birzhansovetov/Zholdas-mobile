@@ -7,6 +7,9 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -35,6 +38,18 @@ class TokenManager(private val context: Context) {
         preferences[REFRESH_TOKEN_KEY]
     }
 
+    private val _sessionExpired = MutableStateFlow(false)
+    val sessionExpired: StateFlow<Boolean> = _sessionExpired.asStateFlow()
+    val isSessionExpired: StateFlow<Boolean> get() = sessionExpired
+
+    fun notifySessionExpired() {
+        _sessionExpired.value = true
+    }
+
+    fun resetSessionExpired() {
+        _sessionExpired.value = false
+    }
+
     init {
         persistenceScope.launch {
             val preferences = context.dataStore.data.first()
@@ -53,6 +68,7 @@ class TokenManager(private val context: Context) {
     suspend fun saveTokens(accessToken: String, refreshToken: String) {
         persistenceVersion.incrementAndGet()
         cache.update(accessToken, refreshToken)
+        _sessionExpired.value = false
         context.dataStore.edit { preferences ->
             preferences[ACCESS_TOKEN_KEY] = accessToken
             preferences[REFRESH_TOKEN_KEY] = refreshToken
@@ -62,6 +78,7 @@ class TokenManager(private val context: Context) {
     suspend fun clearTokens() {
         persistenceVersion.incrementAndGet()
         cache.clear()
+        _sessionExpired.value = false
         context.dataStore.edit { preferences ->
             preferences.remove(ACCESS_TOKEN_KEY)
             preferences.remove(REFRESH_TOKEN_KEY)
@@ -72,6 +89,7 @@ class TokenManager(private val context: Context) {
     fun saveTokensFromSyncContext(accessToken: String, refreshToken: String) {
         val version = persistenceVersion.incrementAndGet()
         cache.update(accessToken, refreshToken)
+        _sessionExpired.value = false
         persistenceScope.launch {
             if (version != persistenceVersion.get()) return@launch
             context.dataStore.edit { preferences ->
@@ -85,6 +103,7 @@ class TokenManager(private val context: Context) {
     fun clearTokensFromSyncContext() {
         val version = persistenceVersion.incrementAndGet()
         cache.clear()
+        notifySessionExpired()
         persistenceScope.launch {
             if (version != persistenceVersion.get()) return@launch
             context.dataStore.edit { preferences ->

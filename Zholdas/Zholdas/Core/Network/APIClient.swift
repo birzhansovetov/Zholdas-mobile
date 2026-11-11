@@ -12,18 +12,21 @@ enum APIError: Error, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidURL:
-            return "Неверный URL адрес"
+            return "error_generic".localized
         case .noData:
-            return "Нет данных от сервера"
-        case .decodingError(let error):
-            return "Ошибка декодирования данных: \(error.localizedDescription)"
+            return "error_network".localized
+        case .decodingError:
+            return "error_decoding".localized
         case .serverError(_, let message):
             return message
         case .unauthorized:
-            return "Не авторизован. Войдите заново"
+            return "session_expired".localized
         case .missingSupabaseAnonKey:
-            return "Не настроен Supabase anon key"
+            return "error_generic".localized
         case .unknown(let error):
+            if error is URLError || (error as NSError).domain == NSURLErrorDomain {
+                return "error_network".localized
+            }
             return error.localizedDescription
         }
     }
@@ -202,6 +205,12 @@ actor APIClient {
                     throw APIError.noData
                 }
                 
+                if retryHTTPResponse.statusCode == 401 {
+                    TokenStorage.shared.clear()
+                    NotificationCenter.default.post(name: .unauthorizedNotification, object: nil)
+                    throw APIError.unauthorized
+                }
+                
                 try checkResponse(retryHTTPResponse, data: retryData)
                 return try decode(retryData)
             }
@@ -261,6 +270,12 @@ actor APIClient {
                     throw APIError.noData
                 }
                 
+                if retryHTTPResponse.statusCode == 401 {
+                    TokenStorage.shared.clear()
+                    NotificationCenter.default.post(name: .unauthorizedNotification, object: nil)
+                    throw APIError.unauthorized
+                }
+                
                 try checkResponse(retryHTTPResponse, data: retryData)
                 struct UploadResponse: Codable {
                     let url: String
@@ -309,30 +324,92 @@ actor APIClient {
             return
         }
         
-        if let errorJSON = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-            let message = errorJSON["error_description"] as? String
-                ?? errorJSON["msg"] as? String
-                ?? errorJSON["message"] as? String
-                ?? errorJSON["error"] as? String
-
-            if let message {
-                throw APIError.serverError(statusCode: response.statusCode, message: authErrorMessage(message))
-            }
+        let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        let errorCode = (json?["error_code"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let msg = (json?["msg"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let errorDescription = (json?["error_description"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let rawError = json?["error"]
+        let errorString = (rawError as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        let codes = [errorCode, errorString].compactMap { $0 }
+        let messages = [msg, errorDescription].compactMap { $0 }
+        
+        // 429 или over_*_rate_limit
+        let isRateLimit = response.statusCode == 429 || codes.contains {
+            $0 == "over_request_rate_limit"
+                || $0 == "over_email_send_rate_limit"
+                || ($0.hasPrefix("over_") && $0.contains("rate_limit"))
         }
         
-        throw APIError.serverError(statusCode: response.statusCode, message: "Код ошибки сервера: \(response.statusCode)")
-    }
-
-    private func authErrorMessage(_ message: String) -> String {
-        switch message {
-        case "Invalid login credentials":
-            return "Неверная почта или пароль"
-        case "Email not confirmed":
-            return "Подтвердите email перед входом"
-        case "Signup is disabled":
-            return "Регистрация отключена в Supabase"
+        if isRateLimit {
+            throw APIError.serverError(statusCode: response.statusCode, message: "error_rate_limit".localized)
+        }
+        
+        // invalid_credentials
+        let isInvalidCredentials = codes.contains { $0 == "invalid_credentials" || $0 == "invalid_grant" }
+            || messages.contains { $0.localizedCaseInsensitiveContains("Invalid login credentials") }
+        
+        if isInvalidCredentials {
+            throw APIError.serverError(statusCode: response.statusCode, message: "error_invalid_credentials".localized)
+        }
+        
+        // email_not_confirmed
+        let isEmailNotConfirmed = codes.contains("email_not_confirmed")
+            || messages.contains { $0.localizedCaseInsensitiveContains("Email not confirmed") }
+        
+        if isEmailNotConfirmed {
+            throw APIError.serverError(statusCode: response.statusCode, message: "error_email_not_confirmed".localized)
+        }
+        
+        // user_already_exists
+        let isUserAlreadyExists = codes.contains("user_already_exists")
+            || messages.contains { $0.localizedCaseInsensitiveContains("User already registered") }
+        
+        if isUserAlreadyExists {
+            throw APIError.serverError(statusCode: response.statusCode, message: "error_user_already_exists".localized)
+        }
+        
+        // weak_password
+        let isWeakPassword = codes.contains("weak_password")
+            || messages.contains { $0.localizedCaseInsensitiveContains("Password should be") }
+        
+        if isWeakPassword {
+            throw APIError.serverError(statusCode: response.statusCode, message: "error_weak_password".localized)
+        }
+        
+        // 401 Unauthorized -> session expired
+        if response.statusCode == 401 || errorString?.caseInsensitiveCompare("unauthorized") == .orderedSame {
+            throw APIError.serverError(statusCode: response.statusCode, message: "session_expired".localized)
+        }
+        
+        // Если есть "error" от нашего бэкенда — показывать его
+        var backendError: String?
+        if let errStr = errorString, !errStr.isEmpty,
+           errStr.caseInsensitiveCompare("forbidden") != .orderedSame,
+           errStr.caseInsensitiveCompare("unauthorized") != .orderedSame {
+            backendError = errStr
+        } else if let errObj = rawError as? [String: Any],
+                  let message = (errObj["message"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !message.isEmpty,
+                  message.caseInsensitiveCompare("forbidden") != .orderedSame,
+                  message.caseInsensitiveCompare("unauthorized") != .orderedSame {
+            backendError = message
+        }
+        
+        if let backendError {
+            throw APIError.serverError(statusCode: response.statusCode, message: backendError)
+        }
+        
+        // Иначе по коду
+        switch response.statusCode {
+        case 403:
+            throw APIError.serverError(statusCode: response.statusCode, message: "error_forbidden".localized)
+        case 404:
+            throw APIError.serverError(statusCode: response.statusCode, message: "error_not_found".localized)
+        case 500...599:
+            throw APIError.serverError(statusCode: response.statusCode, message: "error_server_unavailable".localized)
         default:
-            return message
+            throw APIError.serverError(statusCode: response.statusCode, message: "error_generic".localized)
         }
     }
     
@@ -382,24 +459,40 @@ actor APIClient {
             }
             
             guard let refreshToken = TokenStorage.shared.getRefreshToken() else {
+                TokenStorage.shared.clear()
                 NotificationCenter.default.post(name: .unauthorizedNotification, object: nil)
                 throw APIError.unauthorized
             }
             
             let refreshReq = RefreshRequest(refreshToken: refreshToken)
-            let tokenResponse: TokenResponse = try await supabaseAuthRequest(
-                "/auth/v1/token?grant_type=refresh_token",
-                method: "POST",
-                body: try JSONEncoder().encode(refreshReq)
-            )
-            
-            // Сохраняем новые токены в Keychain
-            _ = TokenStorage.shared.saveTokens(
-                accessToken: tokenResponse.accessToken,
-                refreshToken: tokenResponse.refreshToken
-            )
-            
-            return tokenResponse.accessToken
+            do {
+                let tokenResponse: TokenResponse = try await supabaseAuthRequest(
+                    "/auth/v1/token?grant_type=refresh_token",
+                    method: "POST",
+                    body: try JSONEncoder().encode(refreshReq)
+                )
+                
+                // Сохраняем новые токены в Keychain
+                _ = TokenStorage.shared.saveTokens(
+                    accessToken: tokenResponse.accessToken,
+                    refreshToken: tokenResponse.refreshToken
+                )
+                
+                return tokenResponse.accessToken
+            } catch let error as APIError {
+                switch error {
+                case .serverError(let statusCode, _) where statusCode == 400 || statusCode == 401 || statusCode == 403:
+                    TokenStorage.shared.clear()
+                    NotificationCenter.default.post(name: .unauthorizedNotification, object: nil)
+                    throw APIError.unauthorized
+                case .unauthorized:
+                    TokenStorage.shared.clear()
+                    NotificationCenter.default.post(name: .unauthorizedNotification, object: nil)
+                    throw APIError.unauthorized
+                default:
+                    throw error
+                }
+            }
         }
         
         self.refreshTask = task
@@ -429,12 +522,6 @@ actor APIClient {
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.noData
-        }
-
-        if httpResponse.statusCode == 401 || httpResponse.statusCode == 403 {
-            TokenStorage.shared.clear()
-            NotificationCenter.default.post(name: .unauthorizedNotification, object: nil)
-            throw APIError.unauthorized
         }
 
         try checkResponse(httpResponse, data: data)

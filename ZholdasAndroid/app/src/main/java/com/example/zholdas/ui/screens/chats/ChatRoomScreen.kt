@@ -1,5 +1,8 @@
 package com.example.zholdas.ui.screens.chats
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -15,8 +18,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.BrokenImage
 import androidx.compose.material.icons.filled.ChatBubbleOutline
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -25,10 +31,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
 import com.example.zholdas.data.local.localized
 import com.example.zholdas.data.model.ChatMessage
 import com.example.zholdas.data.model.ChatSession
@@ -49,6 +61,20 @@ fun ChatRoomScreen(
     val isConnected by viewModel.isRoomConnected.collectAsState()
     var messageText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
+    val context = LocalContext.current
+    var fullScreenImageUrl by remember { mutableStateOf<String?>(null) }
+
+    val photoPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.sendRoomPhoto(
+                eventId = session.id,
+                contentResolver = context.contentResolver,
+                uri = uri
+            )
+        }
+    }
 
     // Lifecycle: Connect WebSocket on enter & disconnect on exit
     LaunchedEffect(session.id) {
@@ -208,7 +234,11 @@ fun ChatRoomScreen(
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         items(messages, key = { it.id }) { msg ->
-                            EventMessageBubble(message = msg)
+                            EventMessageBubble(
+                                message = msg,
+                                backendBaseUrl = viewModel.backendBaseUrl,
+                                onImageClick = { fullScreenImageUrl = it }
+                            )
                         }
 
                         if (isAiThinking) {
@@ -302,6 +332,27 @@ fun ChatRoomScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
+                        if (session.id != ChatViewModel.AI_SESSION_ID && session.category != "ai") {
+                            IconButton(
+                                onClick = {
+                                    photoPicker.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    )
+                                },
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                                    .background(ZholdasElevatedSurface)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AttachFile,
+                                    contentDescription = "chat_attach_photo".localized,
+                                    tint = ZholdasTextSecondary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+
                         OutlinedTextField(
                             value = messageText,
                             onValueChange = { messageText = it },
@@ -356,12 +407,55 @@ fun ChatRoomScreen(
             }
         }
     }
+
+    if (fullScreenImageUrl != null) {
+        Dialog(
+            onDismissRequest = { fullScreenImageUrl = null },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.95f))
+                    .clickable { fullScreenImageUrl = null },
+                contentAlignment = Alignment.Center
+            ) {
+                AsyncImage(
+                    model = fullScreenImageUrl,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentScale = ContentScale.Fit
+                )
+                IconButton(
+                    onClick = { fullScreenImageUrl = null },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .statusBarsPadding()
+                        .padding(16.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "close",
+                        tint = Color.White
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
-fun EventMessageBubble(message: ChatMessage) {
+fun EventMessageBubble(
+    message: ChatMessage,
+    backendBaseUrl: String = "",
+    onImageClick: (String) -> Unit = {}
+) {
     val isUser = message.isCurrentUser
     val isAI = message.senderID == "ai_zhorik" || message.senderName.contains("Жорик")
+    val isPhoto = message.text.startsWith("[photo]")
+    val isPendingUpload = isPhoto && message.dbID == null && (message.text == "[photo] (загрузка...)" || message.text.trim() == "[photo]")
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -404,7 +498,7 @@ fun EventMessageBubble(message: ChatMessage) {
                 .background(
                     when {
                         isUser -> Brush.linearGradient(listOf(ZholdasAccent, ZholdasAccentDeep))
-                        isAI -> Brush.linearGradient(listOf(Color(0xFF2E1A5A), ZholdasElevatedSurface))
+                        isAI -> Brush.linearGradient(listOf(ZholdasPanel, ZholdasElevatedSurface))
                         else -> Brush.linearGradient(listOf(ZholdasElevatedSurface, ZholdasSurface))
                     }
                 )
@@ -422,15 +516,105 @@ fun EventMessageBubble(message: ChatMessage) {
                         bottomEnd = if (isUser) 4.dp else 18.dp
                     )
                 )
-                .padding(horizontal = 14.dp, vertical = 10.dp)
+                .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(
-                    text = message.text,
-                    color = ZholdasTextPrimary,
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp
-                )
+                if (isPhoto) {
+                    if (isPendingUpload) {
+                        Box(
+                            modifier = Modifier
+                                .width(200.dp)
+                                .height(150.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(Color.White.copy(alpha = 0.08f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(28.dp),
+                                    color = if (isUser) Color.White else ZholdasAccent,
+                                    strokeWidth = 2.5.dp
+                                )
+                                Text(
+                                    text = "chat_photo_uploading".localized,
+                                    color = if (isUser) Color.White.copy(alpha = 0.8f) else ZholdasTextSecondary,
+                                    fontSize = 11.sp
+                                )
+                            }
+                        }
+                    } else {
+                        val rawUrl = message.text.removePrefix("[photo]").trim()
+                        val fullUrl = if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) {
+                            rawUrl
+                        } else {
+                            val base = backendBaseUrl.trimEnd('/')
+                            val path = if (rawUrl.startsWith("/")) rawUrl else "/$rawUrl"
+                            base + path
+                        }
+
+                        SubcomposeAsyncImage(
+                            model = fullUrl,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .widthIn(max = 240.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { onImageClick(fullUrl) },
+                            contentScale = ContentScale.FillWidth,
+                            loading = {
+                                Box(
+                                    modifier = Modifier
+                                        .width(200.dp)
+                                        .height(150.dp)
+                                        .background(Color.White.copy(alpha = 0.05f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        color = if (isUser) Color.White else ZholdasAccent,
+                                        strokeWidth = 2.dp
+                                    )
+                                }
+                            },
+                            error = {
+                                Box(
+                                    modifier = Modifier
+                                        .width(200.dp)
+                                        .height(110.dp)
+                                        .background(Color.White.copy(alpha = 0.05f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.BrokenImage,
+                                            contentDescription = null,
+                                            tint = if (isUser) Color.White.copy(alpha = 0.7f) else ZholdasTextTertiary,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                        Text(
+                                            text = "chat_photo_load_error".localized,
+                                            color = if (isUser) Color.White.copy(alpha = 0.7f) else ZholdasTextTertiary,
+                                            fontSize = 11.sp
+                                        )
+                                    }
+                                }
+                            }
+                        )
+                    }
+                } else {
+                    Text(
+                        text = message.text,
+                        color = if (isUser) Color.White else ZholdasTextPrimary,
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp
+                    )
+                }
+
                 Text(
                     text = message.timestamp,
                     color = if (isUser) Color.White.copy(alpha = 0.7f) else ZholdasTextTertiary,

@@ -13,6 +13,7 @@ import com.example.zholdas.data.model.LocationRequest
 import com.example.zholdas.data.model.Participant
 import com.example.zholdas.data.model.ParticipantStatusRequest
 import com.example.zholdas.data.remote.APIClient
+import com.example.zholdas.data.remote.toUserMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -59,7 +60,7 @@ class EventsViewModel(
         try {
             _currentUserID.value = apiClient.apiService.getProfile().id
         } catch (e: Exception) {
-            _errorMessage.value = e.message ?: "Unable to load your events"
+            _errorMessage.value = e.toUserMessage()
         }
     }
 
@@ -117,7 +118,7 @@ class EventsViewModel(
                 _events.value = fetched
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to load events from API: ${e.message}")
-                _errorMessage.value = e.message ?: "Unable to load events"
+                _errorMessage.value = e.toUserMessage()
             } finally {
                 _isLoading.value = false
             }
@@ -134,7 +135,7 @@ class EventsViewModel(
                 onResult?.invoke(true)
             } catch (e: Exception) {
                 Log.w(TAG, "joinEvent API error: ${e.message}")
-                _errorMessage.value = e.message ?: "Unable to join event"
+                _errorMessage.value = e.toUserMessage()
                 onResult?.invoke(false)
             } finally {
                 _isLoading.value = false
@@ -152,7 +153,7 @@ class EventsViewModel(
                 onResult?.invoke(true)
             } catch (e: Exception) {
                 Log.w(TAG, "leaveEvent API error: ${e.message}")
-                _errorMessage.value = e.message ?: "Unable to leave event"
+                _errorMessage.value = e.toUserMessage()
                 onResult?.invoke(false)
             } finally {
                 _isLoading.value = false
@@ -165,7 +166,7 @@ class EventsViewModel(
             apiClient.apiService.getEventParticipants(eventId)
         } catch (e: Exception) {
             Log.w(TAG, "fetchParticipants error: ${e.message}")
-            _errorMessage.value = e.message ?: "Unable to load participants"
+            _errorMessage.value = e.toUserMessage()
             emptyList()
         }
     }
@@ -184,7 +185,7 @@ class EventsViewModel(
         apiClient.apiService.updateParticipantStatus(eventId, ParticipantStatusRequest(status))
         true
     } catch (e: Exception) {
-        _errorMessage.value = e.message ?: "Не удалось обновить статус"
+        _errorMessage.value = e.toUserMessage()
         false
     }
 
@@ -193,7 +194,7 @@ class EventsViewModel(
         apiClient.apiService.markArrived(eventId, LocationRequest(latitude, longitude, accuracy))
         true
     } catch (e: Exception) {
-        _errorMessage.value = e.message ?: "Не удалось отметить прибытие"
+        _errorMessage.value = e.toUserMessage()
         false
     }
 
@@ -202,14 +203,14 @@ class EventsViewModel(
         apiClient.apiService.updateLiveLocation(eventId, LocationRequest(latitude, longitude, accuracy))
         true
     } catch (e: Exception) {
-        _errorMessage.value = e.message ?: "Не удалось передать геопозицию"
+        _errorMessage.value = e.toUserMessage()
         false
     }
 
     suspend fun fetchLiveLocations(eventId: Int): List<EventLiveLocation> = try {
         apiClient.apiService.getLiveLocations(eventId)
     } catch (e: Exception) {
-        _errorMessage.value = e.message ?: "Не удалось загрузить геопозиции"
+        _errorMessage.value = e.toUserMessage()
         emptyList()
     }
 
@@ -217,7 +218,7 @@ class EventsViewModel(
         apiClient.apiService.stopLiveLocation(eventId)
         true
     } catch (e: Exception) {
-        _errorMessage.value = e.message ?: "Не удалось остановить передачу геопозиции"
+        _errorMessage.value = e.toUserMessage()
         false
     }
 
@@ -263,7 +264,7 @@ class EventsViewModel(
                 onResult?.invoke(true)
             } catch (e: Exception) {
                 Log.w(TAG, "createEvent API error: ${e.message}")
-                _errorMessage.value = e.message ?: "Unable to create event"
+                _errorMessage.value = e.toUserMessage()
                 onResult?.invoke(false)
             } finally {
                 _isLoading.value = false

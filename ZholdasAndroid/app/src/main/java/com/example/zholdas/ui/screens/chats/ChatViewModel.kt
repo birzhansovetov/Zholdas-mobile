@@ -1,5 +1,7 @@
 package com.example.zholdas.ui.screens.chats
 
+import android.content.ContentResolver
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -13,28 +15,94 @@ import com.example.zholdas.data.model.ChatSession
 import com.example.zholdas.data.model.SendMessageRequest
 import com.example.zholdas.data.remote.APIClient
 import com.example.zholdas.data.remote.ChatWebSocketManager
+import com.example.zholdas.ui.screens.events.EventImageUploader
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
-import java.util.Date
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.LocalTime
+import java.time.OffsetDateTime
+import java.time.ZoneId
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.UUID
 
-class ChatViewModel(private val apiClient: APIClient, private val tokenManager: TokenManager) : ViewModel() {
+class ChatViewModel(
+    private val apiClient: APIClient,
+    private val tokenManager: TokenManager,
+    initialUserId: String = ""
+) : ViewModel() {
     companion object {
         private const val TAG = "ChatViewModel"
-        const val AI_SESSION_ID = 999
-        fun formatCurrentTime() = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+        const val AI_SESSION_ID = -1
+
+        private val TIME_FORMAT_TODAY = DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
+        private val TIME_FORMAT_OTHER_DAY = DateTimeFormatter.ofPattern("dd.MM HH:mm", Locale.getDefault())
+
+        fun formatCurrentTime(): String =
+            LocalTime.now(ZoneId.systemDefault()).format(TIME_FORMAT_TODAY)
+
         fun formatTimeFromIsoOrCurrent(value: String): String = try {
-            if (value.isBlank()) formatCurrentTime()
-            else if (value.length <= 5 && value.contains(":")) value
-            else SimpleDateFormat("HH:mm", Locale.getDefault()).format(
-                SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).parse(value) ?: Date()
-            )
-        } catch (_: Exception) { formatCurrentTime() }
+            val trimmed = value.trim()
+            if (trimmed.isBlank()) {
+                formatCurrentTime()
+            } else if (trimmed.length <= 5 && trimmed.contains(":")) {
+                trimmed
+            } else {
+                val zone = ZoneId.systemDefault()
+                val zonedDateTime = parseIsoToZonedDateTime(trimmed, zone)
+                val today = LocalDate.now(zone)
+                if (zonedDateTime.toLocalDate() == today) {
+                    zonedDateTime.format(TIME_FORMAT_TODAY)
+                } else {
+                    zonedDateTime.format(TIME_FORMAT_OTHER_DAY)
+                }
+            }
+        } catch (_: Exception) {
+            formatCurrentTime()
+        }
+
+        private fun parseIsoToZonedDateTime(value: String, zone: ZoneId): ZonedDateTime {
+            return try {
+                Instant.parse(value).atZone(zone)
+            } catch (_: Exception) {
+                try {
+                    OffsetDateTime.parse(value).atZoneSameInstant(zone)
+                } catch (_: Exception) {
+                    try {
+                        LocalDateTime.parse(value).atZone(ZoneOffset.UTC).withZoneSameInstant(zone)
+                    } catch (_: Exception) {
+                        LocalDateTime.parse(value).atZone(zone)
+                    }
+                }
+            }
+        }
+    }
+
+    val backendBaseUrl: String
+        get() = apiClient.backendBaseUrl
+
+    private var currentUserId: String = initialUserId
+
+    fun setCurrentUserId(id: String) {
+        if (id.isNotBlank() && id != currentUserId) {
+            currentUserId = id
+            _currentChatMessages.update { list ->
+                list.map { msg ->
+                    if (msg.senderID != null && msg.senderID == id && !msg.isCurrentUser) {
+                        msg.copy(isCurrentUser = true)
+                    } else {
+                        msg
+                    }
+                }
+            }
+        }
     }
 
     private val _chatSessions = MutableStateFlow<List<ChatSession>>(emptyList())
@@ -62,8 +130,25 @@ class ChatViewModel(private val apiClient: APIClient, private val tokenManager: 
     private val _isAiThinking = MutableStateFlow(false)
     val isAiThinking = _isAiThinking.asStateFlow()
     private var webSocketManager: ChatWebSocketManager? = null
+    private var currentRoomId: Int? = null
 
-    init { fetchChatSessions() }
+    init {
+        fetchChatSessions()
+        if (currentUserId.isBlank()) {
+            loadCurrentUserId()
+        }
+    }
+
+    private fun loadCurrentUserId() = viewModelScope.launch {
+        try {
+            val profile = apiClient.apiService.getProfile()
+            if (profile.id.isNotBlank()) {
+                setCurrentUserId(profile.id)
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to load current user profile", e)
+        }
+    }
     fun setSearchQuery(query: String) { _searchQuery.value = query }
 
     fun fetchChatSessions() = viewModelScope.launch {
@@ -73,7 +158,7 @@ class ChatViewModel(private val apiClient: APIClient, private val tokenManager: 
             _chatSessions.value = listOf(aiSession()) + apiClient.apiService.getChatSessions()
         } catch (e: Exception) {
             Log.w(TAG, "Failed to load chats", e)
-            _chatSessions.value = emptyList()
+            _chatSessions.value = listOf(aiSession())
             _errorMessage.value = "chat_load_error".localized
         } finally { _isLoading.value = false }
     }
@@ -88,20 +173,52 @@ class ChatViewModel(private val apiClient: APIClient, private val tokenManager: 
 
     fun connectToRoom(eventId: Int) {
         disconnectFromRoom()
+        currentRoomId = eventId
         markSessionRead(eventId)
         loadRoomHistory(eventId)
-        ChatWebSocketManager(eventId, tokenManager, apiClient.backendBaseUrl.replaceFirst("http", "ws")).also { ws ->
+        ChatWebSocketManager(
+            eventId,
+            tokenManager,
+            apiClient.backendBaseUrl.replaceFirst("http", "ws"),
+            refreshSession = { runCatching { apiClient.apiService.getProfile() }.isSuccess }
+        ).also { ws ->
             webSocketManager = ws
             ws.onConnectionStateChanged = { _isRoomConnected.value = it }
+            ws.onReconnected = {
+                reloadAndMergeRoomHistory(eventId)
+            }
             ws.onMessageReceived = { response ->
                 val message = response.toChatMessage()
-                _currentChatMessages.update { list -> if (list.none { it.dbID == message.dbID }) list + message else list }
+                _currentChatMessages.update { list ->
+                    if (list.any { it.dbID == message.dbID }) {
+                        list
+                    } else {
+                        val pendingIndex = if (message.isCurrentUser || (currentUserId.isNotBlank() && response.senderID == currentUserId)) {
+                            list.indexOfFirst {
+                                it.dbID == null && it.isCurrentUser && (
+                                    it.text == message.text ||
+                                    (message.text.startsWith("[photo]") && it.text.startsWith("[photo]"))
+                                )
+                            }
+                        } else {
+                            -1
+                        }
+                        if (pendingIndex != -1) {
+                            list.toMutableList().apply {
+                                this[pendingIndex] = message.copy(id = list[pendingIndex].id, isCurrentUser = true)
+                            }
+                        } else {
+                            list + message
+                        }
+                    }
+                }
             }
             ws.connect()
         }
     }
 
     fun disconnectFromRoom() {
+        currentRoomId = null
         webSocketManager?.disconnect()
         webSocketManager = null
         _isRoomConnected.value = false
@@ -111,43 +228,190 @@ class ChatViewModel(private val apiClient: APIClient, private val tokenManager: 
         _isRoomLoading.value = true
         _roomError.value = null
         _currentChatMessages.value = emptyList()
-        try { _currentChatMessages.value = apiClient.apiService.getEventMessages(eventId).map { it.toChatMessage() } }
-        catch (e: Exception) {
+        try {
+            if (currentUserId.isBlank()) {
+                try {
+                    val profile = apiClient.apiService.getProfile()
+                    if (profile.id.isNotBlank()) {
+                        currentUserId = profile.id
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to load current user profile", e)
+                }
+            }
+            val messages = apiClient.apiService.getEventMessages(eventId).map { it.toChatMessage() }
+            if (currentRoomId != eventId) return@launch
+            _currentChatMessages.value = messages
+        } catch (e: Exception) {
             Log.w(TAG, "Failed to load room history", e)
             _roomError.value = "chat_messages_load_error".localized
         } finally { _isRoomLoading.value = false }
     }
 
+    private fun reloadAndMergeRoomHistory(eventId: Int) = viewModelScope.launch {
+        try {
+            if (currentUserId.isBlank()) {
+                try {
+                    val profile = apiClient.apiService.getProfile()
+                    if (profile.id.isNotBlank()) {
+                        currentUserId = profile.id
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to load current user profile", e)
+                }
+            }
+            val serverMessages = apiClient.apiService.getEventMessages(eventId).map { it.toChatMessage() }
+            if (currentRoomId != eventId) return@launch
+            _currentChatMessages.update { currentList ->
+                val existingByDbId = currentList.filter { it.dbID != null }.associateBy { it.dbID }
+                val pendingMessages = currentList.filter { it.dbID == null }.toMutableList()
+
+                val mergedServerMessages = serverMessages.map { serverMsg ->
+                    val existing = existingByDbId[serverMsg.dbID]
+                    if (existing != null) {
+                        serverMsg.copy(id = existing.id)
+                    } else {
+                        val pendingIndex = pendingMessages.indexOfFirst {
+                            it.isCurrentUser && (
+                                it.text == serverMsg.text ||
+                                (serverMsg.text.startsWith("[photo]") && it.text.startsWith("[photo]"))
+                            )
+                        }
+                        if (pendingIndex != -1) {
+                            val matchedPending = pendingMessages.removeAt(pendingIndex)
+                            serverMsg.copy(id = matchedPending.id, isCurrentUser = true)
+                        } else {
+                            serverMsg
+                        }
+                    }
+                }
+
+                val serverDbIds = serverMessages.mapNotNull { it.dbID }.toSet()
+                val unrepresented = currentList.filter { it.dbID != null && it.dbID !in serverDbIds }
+                val confirmedMessages = (mergedServerMessages + unrepresented).sortedBy { it.dbID ?: 0 }
+
+                confirmedMessages + pendingMessages
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to reload and merge room history on reconnect", e)
+        }
+    }
+
     private fun com.example.zholdas.data.model.EventMessageResponse.toChatMessage() = ChatMessage(
-        id = UUID.randomUUID().toString(), senderName = senderName.ifEmpty { senderUsername },
-        senderAvatarURL = senderAvatarURL, text = text, timestamp = formatTimeFromIsoOrCurrent(createdAt),
-        isCurrentUser = false, dbID = id, senderID = senderID
+        id = UUID.randomUUID().toString(),
+        senderName = senderName.ifEmpty { senderUsername },
+        senderAvatarURL = senderAvatarURL,
+        text = text,
+        timestamp = formatTimeFromIsoOrCurrent(createdAt),
+        isCurrentUser = senderID.isNotBlank() && senderID == currentUserId,
+        dbID = id,
+        senderID = senderID
     )
 
-    fun sendRoomMessage(eventId: Int, text: String, currentUserId: String = "me", currentUserName: String = "chat_prefix_you".localized.removeSuffix(": "), avatarUrl: String? = null) {
+    fun sendRoomMessage(
+        eventId: Int,
+        text: String,
+        currentUserId: String = this.currentUserId.ifBlank { "me" },
+        currentUserName: String = "chat_prefix_you".localized.removeSuffix(": "),
+        avatarUrl: String? = null
+    ) {
         val clean = text.trim(); if (clean.isEmpty()) return
         val localId = UUID.randomUUID().toString()
-        _currentChatMessages.update { it + ChatMessage(localId, currentUserName, avatarUrl, clean, formatCurrentTime(), true, senderID = currentUserId) }
+        val effectiveUserId = if (currentUserId != "me" && currentUserId.isNotBlank()) currentUserId else this.currentUserId.ifBlank { "me" }
+        _currentChatMessages.update {
+            it + ChatMessage(
+                id = localId,
+                senderName = currentUserName,
+                senderAvatarURL = avatarUrl,
+                text = clean,
+                timestamp = formatCurrentTime(),
+                isCurrentUser = true,
+                senderID = effectiveUserId
+            )
+        }
         viewModelScope.launch {
             try {
                 val sent = apiClient.apiService.sendEventMessage(eventId, SendMessageRequest(clean))
-                _currentChatMessages.update { list -> list.map { if (it.id == localId) it.copy(dbID = sent.id, timestamp = formatTimeFromIsoOrCurrent(sent.createdAt)) else it } }
-                if (clean.contains("@ai", true) || clean.contains("@жорик", true) || clean.contains("@zhorik", true)) requestRoomAI(clean)
+                if (this@ChatViewModel.currentUserId.isBlank() && sent.senderID.isNotBlank()) {
+                    setCurrentUserId(sent.senderID)
+                }
+                _currentChatMessages.update { list ->
+                    list.map {
+                        if (it.id == localId) {
+                            it.copy(
+                                dbID = sent.id,
+                                senderID = sent.senderID.ifBlank { effectiveUserId },
+                                timestamp = formatTimeFromIsoOrCurrent(sent.createdAt)
+                            )
+                        } else {
+                            it
+                        }
+                    }
+                }
             } catch (e: Exception) {
-                _currentChatMessages.update { list -> list.filterNot { it.id == localId } }
+                _currentChatMessages.update { list -> list.filterNot { it.id == localId && it.dbID == null } }
                 _roomError.value = "chat_send_error".localized
             }
         }
     }
 
-    private fun requestRoomAI(text: String) = viewModelScope.launch {
-        _isAiThinking.value = true
-        try {
-            val prompt = text.replace("@ai", "", true).replace("@жорик", "", true).replace("@zhorik", "", true).trim()
-            val reply = apiClient.apiService.chatWithAI(AIChatRequest(prompt)).reply
-            _currentChatMessages.update { it + ChatMessage(UUID.randomUUID().toString(), "chat_ai_assistant_name".localized, text = reply, timestamp = formatCurrentTime(), isCurrentUser = false, senderID = "ai_zhorik") }
-        } catch (e: Exception) { _roomError.value = "chat_ai_unavailable".localized }
-        finally { _isAiThinking.value = false }
+    fun sendRoomPhoto(
+        eventId: Int,
+        contentResolver: ContentResolver,
+        uri: Uri,
+        currentUserId: String = this.currentUserId.ifBlank { "me" },
+        currentUserName: String = "chat_prefix_you".localized.removeSuffix(": "),
+        avatarUrl: String? = null
+    ) {
+        val localId = UUID.randomUUID().toString()
+        val placeholderText = "[photo] (загрузка...)"
+        val effectiveUserId = if (currentUserId != "me" && currentUserId.isNotBlank()) currentUserId else this.currentUserId.ifBlank { "me" }
+
+        _currentChatMessages.update {
+            it + ChatMessage(
+                id = localId,
+                senderName = currentUserName,
+                senderAvatarURL = avatarUrl,
+                text = placeholderText,
+                timestamp = formatCurrentTime(),
+                isCurrentUser = true,
+                senderID = effectiveUserId
+            )
+        }
+
+        viewModelScope.launch {
+            try {
+                val uploadedUrl = EventImageUploader.upload(contentResolver, uri, apiClient)
+                val photoText = "[photo] $uploadedUrl"
+                val sent = apiClient.apiService.sendEventMessage(eventId, SendMessageRequest(photoText))
+                if (this@ChatViewModel.currentUserId.isBlank() && sent.senderID.isNotBlank()) {
+                    setCurrentUserId(sent.senderID)
+                }
+                _currentChatMessages.update { list ->
+                    val alreadyMerged = list.any { it.dbID == sent.id && it.id != localId }
+                    if (alreadyMerged) {
+                        list.filterNot { it.id == localId }
+                    } else {
+                        list.map {
+                            if (it.id == localId) {
+                                it.copy(
+                                    dbID = sent.id,
+                                    senderID = sent.senderID.ifBlank { effectiveUserId },
+                                    text = sent.text.ifBlank { photoText },
+                                    timestamp = formatTimeFromIsoOrCurrent(sent.createdAt)
+                                )
+                            } else {
+                                it
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to send photo", e)
+                _currentChatMessages.update { list -> list.filterNot { it.id == localId && it.dbID == null } }
+                _roomError.value = "chat_send_error".localized
+            }
+        }
     }
 
     fun sendPersonalAIMessage(text: String) {
@@ -168,9 +432,13 @@ class ChatViewModel(private val apiClient: APIClient, private val tokenManager: 
 
     override fun onCleared() { disconnectFromRoom(); super.onCleared() }
 
-    class Factory(private val apiClient: APIClient, private val tokenManager: TokenManager) : ViewModelProvider.Factory {
+    class Factory(
+        private val apiClient: APIClient,
+        private val tokenManager: TokenManager,
+        private val currentUserId: String = ""
+    ) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            @Suppress("UNCHECKED_CAST") return ChatViewModel(apiClient, tokenManager) as T
+            @Suppress("UNCHECKED_CAST") return ChatViewModel(apiClient, tokenManager, currentUserId) as T
         }
     }
 }
