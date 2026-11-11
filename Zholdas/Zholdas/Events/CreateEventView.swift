@@ -507,7 +507,7 @@ struct CreateEventView: View {
                             }
                             .primaryActionSurface()
                         }
-                        .disabled(title.isEmpty || description.isEmpty || locationName.isEmpty || selectedCoordinate == nil || eventsViewModel.isLoading)
+                        .disabled(title.isEmpty || description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || locationName.isEmpty || selectedCoordinate == nil || eventsViewModel.isLoading)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 24)
@@ -555,7 +555,7 @@ struct CreateEventView: View {
         Task {
             let success = await eventsViewModel.createEvent(
                 title: title,
-                description: description,
+                description: description.trimmingCharacters(in: .whitespacesAndNewlines),
                 category: category,
                 locationName: locationName,
                 latitude: latitude,

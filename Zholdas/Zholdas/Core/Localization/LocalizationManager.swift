@@ -315,6 +315,16 @@ class LocalizationManager: ObservableObject {
             "kk": "Жорик чеклист дайындап жатыр...",
             "en": "Joryk is preparing your checklist..."
         ],
+        "ev_reminder_title": [
+            "ru": "Напоминание",
+            "kk": "Ескерту",
+            "en": "Reminder"
+        ],
+        "ev_reminder_placeholder": [
+            "ru": "Напоминание появится в приложении перед началом события",
+            "kk": "Ескерту оқиға басталар алдында қосымшада пайда болады",
+            "en": "A reminder will appear in the app before the event starts"
+        ],
         "ev_live_location_title": [
             "ru": "Локация участников",
             "kk": "Қатысушылар локациясы",

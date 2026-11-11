@@ -207,9 +207,10 @@ struct EditEventView: View {
                             .padding()
                             .background(ZholdasTheme.accentGradient)
                             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .opacity(description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.6 : 1.0)
                         }
                         .buttonStyle(.plain)
-                        .disabled(isSaving)
+                        .disabled(isSaving || description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                     }
                     .padding(20)
                 }
