@@ -17,6 +17,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -65,6 +67,9 @@ fun RegisterScreen(
     // Steppers and selectors
     var selectedAge by remember { mutableStateOf(20) }
     var selectedGender by remember { mutableStateOf("male") }
+    var selectedCity by remember { mutableStateOf("Алматы") }
+    var cityExpanded by remember { mutableStateOf(false) }
+    val cities = listOf("Алматы", "Астана", "Шымкент", "Караганда")
     var selectedPhotoUri by remember { mutableStateOf<Uri?>(null) }
     var selectedPhotoBytes by remember { mutableStateOf<ByteArray?>(null) }
 
@@ -580,7 +585,75 @@ fun RegisterScreen(
 
                 Spacer(modifier = Modifier.height(18.dp))
 
-                // 8. About Me (Bio)
+                // 8. City Picker
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "reg_city_label".localized,
+                        color = ZholdasTextSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.5.sp
+                    )
+
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(56.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(ZholdasElevatedSurface)
+                                .border(1.dp, ZholdasBorder, RoundedCornerShape(12.dp))
+                                .clickable { cityExpanded = true }
+                                .padding(horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.LocationCity,
+                                    contentDescription = null,
+                                    tint = ZholdasTextSecondary,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Text(
+                                    text = selectedCity.ifEmpty { "edit_prof_city_placeholder".localized },
+                                    color = if (selectedCity.isEmpty()) ZholdasTextTertiary else ZholdasTextPrimary,
+                                    fontSize = 16.sp
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = null,
+                                tint = ZholdasTextSecondary
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = cityExpanded,
+                            onDismissRequest = { cityExpanded = false },
+                            modifier = Modifier.background(ZholdasElevatedSurface)
+                        ) {
+                            cities.forEach { option ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Text(text = option, color = ZholdasTextPrimary)
+                                    },
+                                    onClick = {
+                                        selectedCity = option
+                                        cityExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(18.dp))
+
+                // 9. About Me (Bio)
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         text = "reg_bio_label".localized,
@@ -723,7 +796,7 @@ fun RegisterScreen(
                             fullName = fullName,
                             avatarURL = avatarURL,
                             bio = bio.trim().ifEmpty { null },
-                            city = "Алматы",
+                            city = selectedCity,
                             photoData = selectedPhotoBytes,
                             gender = selectedGender,
                             birthYear = birthYear

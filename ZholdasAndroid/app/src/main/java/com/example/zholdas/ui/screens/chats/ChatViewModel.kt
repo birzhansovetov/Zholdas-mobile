@@ -1,5 +1,7 @@
 package com.example.zholdas.ui.screens.chats
 
+import android.content.ContentResolver
+import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -13,6 +15,7 @@ import com.example.zholdas.data.model.ChatSession
 import com.example.zholdas.data.model.SendMessageRequest
 import com.example.zholdas.data.remote.APIClient
 import com.example.zholdas.data.remote.ChatWebSocketManager
+import com.example.zholdas.ui.screens.events.EventImageUploader
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -81,6 +84,9 @@ class ChatViewModel(
             }
         }
     }
+
+    val backendBaseUrl: String
+        get() = apiClient.backendBaseUrl
 
     private var currentUserId: String = initialUserId
 
@@ -188,7 +194,12 @@ class ChatViewModel(
                         list
                     } else {
                         val pendingIndex = if (message.isCurrentUser || (currentUserId.isNotBlank() && response.senderID == currentUserId)) {
-                            list.indexOfFirst { it.dbID == null && it.isCurrentUser && it.text == message.text }
+                            list.indexOfFirst {
+                                it.dbID == null && it.isCurrentUser && (
+                                    it.text == message.text ||
+                                    (message.text.startsWith("[photo]") && it.text.startsWith("[photo]"))
+                                )
+                            }
                         } else {
                             -1
                         }
@@ -261,7 +272,10 @@ class ChatViewModel(
                         serverMsg.copy(id = existing.id)
                     } else {
                         val pendingIndex = pendingMessages.indexOfFirst {
-                            it.isCurrentUser && it.text == serverMsg.text
+                            it.isCurrentUser && (
+                                it.text == serverMsg.text ||
+                                (serverMsg.text.startsWith("[photo]") && it.text.startsWith("[photo]"))
+                            )
                         }
                         if (pendingIndex != -1) {
                             val matchedPending = pendingMessages.removeAt(pendingIndex)
@@ -335,6 +349,65 @@ class ChatViewModel(
                     }
                 }
             } catch (e: Exception) {
+                _currentChatMessages.update { list -> list.filterNot { it.id == localId && it.dbID == null } }
+                _roomError.value = "chat_send_error".localized
+            }
+        }
+    }
+
+    fun sendRoomPhoto(
+        eventId: Int,
+        contentResolver: ContentResolver,
+        uri: Uri,
+        currentUserId: String = this.currentUserId.ifBlank { "me" },
+        currentUserName: String = "chat_prefix_you".localized.removeSuffix(": "),
+        avatarUrl: String? = null
+    ) {
+        val localId = UUID.randomUUID().toString()
+        val placeholderText = "[photo] (загрузка...)"
+        val effectiveUserId = if (currentUserId != "me" && currentUserId.isNotBlank()) currentUserId else this.currentUserId.ifBlank { "me" }
+
+        _currentChatMessages.update {
+            it + ChatMessage(
+                id = localId,
+                senderName = currentUserName,
+                senderAvatarURL = avatarUrl,
+                text = placeholderText,
+                timestamp = formatCurrentTime(),
+                isCurrentUser = true,
+                senderID = effectiveUserId
+            )
+        }
+
+        viewModelScope.launch {
+            try {
+                val uploadedUrl = EventImageUploader.upload(contentResolver, uri, apiClient)
+                val photoText = "[photo] $uploadedUrl"
+                val sent = apiClient.apiService.sendEventMessage(eventId, SendMessageRequest(photoText))
+                if (this@ChatViewModel.currentUserId.isBlank() && sent.senderID.isNotBlank()) {
+                    setCurrentUserId(sent.senderID)
+                }
+                _currentChatMessages.update { list ->
+                    val alreadyMerged = list.any { it.dbID == sent.id && it.id != localId }
+                    if (alreadyMerged) {
+                        list.filterNot { it.id == localId }
+                    } else {
+                        list.map {
+                            if (it.id == localId) {
+                                it.copy(
+                                    dbID = sent.id,
+                                    senderID = sent.senderID.ifBlank { effectiveUserId },
+                                    text = sent.text.ifBlank { photoText },
+                                    timestamp = formatTimeFromIsoOrCurrent(sent.createdAt)
+                                )
+                            } else {
+                                it
+                            }
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to send photo", e)
                 _currentChatMessages.update { list -> list.filterNot { it.id == localId && it.dbID == null } }
                 _roomError.value = "chat_send_error".localized
             }
