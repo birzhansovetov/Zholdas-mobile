@@ -22,6 +22,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,19 +59,19 @@ fun RegisterScreen(
     val context = LocalContext.current
 
     // Fields
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
-    var fullName by remember { mutableStateOf("") }
-    var bio by remember { mutableStateOf("") }
+    var email by rememberSaveable { mutableStateOf("") }
+    var password by rememberSaveable { mutableStateOf("") }
+    var confirmPassword by rememberSaveable { mutableStateOf("") }
+    var fullName by rememberSaveable { mutableStateOf("") }
+    var bio by rememberSaveable { mutableStateOf("") }
 
     // Steppers and selectors
-    var selectedAge by remember { mutableStateOf(20) }
-    var selectedGender by remember { mutableStateOf("male") }
-    var selectedCity by remember { mutableStateOf("Алматы") }
+    var selectedAge by rememberSaveable { mutableStateOf(20) }
+    var selectedGender by rememberSaveable { mutableStateOf("male") }
+    var selectedCity by rememberSaveable { mutableStateOf("Алматы") }
     var cityExpanded by remember { mutableStateOf(false) }
     val cities = listOf("Алматы", "Астана", "Шымкент", "Караганда")
-    var selectedPhotoUri by remember { mutableStateOf<Uri?>(null) }
+    var selectedPhotoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
     var selectedPhotoBytes by remember { mutableStateOf<ByteArray?>(null) }
 
     // Focus state
@@ -105,6 +106,18 @@ fun RegisterScreen(
             } catch (e: Exception) {
                 Log.e("RegisterScreen", "Failed to read selected photo", e)
                 localError = "reg_photo_error".localized
+            }
+        }
+    }
+
+    LaunchedEffect(selectedPhotoUri) {
+        if (selectedPhotoUri != null && selectedPhotoBytes == null) {
+            try {
+                context.contentResolver.openInputStream(selectedPhotoUri!!)?.use { inputStream ->
+                    selectedPhotoBytes = inputStream.readBytes()
+                }
+            } catch (e: Exception) {
+                Log.e("RegisterScreen", "Failed to restore selected photo bytes", e)
             }
         }
     }

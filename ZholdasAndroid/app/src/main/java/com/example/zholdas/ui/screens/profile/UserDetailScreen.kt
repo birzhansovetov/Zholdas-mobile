@@ -510,11 +510,7 @@ fun UserDetailScreen(
                         Icon(Icons.Default.LockOpen, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = when (com.example.zholdas.data.local.Localization.language) {
-                                "kk" -> "Бұғаттан шығару"
-                                "en" -> "Unblock user"
-                                else -> "Разблокировать"
-                            },
+                            text = "user_detail_unblock".localized,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -545,7 +541,7 @@ fun UserDetailScreen(
 
                     if (reviews.isEmpty()) {
                         Text(
-                            text = "Оценок пока нет",
+                            text = "user_detail_no_reviews".localized,
                             color = ZholdasTextSecondary,
                             fontSize = 13.sp
                         )
@@ -662,7 +658,7 @@ private fun ReviewRow(review: UserReview) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = review.reviewerName.ifBlank { "Участник" },
+                text = review.reviewerName.ifBlank { "common_participant".localized },
                 color = ZholdasTextPrimary,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 14.sp

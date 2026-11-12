@@ -300,7 +300,7 @@ fun ProfileScreen(
                             modifier = Modifier.size(48.dp)
                         )
                         Text(
-                            text = errorMessage ?: "Не удалось загрузить профиль",
+                            text = errorMessage ?: "profile_load_error".localized,
                             color = ZholdasTextPrimary,
                             textAlign = TextAlign.Center,
                             fontSize = 16.sp
@@ -663,21 +663,13 @@ private fun SettingsSection(
                     Icon(Icons.Default.Palette, contentDescription = null, tint = ZholdasAccent)
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        when (Localization.language) {
-                            "kk" -> "Тақырып"
-                            "en" -> "Theme"
-                            else -> "Тема"
-                        },
+                        "profile_theme".localized,
                         color = ZholdasTextPrimary,
                         fontSize = 15.sp
                     )
                     Spacer(modifier = Modifier.weight(1f))
                     Text(
-                        when (selectedTheme) {
-                            AppTheme.SYSTEM -> themeLabel(AppTheme.SYSTEM)
-                            AppTheme.LIGHT -> themeLabel(AppTheme.LIGHT)
-                            AppTheme.DARK -> themeLabel(AppTheme.DARK)
-                        },
+                        themeLabel(selectedTheme),
                         color = ZholdasAccent,
                         fontSize = 14.sp
                     )
@@ -821,22 +813,10 @@ private fun SettingsSection(
     }
 }
 
-private fun themeLabel(theme: AppTheme): String = when (Localization.language) {
-    "kk" -> when (theme) {
-        AppTheme.SYSTEM -> "Жүйелік"
-        AppTheme.LIGHT -> "Жарық"
-        AppTheme.DARK -> "Қараңғы"
-    }
-    "en" -> when (theme) {
-        AppTheme.SYSTEM -> "System"
-        AppTheme.LIGHT -> "Light"
-        AppTheme.DARK -> "Dark"
-    }
-    else -> when (theme) {
-        AppTheme.SYSTEM -> "Системная"
-        AppTheme.LIGHT -> "Светлая"
-        AppTheme.DARK -> "Тёмная"
-    }
+private fun themeLabel(theme: AppTheme): String = when (theme) {
+    AppTheme.SYSTEM -> "theme_system".localized
+    AppTheme.LIGHT -> "theme_light".localized
+    AppTheme.DARK -> "theme_dark".localized
 }
 
 @Composable

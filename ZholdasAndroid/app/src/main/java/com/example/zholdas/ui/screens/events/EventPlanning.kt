@@ -1,5 +1,6 @@
 package com.example.zholdas.ui.screens.events
 
+import com.example.zholdas.data.local.localized
 import com.example.zholdas.data.model.Event
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -26,13 +27,13 @@ fun filterMyEvents(events: List<Event>, currentUserID: String, filter: MyEventsF
 }
 
 fun preparationCountdown(startTime: String, now: Instant = Instant.now()): String {
-    val start = parseEventInstant(startTime) ?: return "Время начала не указано"
+    val start = parseEventInstant(startTime) ?: return "countdown_no_start_time".localized
     val minutes = (start.epochSecond - now.epochSecond) / 60
     return when {
-        minutes <= 0 -> "Событие уже началось"
-        minutes < 60 -> "До начала $minutes мин"
-        minutes < 1_440 -> "До начала ${minutes / 60} ч ${minutes % 60} мин"
-        else -> "До начала ${minutes / 1_440} дн"
+        minutes <= 0 -> "countdown_already_started".localized
+        minutes < 60 -> String.format("countdown_minutes_format".localized, minutes)
+        minutes < 1_440 -> String.format("countdown_hours_minutes_format".localized, minutes / 60, minutes % 60)
+        else -> String.format("countdown_days_format".localized, minutes / 1_440)
     }
 }
 
