@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewModelScope
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.example.zholdas.data.local.localized
@@ -45,8 +46,11 @@ import com.example.zholdas.data.model.Participant
 import com.example.zholdas.theme.*
 import com.example.zholdas.ui.components.ModernCard
 import com.example.zholdas.ui.components.PrimaryButton
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -73,18 +77,40 @@ fun EventDetailScreen(
     var showPreparation by remember { mutableStateOf(false) }
     var reminderText by remember { mutableStateOf<String?>(null) }
     var pendingLocationAction by remember { mutableStateOf<((Location) -> Unit)?>(null) }
+    var pendingLiveShareRequest by remember { mutableStateOf(false) }
     var showLeaveConfirmDialog by remember { mutableStateOf(false) }
 
+    fun openRoute(ctx: android.content.Context, ev: Event) {
+        val geoUri = Uri.parse("geo:${ev.latitude},${ev.longitude}?q=${ev.latitude},${ev.longitude}(${Uri.encode(ev.locationName)})")
+        val mapIntent = Intent(Intent.ACTION_VIEW, geoUri)
+        try {
+            ctx.startActivity(mapIntent)
+        } catch (_: Exception) {
+            val webUri = Uri.parse("https://www.openstreetmap.org/directions?to=${ev.latitude}%2C${ev.longitude}")
+            val webIntent = Intent(Intent.ACTION_VIEW, webUri)
+            try {
+                ctx.startActivity(webIntent)
+            } catch (_: Exception) {
+                val errorMsg = "ev_route_no_app".localized
+                actionError = errorMsg
+                Toast.makeText(ctx, errorMsg, Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    fun hasLocationPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    }
+
     fun readCurrentLocation(action: (Location) -> Unit) {
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED
-        ) {
+        if (!hasLocationPermission()) {
             pendingLocationAction = action
             return
         }
         locationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
             .addOnSuccessListener { location ->
-                if (location != null) action(location) else actionError = "Не удалось получить текущую геопозицию"
+                if (location != null) action(location) else actionError = "ev_location_get_failed".localized
             }
             .addOnFailureListener { actionError = it.toUserMessage() }
     }
@@ -92,23 +118,52 @@ fun EventDetailScreen(
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        if (permissions.values.any { it }) {
+        val isGranted = permissions.values.any { it }
+        if (isGranted) {
+            if (pendingLiveShareRequest) {
+                isSharingLocation = true
+            }
             pendingLocationAction?.let { action -> readCurrentLocation(action) }
         } else {
-            actionError = "Для этой функции нужен доступ к геопозиции"
+            if (pendingLiveShareRequest) {
+                isSharingLocation = false
+                actionError = "ev_live_location_permission".localized
+            } else {
+                actionError = "ev_location_permission_needed".localized
+            }
         }
+        pendingLiveShareRequest = false
         pendingLocationAction = null
     }
 
     fun withCurrentLocation(action: (Location) -> Unit) {
-        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
-            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
-        ) {
+        if (hasLocationPermission()) {
             readCurrentLocation(action)
         } else {
             pendingLocationAction = action
-            locationPermissionLauncher.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION))
+            locationPermissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
         }
+    }
+
+    suspend fun fetchCurrentLocation(): Location? = suspendCancellableCoroutine { cont ->
+        if (!hasLocationPermission()) {
+            if (cont.isActive) cont.resume(null)
+            return@suspendCancellableCoroutine
+        }
+        val cancellationSource = com.google.android.gms.tasks.CancellationTokenSource()
+        cont.invokeOnCancellation { cancellationSource.cancel() }
+        locationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, cancellationSource.token)
+            .addOnSuccessListener { location ->
+                if (cont.isActive) cont.resume(location)
+            }
+            .addOnFailureListener { exception ->
+                if (cont.isActive) cont.resumeWithException(exception)
+            }
     }
 
     LaunchedEffect(event.id) {
@@ -118,16 +173,55 @@ fun EventDetailScreen(
     }
 
     LaunchedEffect(event.id, isSharingLocation) {
+        if (!isSharingLocation) return@LaunchedEffect
         while (isSharingLocation) {
-            withCurrentLocation { location ->
-                scope.launch {
-                    if (!viewModel.updateLiveLocation(event.id, location.latitude, location.longitude, location.accuracy.toDouble())) {
-                        isSharingLocation = false
-                    }
-                    liveLocations = viewModel.fetchLiveLocations(event.id)
+            try {
+                if (!hasLocationPermission()) {
+                    isSharingLocation = false
+                    viewModel.stopLiveLocation(event.id)
+                    actionError = "ev_live_location_permission".localized
+                    break
                 }
+                val location = fetchCurrentLocation()
+                if (location == null) {
+                    isSharingLocation = false
+                    viewModel.stopLiveLocation(event.id)
+                    actionError = "ev_location_get_failed".localized
+                    break
+                }
+                val success = viewModel.updateLiveLocation(
+                    event.id,
+                    location.latitude,
+                    location.longitude,
+                    location.accuracy.toDouble()
+                )
+                if (!success) {
+                    isSharingLocation = false
+                    viewModel.stopLiveLocation(event.id)
+                    actionError = viewModel.errorMessage.value ?: "ev_live_location_update_failed".localized
+                    break
+                }
+                liveLocations = viewModel.fetchLiveLocations(event.id)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                isSharingLocation = false
+                viewModel.stopLiveLocation(event.id)
+                actionError = e.toUserMessage()
+                break
             }
             delay(30_000)
+        }
+    }
+
+    val currentSharingState by rememberUpdatedState(isSharingLocation)
+    DisposableEffect(event.id) {
+        onDispose {
+            if (currentSharingState) {
+                viewModel.viewModelScope.launch {
+                    viewModel.stopLiveLocation(event.id)
+                }
+            }
         }
     }
 
@@ -568,14 +662,18 @@ fun EventDetailScreen(
                 ) {
                     Icon(Icons.Default.Checklist, null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Подготовиться к событию", fontWeight = FontWeight.Bold)
+                    Text("ev_prepare_btn".localized, fontWeight = FontWeight.Bold)
                 }
 
                 ModernCard {
-                    Text("Статус участия", color = ZholdasTextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text("ev_participation_status".localized, color = ZholdasTextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(10.dp))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("going" to "Иду", "late" to "Опоздаю", "not_going" to "Не приду").forEach { (status, title) ->
+                        listOf(
+                            "going" to "ev_status_going".localized,
+                            "late" to "ev_status_late".localized,
+                            "not_going" to "ev_status_not_going".localized
+                        ).forEach { (status, title) ->
                             FilterChip(
                                 selected = participantStatus == status,
                                 onClick = {
@@ -605,30 +703,49 @@ fun EventDetailScreen(
                         },
                         enabled = participantStatus != "arrived",
                         modifier = Modifier.fillMaxWidth()
-                    ) { Text(if (participantStatus == "arrived") "Вы на месте" else "Я на месте") }
+                    ) { Text(if (participantStatus == "arrived") "ev_you_are_here".localized else "ev_i_am_here".localized) }
 
                     HorizontalDivider(Modifier.padding(vertical = 12.dp), color = Color.White.copy(alpha = .1f))
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
-                            Text("Геопозиция для участников", color = ZholdasTextPrimary, fontWeight = FontWeight.SemiBold)
-                            Text("Обновляется каждые 30 секунд", color = ZholdasTextSecondary, fontSize = 12.sp)
+                            Text("ev_live_location_title".localized, color = ZholdasTextPrimary, fontWeight = FontWeight.SemiBold)
+                            Text("ev_live_location_subtitle".localized, color = ZholdasTextSecondary, fontSize = 12.sp)
                         }
                         Switch(
                             checked = isSharingLocation,
                             onCheckedChange = { enabled ->
-                                isSharingLocation = enabled
-                                if (!enabled) scope.launch { viewModel.stopLiveLocation(event.id) }
+                                if (enabled) {
+                                    if (hasLocationPermission()) {
+                                        isSharingLocation = true
+                                    } else {
+                                        pendingLiveShareRequest = true
+                                        locationPermissionLauncher.launch(
+                                            arrayOf(
+                                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                                Manifest.permission.ACCESS_COARSE_LOCATION
+                                            )
+                                        )
+                                    }
+                                } else {
+                                    isSharingLocation = false
+                                    scope.launch { viewModel.stopLiveLocation(event.id) }
+                                }
                             }
                         )
                     }
                     TextButton(
                         onClick = { scope.launch { liveLocations = viewModel.fetchLiveLocations(event.id) } },
                         modifier = Modifier.align(Alignment.End)
-                    ) { Text("Обновить позиции") }
+                    ) { Text("ev_live_location_refresh".localized) }
                     if (liveLocations.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
                         liveLocations.forEach { location ->
-                            Text("• ${location.fullName.ifBlank { location.username }}", color = ZholdasTextSecondary, fontSize = 13.sp)
+                            val name = location.fullName.ifBlank { location.username.ifBlank { "ev_participant_default_name".localized } }
+                            val minutes = formatMinutesAgo(location.updatedAt)
+                            val timeSuffix = if (minutes != null) {
+                                " · " + String.format(Locale.getDefault(), "ev_live_updated_ago".localized, minutes)
+                            } else ""
+                            Text("• $name$timeSuffix", color = ZholdasTextSecondary, fontSize = 13.sp)
                         }
                     }
                     actionError?.let { Text(it, color = ZholdasDanger, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp)) }
@@ -699,20 +816,7 @@ fun EventDetailScreen(
                 }
 
                 Button(
-                    onClick = {
-                        val geoUri = Uri.parse("geo:${event.latitude},${event.longitude}?q=${event.latitude},${event.longitude}(${Uri.encode(event.locationName)})")
-                        val mapIntent = Intent(Intent.ACTION_VIEW, geoUri)
-                        try {
-                            context.startActivity(mapIntent)
-                        } catch (e: Exception) {
-                            // OpenStreetMap web fallback
-                            val webIntent = Intent(
-                                Intent.ACTION_VIEW,
-                                Uri.parse("https://www.openstreetmap.org/?mlat=${event.latitude}&mlon=${event.longitude}#map=16/${event.latitude}/${event.longitude}")
-                            )
-                            context.startActivity(webIntent)
-                        }
-                    },
+                    onClick = { openRoute(context, event) },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
@@ -782,7 +886,7 @@ fun EventDetailScreen(
                                 }
                                 Column {
                                     Text(
-                                        text = participant.fullName.ifBlank { "Участник" },
+                                        text = participant.fullName.ifBlank { "ev_participant_default_name".localized },
                                         color = ZholdasTextPrimary,
                                         fontWeight = FontWeight.SemiBold
                                     )
@@ -793,10 +897,10 @@ fun EventDetailScreen(
                                     )
                                     Text(
                                         text = when (participant.participantStatus) {
-                                            "arrived" -> "На месте"
-                                            "late" -> "Опоздает"
-                                            "not_going" -> "Не придёт"
-                                            else -> "Идёт"
+                                            "arrived" -> "ev_status_arrived".localized
+                                            "late" -> "ev_participant_status_late".localized
+                                            "not_going" -> "ev_participant_status_not_going".localized
+                                            else -> "ev_participant_status_going".localized
                                         },
                                         color = if (participant.participantStatus == "arrived") ZholdasSuccess else ZholdasTextSecondary,
                                         fontSize = 11.sp
@@ -820,34 +924,36 @@ fun EventDetailScreen(
                 Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                Text("Подготовка", color = ZholdasTextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                Text("ev_preparation_title".localized, color = ZholdasTextPrimary, fontSize = 22.sp, fontWeight = FontWeight.Bold)
                 Text(preparationCountdown(event.startTime), color = ZholdasAccent, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                PreparationRow(Icons.Default.Schedule, "Начало", eventLocalTime(event.startTime))
-                PreparationRow(Icons.Default.Place, "Место", event.locationName)
+                PreparationRow(Icons.Default.Schedule, "ev_prep_start".localized, eventLocalTime(event.startTime))
+                PreparationRow(Icons.Default.Place, "ev_prep_location".localized, event.locationName)
                 PreparationRow(
                     Icons.Default.HowToReg,
-                    "Ваш статус",
-                    when (participantStatus) { "arrived" -> "На месте"; "late" -> "Опоздаю"; "not_going" -> "Не приду"; else -> "Иду" }
+                    "ev_your_status".localized,
+                    when (participantStatus) {
+                        "arrived" -> "ev_status_arrived".localized
+                        "late" -> "ev_status_late".localized
+                        "not_going" -> "ev_status_not_going".localized
+                        else -> "ev_status_going".localized
+                    }
                 )
                 reminderText?.let {
                     Surface(color = ZholdasAccent.copy(alpha = .15f), shape = RoundedCornerShape(12.dp)) {
                         Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                             Icon(Icons.Default.NotificationsActive, null, tint = ZholdasAccent)
                             Column {
-                                Text("Напоминание", color = ZholdasTextPrimary, fontWeight = FontWeight.Bold)
+                                Text("ev_reminder_title".localized, color = ZholdasTextPrimary, fontWeight = FontWeight.Bold)
                                 Text(it, color = ZholdasTextSecondary, fontSize = 13.sp)
                             }
                         }
                     }
-                } ?: Text("Напоминание появится в приложении перед началом события", color = ZholdasTextSecondary, fontSize = 13.sp)
-                Text("Возьмите заряженный телефон, проверьте маршрут и сообщите организатору, если опаздываете.", color = ZholdasTextSecondary, fontSize = 13.sp)
+                } ?: Text("ev_reminder_hint".localized, color = ZholdasTextSecondary, fontSize = 13.sp)
+                Text("ev_preparation_tips".localized, color = ZholdasTextSecondary, fontSize = 13.sp)
                 Button(
-                    onClick = {
-                        val uri = Uri.parse("geo:${event.latitude},${event.longitude}?q=${event.latitude},${event.longitude}(${Uri.encode(event.locationName)})")
-                        context.startActivity(Intent(Intent.ACTION_VIEW, uri))
-                    },
+                    onClick = { openRoute(context, event) },
                     modifier = Modifier.fillMaxWidth()
-                ) { Icon(Icons.Default.Route, null); Spacer(Modifier.width(8.dp)); Text("Построить маршрут") }
+                ) { Icon(Icons.Default.Route, null); Spacer(Modifier.width(8.dp)); Text("ev_route_btn".localized) }
                 Spacer(Modifier.height(20.dp))
             }
         }
@@ -969,5 +1075,26 @@ private fun StatMiniCard(
             color = ZholdasTextSecondary,
             fontSize = 11.sp
         )
+    }
+}
+
+private fun formatMinutesAgo(updatedAt: String): Long? {
+    if (updatedAt.isBlank()) return null
+    return try {
+        val instant = java.time.Instant.parse(
+            if (updatedAt.endsWith("Z") || updatedAt.contains("+")) updatedAt else "${updatedAt}Z"
+        )
+        val minutes = java.time.Duration.between(instant, java.time.Instant.now()).toMinutes()
+        minutes.coerceAtLeast(0)
+    } catch (_: Exception) {
+        try {
+            val parser = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.US)
+            val clean = updatedAt.substringBefore("Z").substringBefore("+")
+            val date = parser.parse(clean) ?: return null
+            val minutes = (System.currentTimeMillis() - date.time) / 60000
+            minutes.coerceAtLeast(0)
+        } catch (_: Exception) {
+            null
+        }
     }
 }

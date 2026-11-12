@@ -1,5 +1,7 @@
 package com.example.zholdas.ui.screens.events
 
+import android.Manifest
+import android.content.pm.PackageManager
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -27,12 +29,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.zholdas.ZholdasApplication
 import com.example.zholdas.data.local.localized
 import com.example.zholdas.data.model.Event
 import com.example.zholdas.theme.*
 import com.example.zholdas.ui.components.ModernCard
+import com.google.android.gms.location.LocationServices
 import java.util.Locale
 
 @Composable
@@ -46,6 +50,22 @@ fun EventListScreen(
     val viewModel: EventsViewModel = viewModel(
         factory = EventsViewModel.Factory(app.container.apiClient)
     )
+
+    LaunchedEffect(Unit) {
+        val hasPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (hasPermission) {
+            try {
+                val fusedClient = LocationServices.getFusedLocationProviderClient(context)
+                fusedClient.lastLocation.addOnSuccessListener { loc ->
+                    if (loc != null) {
+                        viewModel.loadEvents(loc.latitude, loc.longitude)
+                    }
+                }
+            } catch (_: SecurityException) {
+            }
+        }
+    }
 
     var selectedEventForDetail by remember { mutableStateOf<Event?>(null) }
     var selectedEventForEdit by remember { mutableStateOf<Event?>(null) }

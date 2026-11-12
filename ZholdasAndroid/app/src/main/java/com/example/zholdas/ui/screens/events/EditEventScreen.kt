@@ -24,6 +24,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -61,6 +62,10 @@ fun EditEventScreen(
 
     var title by remember { mutableStateOf(event.title) }
     var description by remember { mutableStateOf(event.description) }
+    var descriptionHasHadFocus by remember { mutableStateOf(false) }
+    var isDescriptionFocused by remember { mutableStateOf(false) }
+    var attemptedSubmit by remember { mutableStateOf(false) }
+    val showDescriptionError = (attemptedSubmit || (descriptionHasHadFocus && !isDescriptionFocused)) && description.isBlank()
     var category by remember { mutableStateOf(event.category.ifBlank { "cat_mountains" }) }
     var locationName by remember { mutableStateOf(event.locationName) }
     var latitude by remember { mutableStateOf(event.latitude.toString()) }
@@ -228,12 +233,22 @@ fun EditEventScreen(
                         onValueChange = { description = it },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(110.dp),
+                            .height(110.dp)
+                            .onFocusChanged { state ->
+                                if (state.isFocused) descriptionHasHadFocus = true
+                                isDescriptionFocused = state.isFocused
+                            },
+                        isError = showDescriptionError,
+                        supportingText = if (showDescriptionError) {
+                            { Text("ev_description_required".localized, color = ZholdasDanger, fontSize = 12.sp) }
+                        } else null,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedTextColor = ZholdasTextPrimary,
                             unfocusedTextColor = ZholdasTextPrimary,
-                            focusedBorderColor = ZholdasAccent,
-                            unfocusedBorderColor = ZholdasBorder
+                            focusedBorderColor = if (showDescriptionError) ZholdasDanger else ZholdasAccent,
+                            unfocusedBorderColor = if (showDescriptionError) ZholdasDanger else ZholdasBorder,
+                            errorBorderColor = ZholdasDanger,
+                            errorSupportingTextColor = ZholdasDanger
                         )
                     )
                 }
@@ -498,6 +513,10 @@ fun EditEventScreen(
             PrimaryButton(
                 text = "edit_ev_save_btn".localized,
                 onClick = {
+                    attemptedSubmit = true
+                    if (description.isBlank()) {
+                        return@PrimaryButton
+                    }
                     if (title.isBlank() || locationName.isBlank()) {
                         Toast.makeText(context, "Заполните обязательные поля", Toast.LENGTH_SHORT).show()
                         return@PrimaryButton
@@ -555,7 +574,8 @@ fun EditEventScreen(
                         }
                     }
                 },
-                isLoading = isSubmitting
+                isLoading = isSubmitting,
+                enabled = description.isNotBlank() && !isSubmitting
             )
         }
     }

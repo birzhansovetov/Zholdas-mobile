@@ -22,6 +22,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
@@ -55,6 +56,9 @@ fun CreateEventScreen(
 
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
+    var descriptionHasHadFocus by remember { mutableStateOf(false) }
+    var isDescriptionFocused by remember { mutableStateOf(false) }
+    val showDescriptionError = descriptionHasHadFocus && !isDescriptionFocused && description.isBlank()
     var category by remember { mutableStateOf("hiking") }
     var locationName by remember { mutableStateOf("") }
     var latitude by remember { mutableStateOf(43.2389) }
@@ -266,7 +270,15 @@ fun CreateEventScreen(
                         .height(110.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(ZholdasPanel)
-                        .border(1.dp, ZholdasBorder, RoundedCornerShape(12.dp)),
+                        .border(
+                            1.dp,
+                            if (showDescriptionError) ZholdasDanger else ZholdasBorder,
+                            RoundedCornerShape(12.dp)
+                        )
+                        .onFocusChanged { state ->
+                            if (state.isFocused) descriptionHasHadFocus = true
+                            isDescriptionFocused = state.isFocused
+                        },
                     colors = TextFieldDefaults.colors(
                         focusedTextColor = ZholdasTextPrimary,
                         unfocusedTextColor = ZholdasTextPrimary,
@@ -276,6 +288,14 @@ fun CreateEventScreen(
                         unfocusedIndicatorColor = Color.Transparent
                     )
                 )
+                if (showDescriptionError) {
+                    Text(
+                        text = "ev_description_required".localized,
+                        color = ZholdasDanger,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(start = 4.dp)
+                    )
+                }
             }
 
             // 5. Location and Map Point
@@ -529,7 +549,7 @@ fun CreateEventScreen(
             val isStartInFuture = startDateTime.isAfter(ZonedDateTime.now().minusMinutes(5))
             val isEndAfterStart = endDateTime.isAfter(startDateTime)
             val isDateTimeValid = isStartInFuture && isEndAfterStart
-            val isFormValid = title.isNotBlank() && locationName.isNotBlank() && isDateTimeValid
+            val isFormValid = title.isNotBlank() && description.isNotBlank() && locationName.isNotBlank() && isDateTimeValid
             PrimaryButton(
                 text = "create_ev_btn".localized,
                 onClick = {

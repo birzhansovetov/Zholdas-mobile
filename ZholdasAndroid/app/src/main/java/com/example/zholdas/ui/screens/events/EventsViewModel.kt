@@ -14,6 +14,8 @@ import com.example.zholdas.data.model.Participant
 import com.example.zholdas.data.model.ParticipantStatusRequest
 import com.example.zholdas.data.remote.APIClient
 import com.example.zholdas.data.remote.toUserMessage
+import com.example.zholdas.ui.screens.map.EventCategories
+import com.example.zholdas.ui.screens.map.MapViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -105,7 +107,7 @@ class EventsViewModel(
         _errorMessage.value = null
     }
 
-    fun loadEvents(latitude: Double = 43.2389, longitude: Double = 76.8897) {
+    fun loadEvents(latitude: Double = MapViewModel.DEFAULT_LATITUDE, longitude: Double = MapViewModel.DEFAULT_LONGITUDE) {
         viewModelScope.launch {
             _isLoading.value = true
             _errorMessage.value = null
@@ -113,7 +115,7 @@ class EventsViewModel(
                 val fetched = apiClient.apiService.getNearbyEvents(
                     latitude = latitude,
                     longitude = longitude,
-                    radiusMeters = 15000.0
+                    radiusMeters = MapViewModel.EVENTS_RADIUS_METERS
                 )
                 _events.value = fetched
             } catch (e: Exception) {
@@ -277,23 +279,7 @@ class EventsViewModel(
     }
 
     private fun matchesCategory(eventCategory: String, filterCategory: String): Boolean {
-        if (filterCategory == "cat_all") return true
-
-        val ec = eventCategory.lowercase(Locale.getDefault())
-        return when (filterCategory) {
-            "cat_mountains" -> ec.contains("hiking") || ec.contains("mountain") || ec.contains("гор")
-            "cat_theater" -> ec.contains("theater") || ec.contains("theatre") || ec.contains("театр")
-            "cat_restaurant" -> ec.contains("restaurant") || ec.contains("food") || ec.contains("cafe") || ec.contains("ресторан") || ec.contains("кафе")
-            "cat_sports" -> ec.contains("sport") || ec.contains("run") || ec.contains("football") || ec.contains("спорт") || ec.contains("футбол")
-            "cat_other" -> {
-                val matchesSpecific = ec.contains("hiking") || ec.contains("mountain") || ec.contains("гор") ||
-                    ec.contains("theater") || ec.contains("theatre") || ec.contains("театр") ||
-                    ec.contains("restaurant") || ec.contains("food") || ec.contains("cafe") || ec.contains("ресторан") || ec.contains("кафе") ||
-                    ec.contains("sport") || ec.contains("run") || ec.contains("football") || ec.contains("спорт") || ec.contains("футбол")
-                !matchesSpecific
-            }
-            else -> false
-        }
+        return EventCategories.matches(eventCategory, filterCategory)
     }
 
     class Factory(private val apiClient: APIClient) : ViewModelProvider.Factory {

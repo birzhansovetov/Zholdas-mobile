@@ -1,5 +1,9 @@
 package com.example.zholdas.ui.screens.map
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -19,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -32,9 +37,14 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.zholdas.data.local.localized
 import com.example.zholdas.data.model.Event
 import com.example.zholdas.theme.*
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import org.maplibre.android.geometry.LatLng
 
 @Composable
 fun MapScreen(
@@ -45,6 +55,86 @@ fun MapScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val mapController = remember(context) { OpenMapController(context) }
+    val locationClient = remember(context) { LocationServices.getFusedLocationProviderClient(context) }
+
+    var hasRequestedInitialPermission by rememberSaveable { mutableStateOf(false) }
+    var isRequestingFromFab by remember { mutableStateOf(false) }
+    var currentCameraTarget by remember { mutableStateOf<LatLng?>(null) }
+
+    fun hasLocationPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    }
+
+    fun fetchLocationAndCenter(onFailureOrDenied: (() -> Unit)? = null) {
+        if (!hasLocationPermission()) {
+            onFailureOrDenied?.invoke()
+            return
+        }
+        try {
+            locationClient.getCurrentLocation(Priority.PRIORITY_BALANCED_POWER_ACCURACY, null)
+                .addOnSuccessListener { location ->
+                    if (location != null) {
+                        val latLng = LatLng(location.latitude, location.longitude)
+                        mapController.updateUserLocation(latLng)
+                        mapController.moveTo(latLng, zoom = 13.0, animate = true)
+                        viewModel.loadNearbyEvents(location.latitude, location.longitude)
+                    } else {
+                        onFailureOrDenied?.invoke()
+                    }
+                }
+                .addOnFailureListener {
+                    onFailureOrDenied?.invoke()
+                }
+        } catch (_: SecurityException) {
+            onFailureOrDenied?.invoke()
+        }
+    }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        val granted = permissions.values.any { it }
+        val fromFab = isRequestingFromFab
+        isRequestingFromFab = false
+        if (granted) {
+            fetchLocationAndCenter(onFailureOrDenied = {
+                if (fromFab) {
+                    mapController.recenter()
+                }
+            })
+        } else {
+            if (fromFab) {
+                mapController.recenter()
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (!hasRequestedInitialPermission) {
+            hasRequestedInitialPermission = true
+            if (hasLocationPermission()) {
+                fetchLocationAndCenter()
+            } else {
+                locationPermissionLauncher.launch(
+                    arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+                )
+            }
+        }
+    }
+
+    val showSearchHere = remember(currentCameraTarget, uiState.lastLoadedLat, uiState.lastLoadedLon) {
+        val target = currentCameraTarget ?: return@remember false
+        val results = FloatArray(1)
+        android.location.Location.distanceBetween(
+            uiState.lastLoadedLat,
+            uiState.lastLoadedLon,
+            target.latitude,
+            target.longitude,
+            results
+        )
+        results[0] > 1500f
+    }
 
     Box(
         modifier = modifier
@@ -57,6 +147,9 @@ fun MapScreen(
             selectedEvent = uiState.selectedEvent,
             recommendedIds = uiState.aiRecommendedEvents.map { it.id }.toSet(),
             onSelectEvent = viewModel::selectEvent,
+            onCameraIdle = { center ->
+                currentCameraTarget = center
+            },
             modifier = Modifier.fillMaxSize()
         )
         // 2. Top Filter Overlay (City Info, Search, Categories)
@@ -65,6 +158,14 @@ fun MapScreen(
             selectedCategory = uiState.selectedCategory,
             searchQuery = uiState.searchQuery,
             errorMessage = uiState.errorMessage,
+            isLoading = uiState.isLoading,
+            showSearchHere = showSearchHere,
+            onRetry = viewModel::retryLoadNearbyEvents,
+            onSearchHereClick = {
+                currentCameraTarget?.let { target ->
+                    viewModel.loadNearbyEvents(target.latitude, target.longitude)
+                }
+            },
             onCategorySelected = { category -> viewModel.selectCategory(category) },
             onSearchQueryChanged = { query -> viewModel.updateSearchQuery(query) },
             onAIRecommendations = viewModel::requestAIRecommendations,
@@ -94,18 +195,27 @@ fun MapScreen(
                 .padding(end = 16.dp, bottom = if (uiState.selectedEvent != null) 230.dp else 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Recenter Button
+            // My Location Button
             FloatingActionButton(
                 onClick = {
-                    mapController.recenter()
+                    if (hasLocationPermission()) {
+                        fetchLocationAndCenter(onFailureOrDenied = {
+                            mapController.recenter()
+                        })
+                    } else {
+                        isRequestingFromFab = true
+                        locationPermissionLauncher.launch(
+                            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
+                        )
+                    }
                 },
                 containerColor = ZholdasElevatedSurface,
                 contentColor = ZholdasAccent,
                 modifier = Modifier.size(48.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Place,
-                    contentDescription = "Центр Алматы"
+                    imageVector = Icons.Default.MyLocation,
+                    contentDescription = "map_my_location".localized
                 )
             }
 
@@ -138,6 +248,10 @@ fun MapTopFiltersSection(
     selectedCategory: String,
     searchQuery: String,
     errorMessage: String?,
+    isLoading: Boolean = false,
+    showSearchHere: Boolean = false,
+    onRetry: () -> Unit = {},
+    onSearchHereClick: () -> Unit = {},
     onCategorySelected: (String) -> Unit,
     onSearchQueryChanged: (String) -> Unit,
     onAIRecommendations: () -> Unit,
@@ -158,7 +272,6 @@ fun MapTopFiltersSection(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
                     .background(ZholdasAccent.copy(alpha = 0.88f))
-
                     .padding(horizontal = 14.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -176,6 +289,17 @@ fun MapTopFiltersSection(
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f)
                 )
+                TextButton(
+                    onClick = onRetry,
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                ) {
+                    Text(
+                        text = "common_retry".localized,
+                        color = Color.White,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
 
@@ -227,12 +351,24 @@ fun MapTopFiltersSection(
                     containerColor = ZholdasAccent.copy(alpha = 0.2f),
                     contentColor = ZholdasAccent
                 ) {
-                    Text(
-                        text = "$eventsCount ивентов",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(12.dp),
+                                strokeWidth = 2.dp,
+                                color = ZholdasAccent
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                        }
+                        Text(
+                            text = "$eventsCount ивентов",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
         }
@@ -310,6 +446,41 @@ fun MapTopFiltersSection(
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                         modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
                     )
+                }
+            }
+        }
+
+        // Search here button
+        if (showSearchHere) {
+            Box(
+                modifier = Modifier.fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Surface(
+                    onClick = onSearchHereClick,
+                    shape = RoundedCornerShape(20.dp),
+                    color = ZholdasElevatedSurface,
+                    shadowElevation = 6.dp,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, ZholdasAccent.copy(alpha = 0.4f))
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = null,
+                            tint = ZholdasAccent,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "map_search_here".localized,
+                            color = ZholdasTextPrimary,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
         }
@@ -538,37 +709,27 @@ fun EventMarkerIcon(
 }
 
 fun getCategoryTitle(cat: String): String {
-    return when (cat.lowercase()) {
-        "cat_all" -> "Все"
-        "cat_mountains", "hiking", "mountain" -> "Горы"
-        "cat_theater", "theater" -> "Театр"
-        "cat_restaurant", "restaurant", "food" -> "Еда"
-        "cat_sports", "sport" -> "Спорт"
-        "cat_other", "board_games" -> "Другое"
-        else -> "Ивенты"
-    }
+    return EventCategories.getFilterKey(cat).localized
 }
 
 fun getCategoryColor(category: String): Color {
-    val ec = category.lowercase()
-    return when {
-        ec.contains("hiking") || ec.contains("mountain") || ec.contains("гор") -> ZholdasSuccess
-        ec.contains("sport") || ec.contains("run") || ec.contains("football") || ec.contains("спорт") -> ZholdasAccent
-        ec.contains("theater") || ec.contains("театр") -> Color(0xFFB042FF)
-        ec.contains("restaurant") || ec.contains("food") || ec.contains("cafe") || ec.contains("ресторан") -> ZholdasDanger
-        ec.contains("board_games") || ec.contains("game") -> Color(0xFF3B82F6)
-        else -> Color(0xFF7C66DC)
+    val key = EventCategories.getFilterKey(category)
+    return when (key) {
+        "cat_mountains" -> ZholdasSuccess
+        "cat_sports" -> ZholdasAccent
+        "cat_theater" -> Color(0xFFB042FF)
+        "cat_restaurant" -> ZholdasDanger
+        else -> Color(0xFF3B82F6)
     }
 }
 
 fun getCategoryEmoji(category: String): String {
-    val ec = category.lowercase()
-    return when {
-        ec.contains("hiking") || ec.contains("mountain") || ec.contains("гор") -> "🏔️"
-        ec.contains("sport") || ec.contains("run") || ec.contains("football") || ec.contains("спорт") -> "🏃"
-        ec.contains("theater") || ec.contains("театр") -> "🎭"
-        ec.contains("restaurant") || ec.contains("food") || ec.contains("cafe") || ec.contains("ресторан") -> "🍴"
-        ec.contains("board_games") || ec.contains("game") -> "🎲"
-        else -> "📌"
+    val key = EventCategories.getFilterKey(category)
+    return when (key) {
+        "cat_mountains" -> "🏔️"
+        "cat_sports" -> "🏃"
+        "cat_theater" -> "🎭"
+        "cat_restaurant" -> "🍴"
+        else -> "🎲"
     }
 }

@@ -98,6 +98,7 @@ struct EventDetailView: View {
     @State private var isShowingReportSheet = false
     @State private var localSession: ChatSession? = nil
     @State private var organizerProfile: User? = nil
+    @State private var reminderText: String? = nil
     @State private var isShowingPreparationSheet = false
     @State private var isLoadingPreparation = false
     @State private var preparationChecklist = ""
@@ -461,6 +462,10 @@ struct EventDetailView: View {
                     joinActionButton
                         .padding(.top, 8)
 
+                    if isJoined || isCreator {
+                        reminderCard
+                    }
+
                     preparationButton
                     
                     // 9. Bottom Action Buttons (Share & Route)
@@ -531,6 +536,7 @@ struct EventDetailView: View {
             if shouldShowWeather {
                 await loadWeather()
             }
+            await loadReminder()
         }
         .onReceive(liveLocationTimer) { _ in
             guard isSharingLiveLocation, isLiveLocationAvailable else { return }
@@ -1025,6 +1031,33 @@ struct EventDetailView: View {
         }
     }
 
+    private var reminderCard: some View {
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: "bell.badge.fill")
+                .font(.title3)
+                .foregroundColor(ZholdasTheme.accent)
+                .frame(width: 44, height: 44)
+                .background(Circle().fill(ZholdasTheme.accent.opacity(0.14)))
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("ev_reminder_title".localized)
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundColor(ZholdasTheme.textPrimary)
+
+                Text(reminderText ?? "ev_reminder_placeholder".localized)
+                    .font(.subheadline)
+                    .foregroundColor(ZholdasTheme.textSecondary)
+                    .lineSpacing(3)
+            }
+
+            Spacer()
+        }
+        .padding()
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .glassBackground(cornerRadius: 16)
+    }
+
     private var preparationButton: some View {
         Button {
             isShowingPreparationSheet = true
@@ -1295,6 +1328,7 @@ struct EventDetailView: View {
                         self.participantsCount += 1
                     }
                     await loadParticipants()
+                    await loadReminder()
                 } else {
                     await MainActor.run {
                         self.actionErrorMessage = eventsViewModel.errorMessage ?? "error_generic".localized
@@ -1488,6 +1522,23 @@ struct EventDetailView: View {
                     self.isLoadingPreparation = false
                 }
             }
+        }
+    }
+
+    private func loadReminder() async {
+        do {
+            let items: [NotificationItem] = try await APIClient.shared.request(
+                "/notifications",
+                method: "GET",
+                requiresAuth: true
+            )
+            if let reminder = items.first(where: { $0.eventID == event.id && $0.notificationType == "event_reminder" }) {
+                await MainActor.run {
+                    self.reminderText = reminder.text
+                }
+            }
+        } catch {
+            // Silently ignore loading error; placeholder will be shown
         }
     }
 
