@@ -80,6 +80,13 @@ fun EventDetailScreen(
     var pendingLiveShareRequest by remember { mutableStateOf(false) }
     var showLeaveConfirmDialog by remember { mutableStateOf(false) }
 
+    val organizerProfile by viewModel.organizerProfile.collectAsState()
+    val organizerName = remember(organizerProfile) {
+        organizerProfile?.fullName?.takeIf { it.isNotBlank() }
+            ?: organizerProfile?.username?.takeIf { it.isNotBlank() }
+            ?: "ev_organizer_loading".localized
+    }
+
     fun openRoute(ctx: android.content.Context, ev: Event) {
         val geoUri = Uri.parse("geo:${ev.latitude},${ev.longitude}?q=${ev.latitude},${ev.longitude}(${Uri.encode(ev.locationName)})")
         val mapIntent = Intent(Intent.ACTION_VIEW, geoUri)
@@ -167,6 +174,7 @@ fun EventDetailScreen(
     }
 
     LaunchedEffect(event.id) {
+        viewModel.loadOrganizer(event.creatorID)
         participantsList = viewModel.fetchParticipants(event.id)
         participantStatus = viewModel.fetchCurrentParticipantStatus(event.id, participantsList)
         reminderText = viewModel.eventReminderText(event.id)
@@ -438,7 +446,7 @@ fun EventDetailScreen(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Абылай Жолдас",
+                            text = organizerName,
                             color = ZholdasTextPrimary,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold
@@ -520,7 +528,7 @@ fun EventDetailScreen(
                         val dist = event.distanceMeters
                         if (dist != null) {
                             Text(
-                                text = "${"ev_distance".localized}: ${String.format(java.util.Locale.US, "%.1f км", dist / 1000.0)}",
+                                text = "${"ev_distance".localized}: ${String.format(java.util.Locale.US, "%.1f %s", dist / 1000.0, "unit_km".localized)}",
                                 color = ZholdasTextSecondary,
                                 fontSize = 12.sp
                             )

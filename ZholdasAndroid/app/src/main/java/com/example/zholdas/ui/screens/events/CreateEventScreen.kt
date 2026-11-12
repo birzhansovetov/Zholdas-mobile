@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,29 +55,29 @@ fun CreateEventScreen(
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
 
-    var title by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var descriptionHasHadFocus by remember { mutableStateOf(false) }
+    var title by rememberSaveable { mutableStateOf("") }
+    var description by rememberSaveable { mutableStateOf("") }
+    var descriptionHasHadFocus by rememberSaveable { mutableStateOf(false) }
     var isDescriptionFocused by remember { mutableStateOf(false) }
     val showDescriptionError = descriptionHasHadFocus && !isDescriptionFocused && description.isBlank()
-    var category by remember { mutableStateOf("hiking") }
-    var locationName by remember { mutableStateOf("") }
-    var latitude by remember { mutableStateOf(43.2389) }
-    var longitude by remember { mutableStateOf(76.8897) }
-    var maxParticipants by remember { mutableStateOf(10) }
-    var visibility by remember { mutableStateOf("public") }
-    var genderFilter by remember { mutableStateOf("all") }
-    var minAge by remember { mutableStateOf("") }
-    var maxAge by remember { mutableStateOf("") }
-    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    var category by rememberSaveable { mutableStateOf("hiking") }
+    var locationName by rememberSaveable { mutableStateOf("") }
+    var latitude by rememberSaveable { mutableStateOf(43.2389) }
+    var longitude by rememberSaveable { mutableStateOf(76.8897) }
+    var maxParticipants by rememberSaveable { mutableStateOf(10) }
+    var visibility by rememberSaveable { mutableStateOf("public") }
+    var genderFilter by rememberSaveable { mutableStateOf("all") }
+    var minAge by rememberSaveable { mutableStateOf("") }
+    var maxAge by rememberSaveable { mutableStateOf("") }
+    var selectedImageUri by rememberSaveable { mutableStateOf<Uri?>(null) }
     var isUploadingImage by remember { mutableStateOf(false) }
     var imageUploadError by remember { mutableStateOf<String?>(null) }
     var showLocationPickerDialog by remember { mutableStateOf(false) }
     val now = remember { ZonedDateTime.now() }
-    var startDateTime by remember {
+    var startDateTime by rememberSaveable(stateSaver = ZonedDateTimeSaver) {
         mutableStateOf(now.plusHours(1).withMinute(0).withSecond(0).withNano(0))
     }
-    var endDateTime by remember {
+    var endDateTime by rememberSaveable(stateSaver = ZonedDateTimeSaver) {
         mutableStateOf(now.plusHours(2).withMinute(0).withSecond(0).withNano(0))
     }
 
@@ -171,7 +172,7 @@ fun CreateEventScreen(
                             modifier = Modifier.size(36.dp)
                         )
                         Text(
-                            text = if (hasSelectedCover) "Обложка выбрана (нажмите для смены)" else "create_ev_select_photo".localized,
+                            text = if (hasSelectedCover) "create_ev_cover_selected".localized else "create_ev_select_photo".localized,
                             color = if (hasSelectedCover) Color.White else ZholdasTextSecondary,
                             fontSize = 14.sp
                         )
@@ -261,7 +262,7 @@ fun CreateEventScreen(
                     onValueChange = { description = it },
                     placeholder = {
                         Text(
-                            text = "Опишите маршрут, программу или требования для участников...",
+                            text = "create_ev_desc_placeholder".localized,
                             color = ZholdasTextTertiary
                         )
                     },

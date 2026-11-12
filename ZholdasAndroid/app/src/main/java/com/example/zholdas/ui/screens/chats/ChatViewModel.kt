@@ -111,6 +111,8 @@ class ChatViewModel(
     val searchQuery = _searchQuery.asStateFlow()
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing = _isRefreshing.asStateFlow()
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage = _errorMessage.asStateFlow()
     private val _unreadCountMap = MutableStateFlow<Map<Int, Int>>(emptyMap())
@@ -151,8 +153,16 @@ class ChatViewModel(
     }
     fun setSearchQuery(query: String) { _searchQuery.value = query }
 
-    fun fetchChatSessions() = viewModelScope.launch {
-        _isLoading.value = true
+    fun fetchChatSessions() = loadChatSessions(isRefresh = false)
+
+    fun refreshChatSessions() = loadChatSessions(isRefresh = true)
+
+    private fun loadChatSessions(isRefresh: Boolean = false) = viewModelScope.launch {
+        if (isRefresh) {
+            _isRefreshing.value = true
+        } else {
+            _isLoading.value = true
+        }
         _errorMessage.value = null
         try {
             _chatSessions.value = listOf(aiSession()) + apiClient.apiService.getChatSessions()
@@ -160,7 +170,13 @@ class ChatViewModel(
             Log.w(TAG, "Failed to load chats", e)
             _chatSessions.value = listOf(aiSession())
             _errorMessage.value = "chat_load_error".localized
-        } finally { _isLoading.value = false }
+        } finally {
+            if (isRefresh) {
+                _isRefreshing.value = false
+            } else {
+                _isLoading.value = false
+            }
+        }
     }
 
     private fun aiSession() = ChatSession(
