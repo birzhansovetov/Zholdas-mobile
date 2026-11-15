@@ -9,11 +9,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,6 +34,7 @@ import com.example.zholdas.ui.AuthViewModel
 import com.example.zholdas.ui.components.ModernCard
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ActivityScreen(
     authViewModel: AuthViewModel? = null,
@@ -41,14 +45,33 @@ fun ActivityScreen(
     var selectedTabIndex by remember { mutableStateOf(0) }
     var notifications by remember { mutableStateOf<List<NotificationItem>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
+    var isRefreshing by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        isLoading = true
+    suspend fun loadNotificationsData() {
         if (authViewModel != null) {
             notifications = authViewModel.fetchNotificationsList()
             authViewModel.markAllNotificationsRead()
         }
-        isLoading = false
+    }
+
+    LaunchedEffect(Unit) {
+        isLoading = true
+        try {
+            loadNotificationsData()
+        } finally {
+            isLoading = false
+        }
+    }
+
+    val onRefresh: () -> Unit = {
+        coroutineScope.launch {
+            isRefreshing = true
+            try {
+                loadNotificationsData()
+            } finally {
+                isRefreshing = false
+            }
+        }
     }
 
     val filteredNotifications = remember(selectedTabIndex, notifications) {
@@ -124,30 +147,39 @@ fun ActivityScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Main Content Area
-            if (isLoading && notifications.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = ZholdasAccent)
-                }
-            } else if (filteredNotifications.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 24.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    EmptyActivityCard(selectedTabIndex = selectedTabIndex)
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(filteredNotifications) { item ->
-                        NotificationItemRow(item = item)
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = onRefresh,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) {
+                if (isLoading && notifications.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = ZholdasAccent)
+                    }
+                } else if (filteredNotifications.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 24.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        EmptyActivityCard(selectedTabIndex = selectedTabIndex)
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(filteredNotifications) { item ->
+                            NotificationItemRow(item = item)
+                        }
                     }
                 }
             }

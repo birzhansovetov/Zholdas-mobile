@@ -12,6 +12,7 @@ import com.example.zholdas.data.model.EventLiveLocation
 import com.example.zholdas.data.model.LocationRequest
 import com.example.zholdas.data.model.Participant
 import com.example.zholdas.data.model.ParticipantStatusRequest
+import com.example.zholdas.data.model.User
 import com.example.zholdas.data.remote.APIClient
 import com.example.zholdas.data.remote.toUserMessage
 import com.example.zholdas.ui.screens.map.EventCategories
@@ -42,6 +43,12 @@ class EventsViewModel(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    private var lastLatitude: Double = MapViewModel.DEFAULT_LATITUDE
+    private var lastLongitude: Double = MapViewModel.DEFAULT_LONGITUDE
+
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
@@ -56,6 +63,22 @@ class EventsViewModel(
 
     private val _currentUserID = MutableStateFlow("")
     val currentUserID: StateFlow<String> = _currentUserID.asStateFlow()
+
+    private val _organizerProfile = MutableStateFlow<User?>(null)
+    val organizerProfile: StateFlow<User?> = _organizerProfile.asStateFlow()
+
+    fun loadOrganizer(creatorId: String) {
+        _organizerProfile.value = null
+        viewModelScope.launch {
+            if (creatorId.isBlank()) return@launch
+            try {
+                val fetched = apiClient.apiService.getUserProfileByID(creatorId)
+                _organizerProfile.value = fetched
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load organizer profile: ${e.message}", e)
+            }
+        }
+    }
 
     suspend fun loadCurrentUser() {
         if (_currentUserID.value.isNotBlank()) return
@@ -107,9 +130,23 @@ class EventsViewModel(
         _errorMessage.value = null
     }
 
-    fun loadEvents(latitude: Double = MapViewModel.DEFAULT_LATITUDE, longitude: Double = MapViewModel.DEFAULT_LONGITUDE) {
+    fun refresh() {
+        loadEvents(lastLatitude, lastLongitude, isRefresh = true)
+    }
+
+    fun loadEvents(
+        latitude: Double = MapViewModel.DEFAULT_LATITUDE,
+        longitude: Double = MapViewModel.DEFAULT_LONGITUDE,
+        isRefresh: Boolean = false
+    ) {
+        lastLatitude = latitude
+        lastLongitude = longitude
         viewModelScope.launch {
-            _isLoading.value = true
+            if (isRefresh) {
+                _isRefreshing.value = true
+            } else {
+                _isLoading.value = true
+            }
             _errorMessage.value = null
             try {
                 val fetched = apiClient.apiService.getNearbyEvents(
@@ -122,7 +159,11 @@ class EventsViewModel(
                 Log.w(TAG, "Failed to load events from API: ${e.message}")
                 _errorMessage.value = e.toUserMessage()
             } finally {
-                _isLoading.value = false
+                if (isRefresh) {
+                    _isRefreshing.value = false
+                } else {
+                    _isLoading.value = false
+                }
             }
         }
     }

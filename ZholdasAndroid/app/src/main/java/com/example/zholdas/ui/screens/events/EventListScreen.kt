@@ -15,9 +15,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +41,7 @@ import com.example.zholdas.ui.components.ModernCard
 import com.google.android.gms.location.LocationServices
 import java.util.Locale
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EventListScreen(
     modifier: Modifier = Modifier,
@@ -127,6 +130,7 @@ fun EventListScreen(
     val selectedCategory by viewModel.selectedCategory.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
     val recommendedEventIDs by viewModel.recommendedEventIDs.collectAsState()
 
@@ -171,7 +175,7 @@ fun EventListScreen(
 
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilledTonalIconButton(onClick = { showMyEvents = true }) {
-                        Icon(Icons.Default.EventNote, contentDescription = "Мои события", tint = ZholdasTextPrimary)
+                        Icon(Icons.Default.EventNote, contentDescription = "prof_my_events".localized, tint = ZholdasTextPrimary)
                     }
                     Button(
                         onClick = {
@@ -193,7 +197,7 @@ fun EventListScreen(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = "Создать",
+                            text = "common_create".localized,
                             color = Color.White,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
@@ -228,7 +232,7 @@ fun EventListScreen(
                             onValueChange = { viewModel.updateSearchQuery(it) },
                             placeholder = {
                                 Text(
-                                    text = "Поиск по встречам, локации...",
+                                    text = "events_search_placeholder".localized,
                                     color = ZholdasTextTertiary,
                                     fontSize = 14.sp
                                 )
@@ -271,7 +275,7 @@ fun EventListScreen(
                     Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(errorMessage.orEmpty(), modifier = Modifier.weight(1f), fontSize = 13.sp)
                         IconButton(onClick = viewModel::clearError) {
-                            Icon(Icons.Default.Close, contentDescription = "Закрыть сообщение об ошибке")
+                            Icon(Icons.Default.Close, contentDescription = "error_dismiss".localized)
                         }
                     }
                 }
@@ -313,58 +317,67 @@ fun EventListScreen(
             Spacer(modifier = Modifier.height(10.dp))
 
             // Feed Content
-            if (filteredEvents.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = { viewModel.refresh() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) {
+                if (filteredEvents.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 32.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.DirectionsRun,
-                            contentDescription = null,
-                            tint = Color.Gray,
-                            modifier = Modifier.size(64.dp)
-                        )
-                        Text(
-                            text = "list_no_events_found".localized,
-                            color = ZholdasTextPrimary,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = "list_no_events_hint".localized,
-                            color = ZholdasTextSecondary,
-                            fontSize = 14.sp,
-                            textAlign = TextAlign.Center
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DirectionsRun,
+                                contentDescription = null,
+                                tint = Color.Gray,
+                                modifier = Modifier.size(64.dp)
+                            )
+                            Text(
+                                text = "list_no_events_found".localized,
+                                color = ZholdasTextPrimary,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "list_no_events_hint".localized,
+                                color = ZholdasTextSecondary,
+                                fontSize = 14.sp,
+                                textAlign = TextAlign.Center
+                            )
+                        }
                     }
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    items(filteredEvents, key = { it.id }) { event ->
-                        EventRowCard(
-                            event = event,
-                            isRecommended = recommendedEventIDs.contains(event.id),
-                            onClick = {
-                                if (onNavigateToDetail != null) {
-                                    onNavigateToDetail(event)
-                                } else {
-                                    selectedEventForDetail = event
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        items(filteredEvents, key = { it.id }) { event ->
+                            EventRowCard(
+                                event = event,
+                                isRecommended = recommendedEventIDs.contains(event.id),
+                                onClick = {
+                                    if (onNavigateToDetail != null) {
+                                        onNavigateToDetail(event)
+                                    } else {
+                                        selectedEventForDetail = event
+                                    }
                                 }
-                            }
-                        )
-                    }
-                    item {
-                        Spacer(modifier = Modifier.height(60.dp))
+                            )
+                        }
+                        item {
+                            Spacer(modifier = Modifier.height(60.dp))
+                        }
                     }
                 }
             }

@@ -1,5 +1,6 @@
 package com.example.zholdas.ui.screens.events
 
+import android.content.res.Configuration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,10 +12,12 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.Saver
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -24,10 +27,22 @@ import com.example.zholdas.theme.*
 import com.example.zholdas.ui.components.ModernCard
 import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+
+fun currentAppLocale(): Locale = when (Localization.language) {
+    "kk" -> Locale("kk")
+    "en" -> Locale.ENGLISH
+    else -> Locale("ru")
+}
+
+val ZonedDateTimeSaver = Saver<ZonedDateTime, Long>(
+    save = { it.toInstant().toEpochMilli() },
+    restore = { Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()) }
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,6 +52,7 @@ fun EventDatePickerDialog(
     onDismissRequest: () -> Unit,
     onDateSelected: (LocalDate) -> Unit
 ) {
+    val currentLocale = currentAppLocale()
     val initialMillis = remember(initialDate) {
         initialDate.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli()
     }
@@ -54,51 +70,57 @@ fun EventDatePickerDialog(
         selectableDates = selectableDates
     )
 
-    DatePickerDialog(
-        onDismissRequest = onDismissRequest,
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    datePickerState.selectedDateMillis?.let { utcMillis ->
-                        val selectedLocalDate = Instant.ofEpochMilli(utcMillis)
-                            .atZone(ZoneOffset.UTC)
-                            .toLocalDate()
-                        onDateSelected(selectedLocalDate)
-                    }
-                    onDismissRequest()
-                }
-            ) {
-                Text("OK", color = ZholdasAccent, fontWeight = FontWeight.Bold)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismissRequest) {
-                Text("create_ev_cancel".localized, color = ZholdasTextSecondary)
-            }
-        },
-        colors = DatePickerDefaults.colors(
-            containerColor = ZholdasElevatedSurface
-        )
+    CompositionLocalProvider(
+        LocalConfiguration provides Configuration(LocalConfiguration.current).apply {
+            setLocale(currentLocale)
+        }
     ) {
-        DatePicker(
-            state = datePickerState,
+        DatePickerDialog(
+            onDismissRequest = onDismissRequest,
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        datePickerState.selectedDateMillis?.let { utcMillis ->
+                            val selectedLocalDate = Instant.ofEpochMilli(utcMillis)
+                                .atZone(ZoneOffset.UTC)
+                                .toLocalDate()
+                            onDateSelected(selectedLocalDate)
+                        }
+                        onDismissRequest()
+                    }
+                ) {
+                    Text("common_ok".localized, color = ZholdasAccent, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismissRequest) {
+                    Text("create_ev_cancel".localized, color = ZholdasTextSecondary)
+                }
+            },
             colors = DatePickerDefaults.colors(
-                containerColor = ZholdasElevatedSurface,
-                titleContentColor = ZholdasTextPrimary,
-                headlineContentColor = ZholdasTextPrimary,
-                weekdayContentColor = ZholdasTextSecondary,
-                subheadContentColor = ZholdasTextSecondary,
-                yearContentColor = ZholdasTextPrimary,
-                currentYearContentColor = ZholdasAccent,
-                selectedYearContentColor = Color.White,
-                selectedYearContainerColor = ZholdasAccent,
-                dayContentColor = ZholdasTextPrimary,
-                selectedDayContentColor = Color.White,
-                selectedDayContainerColor = ZholdasAccent,
-                todayContentColor = ZholdasAccent,
-                todayDateBorderColor = ZholdasAccent
+                containerColor = ZholdasElevatedSurface
             )
-        )
+        ) {
+            DatePicker(
+                state = datePickerState,
+                colors = DatePickerDefaults.colors(
+                    containerColor = ZholdasElevatedSurface,
+                    titleContentColor = ZholdasTextPrimary,
+                    headlineContentColor = ZholdasTextPrimary,
+                    weekdayContentColor = ZholdasTextSecondary,
+                    subheadContentColor = ZholdasTextSecondary,
+                    yearContentColor = ZholdasTextPrimary,
+                    currentYearContentColor = ZholdasAccent,
+                    selectedYearContentColor = Color.White,
+                    selectedYearContainerColor = ZholdasAccent,
+                    dayContentColor = ZholdasTextPrimary,
+                    selectedDayContentColor = Color.White,
+                    selectedDayContainerColor = ZholdasAccent,
+                    todayContentColor = ZholdasAccent,
+                    todayDateBorderColor = ZholdasAccent
+                )
+            )
+        }
     }
 }
 
@@ -111,65 +133,72 @@ fun EventTimePickerDialog(
     onDismissRequest: () -> Unit,
     onTimeSelected: (hour: Int, minute: Int) -> Unit
 ) {
+    val currentLocale = currentAppLocale()
     val timePickerState = rememberTimePickerState(
         initialHour = initialHour,
         initialMinute = initialMinute,
         is24Hour = true
     )
 
-    AlertDialog(
-        onDismissRequest = onDismissRequest,
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    onTimeSelected(timePickerState.hour, timePickerState.minute)
-                    onDismissRequest()
-                }
-            ) {
-                Text("OK", color = ZholdasAccent, fontWeight = FontWeight.Bold)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismissRequest) {
-                Text("create_ev_cancel".localized, color = ZholdasTextSecondary)
-            }
-        },
-        containerColor = ZholdasElevatedSurface,
-        title = {
-            Text(
-                text = title,
-                color = ZholdasTextPrimary,
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp
-            )
-        },
-        text = {
-            Box(
-                modifier = Modifier.fillMaxWidth(),
-                contentAlignment = Alignment.Center
-            ) {
-                TimePicker(
-                    state = timePickerState,
-                    colors = TimePickerDefaults.colors(
-                        clockDialColor = ZholdasSurface,
-                        clockDialSelectedContentColor = Color.White,
-                        clockDialUnselectedContentColor = ZholdasTextPrimary,
-                        selectorColor = ZholdasAccent,
-                        containerColor = ZholdasElevatedSurface,
-                        periodSelectorBorderColor = ZholdasBorder,
-                        periodSelectorSelectedContainerColor = ZholdasAccent,
-                        periodSelectorUnselectedContainerColor = ZholdasSurface,
-                        periodSelectorSelectedContentColor = Color.White,
-                        periodSelectorUnselectedContentColor = ZholdasTextPrimary,
-                        timeSelectorSelectedContainerColor = ZholdasAccent.copy(alpha = 0.25f),
-                        timeSelectorUnselectedContainerColor = ZholdasSurface,
-                        timeSelectorSelectedContentColor = ZholdasAccent,
-                        timeSelectorUnselectedContentColor = ZholdasTextPrimary
-                    )
-                )
-            }
+    CompositionLocalProvider(
+        LocalConfiguration provides Configuration(LocalConfiguration.current).apply {
+            setLocale(currentLocale)
         }
-    )
+    ) {
+        AlertDialog(
+            onDismissRequest = onDismissRequest,
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onTimeSelected(timePickerState.hour, timePickerState.minute)
+                        onDismissRequest()
+                    }
+                ) {
+                    Text("common_ok".localized, color = ZholdasAccent, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismissRequest) {
+                    Text("create_ev_cancel".localized, color = ZholdasTextSecondary)
+                }
+            },
+            containerColor = ZholdasElevatedSurface,
+            title = {
+                Text(
+                    text = title,
+                    color = ZholdasTextPrimary,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+            },
+            text = {
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    TimePicker(
+                        state = timePickerState,
+                        colors = TimePickerDefaults.colors(
+                            clockDialColor = ZholdasSurface,
+                            clockDialSelectedContentColor = Color.White,
+                            clockDialUnselectedContentColor = ZholdasTextPrimary,
+                            selectorColor = ZholdasAccent,
+                            containerColor = ZholdasElevatedSurface,
+                            periodSelectorBorderColor = ZholdasBorder,
+                            periodSelectorSelectedContainerColor = ZholdasAccent,
+                            periodSelectorUnselectedContainerColor = ZholdasSurface,
+                            periodSelectorSelectedContentColor = Color.White,
+                            periodSelectorUnselectedContentColor = ZholdasTextPrimary,
+                            timeSelectorSelectedContainerColor = ZholdasAccent.copy(alpha = 0.25f),
+                            timeSelectorUnselectedContainerColor = ZholdasSurface,
+                            timeSelectorSelectedContentColor = ZholdasAccent,
+                            timeSelectorUnselectedContentColor = ZholdasTextPrimary
+                        )
+                    )
+                }
+            }
+        )
+    }
 }
 
 @Composable
@@ -186,11 +215,7 @@ fun EventDateTimeSection(
     var showEndTimePicker by remember { mutableStateOf(false) }
 
     val currentLocale = remember(Localization.language) {
-        when (Localization.language) {
-            "kk" -> Locale("kk")
-            "en" -> Locale.ENGLISH
-            else -> Locale("ru")
-        }
+        currentAppLocale()
     }
     val dateFormatter = remember(currentLocale) {
         DateTimeFormatter.ofPattern("d MMMM yyyy, EEEE", currentLocale)

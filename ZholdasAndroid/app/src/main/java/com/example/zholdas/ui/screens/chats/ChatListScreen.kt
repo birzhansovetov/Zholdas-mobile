@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.LocalMovies
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +40,7 @@ import com.example.zholdas.data.local.localized
 import com.example.zholdas.data.model.ChatSession
 import com.example.zholdas.theme.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChatListScreen(
     modifier: Modifier = Modifier,
@@ -62,6 +64,7 @@ fun ChatListScreen(
     val searchQuery by viewModel.searchQuery.collectAsState()
     val unreadMap by viewModel.unreadCountMap.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
 
     var selectedAIChat by remember { mutableStateOf(false) }
@@ -118,7 +121,7 @@ fun ChatListScreen(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "${sessions.size} чатов · Алматы",
+                text = String.format("chats_count".localized, sessions.size),
                 fontSize = 13.sp,
                 color = ZholdasTextSecondary
             )
@@ -171,89 +174,99 @@ fun ChatListScreen(
         }
 
         // Sessions List
-        if (errorMessage != null) {
-            Surface(color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxWidth()) {
-                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(errorMessage.orEmpty(), modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onErrorContainer)
-                    TextButton(onClick = viewModel::fetchChatSessions) { Text("Повторить") }
-                }
-            }
-        }
-        if (isLoading && sessions.isEmpty()) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-        }
-
-        LazyColumn(
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = { viewModel.refreshChatSessions() },
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
-            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .weight(1f)
         ) {
-            // Pinned AI Assistant Chat
-            if (pinnedAiSession != null) {
-                item {
-                    Text(
-                        text = "chat_pinned_section".localized,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = ZholdasAccent,
-                        modifier = Modifier.padding(bottom = 6.dp)
-                    )
+            Column(modifier = Modifier.fillMaxSize()) {
+                if (errorMessage != null) {
+                    Surface(color = MaterialTheme.colorScheme.errorContainer, modifier = Modifier.fillMaxWidth()) {
+                        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(errorMessage.orEmpty(), modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.onErrorContainer)
+                            TextButton(onClick = viewModel::fetchChatSessions) { Text("common_retry".localized) }
+                        }
+                    }
+                }
+                if (isLoading && sessions.isEmpty()) {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                }
 
-                    AIChatAssistantRow(
-                        session = pinnedAiSession,
-                        onClick = {
-                            if (onAIChatClick != null) {
-                                onAIChatClick()
-                            } else {
-                                selectedAIChat = true
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    // Pinned AI Assistant Chat
+                    if (pinnedAiSession != null) {
+                        item {
+                            Text(
+                                text = "chat_pinned_section".localized,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = ZholdasAccent,
+                                modifier = Modifier.padding(bottom = 6.dp)
+                            )
+
+                            AIChatAssistantRow(
+                                session = pinnedAiSession,
+                                onClick = {
+                                    if (onAIChatClick != null) {
+                                        onAIChatClick()
+                                    } else {
+                                        selectedAIChat = true
+                                    }
+                                }
+                            )
+                        }
+                    }
+
+                    // Event Group Chats Section
+                    if (eventSessions.isNotEmpty()) {
+                        item {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "chat_events_section".localized,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = ZholdasTextSecondary,
+                                modifier = Modifier.padding(bottom = 6.dp)
+                            )
+                        }
+
+                        items(eventSessions, key = { it.id }) { session ->
+                            val unread = unreadMap[session.id] ?: 0
+                            EventChatRow(
+                                session = session,
+                                unreadCount = unread,
+                                onClick = {
+                                    if (onChatClick != null) {
+                                        onChatClick(session)
+                                    } else {
+                                        selectedRoomSession = session
+                                    }
+                                }
+                            )
+                        }
+                    } else if (pinnedAiSession == null) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 40.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "chats_not_found".localized,
+                                    color = ZholdasTextTertiary,
+                                    fontSize = 14.sp
+                                )
                             }
                         }
-                    )
-                }
-            }
-
-            // Event Group Chats Section
-            if (eventSessions.isNotEmpty()) {
-                item {
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "chat_events_section".localized,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = ZholdasTextSecondary,
-                        modifier = Modifier.padding(bottom = 6.dp)
-                    )
-                }
-
-                items(eventSessions, key = { it.id }) { session ->
-                    val unread = unreadMap[session.id] ?: 0
-                    EventChatRow(
-                        session = session,
-                        unreadCount = unread,
-                        onClick = {
-                            if (onChatClick != null) {
-                                onChatClick(session)
-                            } else {
-                                selectedRoomSession = session
-                            }
-                        }
-                    )
-                }
-            } else if (pinnedAiSession == null) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 40.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "Чаты не найдены",
-                            color = ZholdasTextTertiary,
-                            fontSize = 14.sp
-                        )
                     }
                 }
             }

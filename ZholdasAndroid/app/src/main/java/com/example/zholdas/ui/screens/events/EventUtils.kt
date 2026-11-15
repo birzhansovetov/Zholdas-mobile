@@ -3,13 +3,14 @@ package com.example.zholdas.ui.screens.events
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.example.zholdas.data.local.localized
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
 object EventUtils {
     fun formatEventDate(isoString: String): String {
-        if (isoString.isBlank()) return "Скоро"
+        if (isoString.isBlank()) return "common_soon".localized
         return try {
             val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
             val cleanStr = if (isoString.contains("Z")) {
@@ -26,7 +27,7 @@ object EventUtils {
     }
 
     fun formatEventDateFull(isoString: String): String {
-        if (isoString.isBlank()) return "Скоро"
+        if (isoString.isBlank()) return "common_soon".localized
         return try {
             val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
             val cleanStr = if (isoString.contains("Z")) {
@@ -44,7 +45,7 @@ object EventUtils {
     }
 
     fun calculateDaysLeftText(isoString: String): String {
-        if (isoString.isBlank()) return "Скоро"
+        if (isoString.isBlank()) return "common_soon".localized
         return try {
             val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US)
             val cleanStr = if (isoString.contains("Z")) {
@@ -52,16 +53,16 @@ object EventUtils {
             } else {
                 isoString
             }
-            val date = parser.parse(cleanStr) ?: return "Скоро"
+            val date = parser.parse(cleanStr) ?: return "common_soon".localized
             val diffMillis = date.time - System.currentTimeMillis()
             val diffDays = (diffMillis / (1000 * 60 * 60 * 24)).toInt()
             when {
-                diffDays > 0 -> "Начнется через $diffDays д"
-                diffDays == 0 -> "Начнется сегодня"
-                else -> "Активность уже началась"
+                diffDays > 0 -> String.format("ev_starts_in_days_format".localized, diffDays)
+                diffDays == 0 -> "ev_starts_today".localized
+                else -> "ev_already_started".localized
             }
         } catch (e: Exception) {
-            "Скоро"
+            "common_soon".localized
         }
     }
 

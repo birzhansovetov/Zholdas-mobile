@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,7 +60,7 @@ fun ChatRoomScreen(
     val isAiThinking by viewModel.isAiThinking.collectAsState()
     val roomError by viewModel.roomError.collectAsState()
     val isConnected by viewModel.isRoomConnected.collectAsState()
-    var messageText by remember { mutableStateOf("") }
+    var messageText by rememberSaveable { mutableStateOf("") }
     val listState = rememberLazyListState()
     val context = LocalContext.current
     var fullScreenImageUrl by remember { mutableStateOf<String?>(null) }
@@ -178,7 +179,7 @@ fun ChatRoomScreen(
                 .background(ZholdasBackground)
         ) {
             if (!isConnected) {
-                Text("Подключение к чату…", color = ZholdasTextSecondary, fontSize = 12.sp,
+                Text("chat_connecting".localized, color = ZholdasTextSecondary, fontSize = 12.sp,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp))
             }
             if (roomError != null) {
@@ -213,14 +214,14 @@ fun ChatRoomScreen(
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "Здесь пока пусто",
+                            text = "chat_empty_title".localized,
                             color = ZholdasTextPrimary,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Напишите первое сообщение или упомяните @ai для совета Жорика!",
+                            text = "chat_empty_subtitle".localized,
                             color = ZholdasTextTertiary,
                             fontSize = 13.sp,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center

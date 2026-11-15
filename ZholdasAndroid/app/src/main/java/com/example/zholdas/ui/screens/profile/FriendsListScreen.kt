@@ -8,8 +8,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
@@ -18,6 +20,7 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +40,7 @@ import com.example.zholdas.theme.*
 import com.example.zholdas.ui.AuthViewModel
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FriendsListScreen(
     authViewModel: AuthViewModel,
@@ -49,15 +53,34 @@ fun FriendsListScreen(
     var requests by remember { mutableStateOf<List<User>>(emptyList()) }
     var selectedTab by remember { mutableStateOf(0) } // 0: Friends, 1: Requests
     var isLoadingData by remember { mutableStateOf(true) }
+    var isRefreshing by remember { mutableStateOf(false) }
     var friendToRemove by remember { mutableStateOf<User?>(null) }
 
-    LaunchedEffect(Unit) {
-        isLoadingData = true
+    suspend fun loadFriendsData() {
         val f = authViewModel.fetchFriends()
         val r = authViewModel.fetchFriendRequests()
         friends = f
         requests = r
-        isLoadingData = false
+    }
+
+    LaunchedEffect(Unit) {
+        isLoadingData = true
+        try {
+            loadFriendsData()
+        } finally {
+            isLoadingData = false
+        }
+    }
+
+    val onRefresh: () -> Unit = {
+        scope.launch {
+            isRefreshing = true
+            try {
+                loadFriendsData()
+            } finally {
+                isRefreshing = false
+            }
+        }
     }
 
     Box(
@@ -107,58 +130,66 @@ fun FriendsListScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (isLoadingData) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = onRefresh,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) {
+                if (isLoadingData) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(
-                            color = ZholdasAccent,
-                            modifier = Modifier.size(36.dp)
-                        )
-                        Text(
-                            text = "prof_loading".localized,
-                            color = ZholdasTextSecondary,
-                            fontSize = 14.sp
-                        )
-                    }
-                }
-            } else {
-                if (selectedTab == 0) {
-                    FriendsListContent(
-                        friends = friends,
-                        onRemoveFriend = { friend ->
-                            friendToRemove = friend
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            CircularProgressIndicator(
+                                color = ZholdasAccent,
+                                modifier = Modifier.size(36.dp)
+                            )
+                            Text(
+                                text = "prof_loading".localized,
+                                color = ZholdasTextSecondary,
+                                fontSize = 14.sp
+                            )
                         }
-                    )
+                    }
                 } else {
-                    RequestsListContent(
-                        requests = requests,
-                        onAccept = { request ->
-                            scope.launch {
-                                val success = authViewModel.acceptFriendRequest(request.id)
-                                if (success) {
-                                    val accepted = requests.find { it.id == request.id }
-                                    requests = requests.filterNot { it.id == request.id }
-                                    if (accepted != null) {
-                                        friends = friends + accepted
+                    if (selectedTab == 0) {
+                        FriendsListContent(
+                            friends = friends,
+                            onRemoveFriend = { friend ->
+                                friendToRemove = friend
+                            }
+                        )
+                    } else {
+                        RequestsListContent(
+                            requests = requests,
+                            onAccept = { request ->
+                                scope.launch {
+                                    val success = authViewModel.acceptFriendRequest(request.id)
+                                    if (success) {
+                                        val accepted = requests.find { it.id == request.id }
+                                        requests = requests.filterNot { it.id == request.id }
+                                        if (accepted != null) {
+                                            friends = friends + accepted
+                                        }
+                                    }
+                                }
+                            },
+                            onReject = { request ->
+                                scope.launch {
+                                    val success = authViewModel.rejectFriendRequest(request.id)
+                                    if (success) {
+                                        requests = requests.filterNot { it.id == request.id }
                                     }
                                 }
                             }
-                        },
-                        onReject = { request ->
-                            scope.launch {
-                                val success = authViewModel.rejectFriendRequest(request.id)
-                                if (success) {
-                                    requests = requests.filterNot { it.id == request.id }
-                                }
-                            }
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }
@@ -509,7 +540,9 @@ private fun EmptyStateView(
     subtitle: String
 ) {
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState()),
         contentAlignment = Alignment.Center
     ) {
         Column(

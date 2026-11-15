@@ -1,5 +1,6 @@
 package com.example.zholdas.ui
 
+import com.example.zholdas.data.local.localized
 import com.example.zholdas.data.model.Event
 import com.example.zholdas.ui.screens.map.EventCategories
 import java.util.Locale
@@ -25,13 +26,13 @@ object AuthUseCases {
     fun validateSignIn(email: String, password: String): ValidationResult {
         val trimmedEmail = email.trim()
         if (trimmedEmail.isEmpty()) {
-            return ValidationResult(false, "Email не может быть пустым")
+            return ValidationResult(false, "val_email_empty".localized)
         }
         if (!trimmedEmail.contains("@") || !trimmedEmail.contains(".")) {
-            return ValidationResult(false, "Некорректный формат email")
+            return ValidationResult(false, "val_email_invalid".localized)
         }
         if (password.isEmpty()) {
-            return ValidationResult(false, "Пароль не может быть пустым")
+            return ValidationResult(false, "val_password_empty".localized)
         }
         return ValidationResult(true)
     }
@@ -47,13 +48,13 @@ object AuthUseCases {
             return emailValidation
         }
         if (fullName.trim().isEmpty()) {
-            return ValidationResult(false, "Имя не может быть пустым")
+            return ValidationResult(false, "val_name_empty".localized)
         }
         if (password.length < 6) {
-            return ValidationResult(false, "Пароль должен содержать минимум 6 символов")
+            return ValidationResult(false, "val_password_min_length".localized)
         }
         if (password != confirmPassword) {
-            return ValidationResult(false, "Пароли не совпадают")
+            return ValidationResult(false, "reg_err_mismatch".localized)
         }
         return ValidationResult(true)
     }
@@ -66,13 +67,13 @@ object AuthUseCases {
     ): ValidationResult {
         val validGenders = setOf("Мужской", "Женский", "Не указывать")
         if (gender !in validGenders) {
-            return ValidationResult(false, "Некорректный пол")
+            return ValidationResult(false, "val_gender_invalid".localized)
         }
         if (age < minAllowedAge) {
-            return ValidationResult(false, "Возраст должен быть не менее $minAllowedAge лет")
+            return ValidationResult(false, String.format("val_age_min_format".localized, minAllowedAge))
         }
         if (age > maxAllowedAge) {
-            return ValidationResult(false, "Указан некорректный возраст")
+            return ValidationResult(false, "val_age_invalid".localized)
         }
         return ValidationResult(true)
     }
@@ -110,7 +111,7 @@ enum class FriendshipAction {
 object ProfileSocialUseCases {
     fun validateProfileUpdate(fullName: String, city: String?): ValidationResult {
         if (fullName.trim().isEmpty()) {
-            return ValidationResult(false, "Имя пользователя не может быть пустым")
+            return ValidationResult(false, "val_username_empty".localized)
         }
         return ValidationResult(true)
     }
@@ -125,13 +126,13 @@ object ProfileSocialUseCases {
         currentStatus: String
     ): ValidationResult {
         if (currentUserId == targetUserId) {
-            return ValidationResult(false, "Нельзя добавить самого себя в друзья")
+            return ValidationResult(false, "val_friend_self".localized)
         }
         if (currentStatus == "friends") {
-            return ValidationResult(false, "Пользователь уже в друзьях")
+            return ValidationResult(false, "val_friend_already".localized)
         }
         if (currentStatus == "pending_sent") {
-            return ValidationResult(false, "Заявка в друзья уже отправлена")
+            return ValidationResult(false, "val_friend_request_sent".localized)
         }
         return ValidationResult(true)
     }
@@ -147,10 +148,10 @@ object ProfileSocialUseCases {
 
     fun validateRateParticipant(rating: Int, comment: String?): ValidationResult {
         if (rating !in 1..5) {
-            return ValidationResult(false, "Оценка должна быть от 1 до 5")
+            return ValidationResult(false, "val_rating_range".localized)
         }
         if (comment != null && comment.length > 500) {
-            return ValidationResult(false, "Комментарий слишком длинный")
+            return ValidationResult(false, "val_comment_too_long".localized)
         }
         return ValidationResult(true)
     }
@@ -184,16 +185,16 @@ object EventsUseCases {
         endTime: String
     ): ValidationResult {
         if (title.trim().isEmpty()) {
-            return ValidationResult(false, "Название события не может быть пустым")
+            return ValidationResult(false, "val_event_title_empty".localized)
         }
         if (locationName.trim().isEmpty()) {
-            return ValidationResult(false, "Укажите место проведения")
+            return ValidationResult(false, "val_event_location_empty".localized)
         }
         if (maxParticipants <= 0) {
-            return ValidationResult(false, "Количество участников должно быть больше 0")
+            return ValidationResult(false, "val_event_participants_min".localized)
         }
         if (startTime.isBlank() || endTime.isBlank()) {
-            return ValidationResult(false, "Укажите время начала и окончания события")
+            return ValidationResult(false, "val_event_datetime_empty".localized)
         }
         return ValidationResult(true)
     }

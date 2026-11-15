@@ -1,5 +1,6 @@
 package com.example.zholdas.ui
 
+import com.example.zholdas.data.local.localized
 import com.example.zholdas.data.model.*
 import com.example.zholdas.data.remote.ZholdasApiService
 
@@ -8,8 +9,8 @@ class ModeratorDashboardUseCases(private val apiService: ZholdasApiService) {
     fun validateSettings(rateLimitText: String, defaultCity: String): ModerationSettingsValidation {
         val limit = rateLimitText.toIntOrNull()
         return when {
-            limit == null || limit !in 1..100 -> ModerationSettingsValidation(false, "Лимит AI должен быть от 1 до 100")
-            defaultCity.isBlank() -> ModerationSettingsValidation(false, "Город по умолчанию обязателен")
+            limit == null || limit !in 1..100 -> ModerationSettingsValidation(false, "mod_settings_rate_error".localized)
+            defaultCity.isBlank() -> ModerationSettingsValidation(false, "mod_settings_city_error".localized)
             else -> ModerationSettingsValidation(true, null, limit)
         }
     }

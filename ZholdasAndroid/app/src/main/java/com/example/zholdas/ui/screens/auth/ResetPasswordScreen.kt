@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,10 +34,10 @@ fun ResetPasswordScreen(
     authViewModel: AuthViewModel,
     onFinished: () -> Unit
 ) {
-    var password by remember { mutableStateOf("") }
-    var confirmation by remember { mutableStateOf("") }
+    var password by rememberSaveable { mutableStateOf("") }
+    var confirmation by rememberSaveable { mutableStateOf("") }
     var localError by remember { mutableStateOf<String?>(link.error) }
-    var completed by remember { mutableStateOf(false) }
+    var completed by rememberSaveable { mutableStateOf(false) }
     val isLoading by authViewModel.isLoading.collectAsState()
     val serverError by authViewModel.errorMessage.collectAsState()
     val scope = rememberCoroutineScope()

@@ -221,7 +221,7 @@ fun RateParticipantsScreen(
 
                     Column {
                         Text(
-                            text = participant.fullName.ifBlank { "Участник" },
+                            text = participant.fullName.ifBlank { "common_participant".localized },
                             color = ZholdasTextPrimary,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
@@ -357,7 +357,7 @@ private fun ParticipantRateRow(
 
             Column {
                 Text(
-                    text = participant.fullName.ifBlank { "Участник" },
+                    text = participant.fullName.ifBlank { "common_participant".localized },
                     color = ZholdasTextPrimary,
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp

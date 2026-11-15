@@ -13,6 +13,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,8 +52,8 @@ fun ReportScreen(
         )
     }
 
-    var selectedReason by remember { mutableStateOf<String?>(null) }
-    var descriptionText by remember { mutableStateOf("") }
+    var selectedReason by rememberSaveable { mutableStateOf<String?>(null) }
+    var descriptionText by rememberSaveable { mutableStateOf("") }
     var isSubmitting by remember { mutableStateOf(false) }
     var showAlert by remember { mutableStateOf(false) }
 

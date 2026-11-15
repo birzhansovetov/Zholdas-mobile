@@ -42,6 +42,9 @@ class AuthViewModel(
     private val _isAuthenticated = MutableStateFlow(false)
     val isAuthenticated: StateFlow<Boolean> = _isAuthenticated.asStateFlow()
 
+    private val _isCheckingAuth = MutableStateFlow(true)
+    val isCheckingAuth: StateFlow<Boolean> = _isCheckingAuth.asStateFlow()
+
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
@@ -76,12 +79,16 @@ class AuthViewModel(
 
     fun checkAuth() {
         viewModelScope.launch {
-            val tokens = tokenManager.restoreTokens()
-            if (tokens != null) {
-                _isAuthenticated.value = true
-                fetchUserProfile()
-            } else {
-                _isAuthenticated.value = false
+            try {
+                val tokens = tokenManager.restoreTokens()
+                if (tokens != null) {
+                    _isAuthenticated.value = true
+                    fetchUserProfile()
+                } else {
+                    _isAuthenticated.value = false
+                }
+            } finally {
+                _isCheckingAuth.value = false
             }
         }
     }
@@ -231,16 +238,22 @@ class AuthViewModel(
             _isLoading.value = true
             try {
                 // Best-effort logout on the backend
-                apiClient.apiService.registerDeviceToken(DeviceTokenRequest("")) // Clear device token
-                apiClient.apiService.logout()
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to clear device token or logout on server: ${e.message}")
+                try {
+                    apiClient.apiService.registerDeviceToken(DeviceTokenRequest(""))
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to clear device token on server: ${e.message}", e)
+                }
+                try {
+                    apiClient.apiService.logout()
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to logout on server: ${e.message}", e)
+                }
+            } finally {
+                tokenManager.clearTokens()
+                _currentUserProfile.value = null
+                _isAuthenticated.value = false
+                _isLoading.value = false
             }
-
-            tokenManager.clearTokens()
-            _currentUserProfile.value = null
-            _isAuthenticated.value = false
-            _isLoading.value = false
         }
     }
 
@@ -258,14 +271,14 @@ class AuthViewModel(
                     _isAuthenticated.value = false
                     _currentUserProfile.value = null
                 } else {
-                    _errorMessage.value = "Не удалось загрузить профиль. Повторите попытку"
+                    _errorMessage.value = "profile_load_retry_error".localized
                 }
             } catch (e: IOException) {
                 Log.e(TAG, "Network error while fetching user profile: ${e.message}", e)
-                _errorMessage.value = "Нет соединения с сервером. Проверьте интернет"
+                _errorMessage.value = "error_network".localized
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to fetch user profile: ${e.message}", e)
-                _errorMessage.value = "Не удалось загрузить профиль. Повторите попытку"
+                _errorMessage.value = "profile_load_retry_error".localized
             }
         }
     }

@@ -60,6 +60,7 @@ fun MapScreen(
     var hasRequestedInitialPermission by rememberSaveable { mutableStateOf(false) }
     var isRequestingFromFab by remember { mutableStateOf(false) }
     var currentCameraTarget by remember { mutableStateOf<LatLng?>(null) }
+    var userLocation by remember { mutableStateOf<LatLng?>(null) }
 
     fun hasLocationPermission(): Boolean {
         return ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
@@ -76,6 +77,7 @@ fun MapScreen(
                 .addOnSuccessListener { location ->
                     if (location != null) {
                         val latLng = LatLng(location.latitude, location.longitude)
+                        userLocation = latLng
                         mapController.updateUserLocation(latLng)
                         mapController.moveTo(latLng, zoom = 13.0, animate = true)
                         viewModel.loadNearbyEvents(location.latitude, location.longitude)
@@ -160,6 +162,7 @@ fun MapScreen(
             errorMessage = uiState.errorMessage,
             isLoading = uiState.isLoading,
             showSearchHere = showSearchHere,
+            hasUserLocation = userLocation != null,
             onRetry = viewModel::retryLoadNearbyEvents,
             onSearchHereClick = {
                 currentCameraTarget?.let { target ->
@@ -250,6 +253,7 @@ fun MapTopFiltersSection(
     errorMessage: String?,
     isLoading: Boolean = false,
     showSearchHere: Boolean = false,
+    hasUserLocation: Boolean = false,
     onRetry: () -> Unit = {},
     onSearchHereClick: () -> Unit = {},
     onCategorySelected: (String) -> Unit,
@@ -331,8 +335,9 @@ fun MapTopFiltersSection(
                                 .background(ZholdasSuccess)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
+                        val headerCityText = if (hasUserLocation) "map_header_near_you".localized else "map_header_default_city".localized
                         Text(
-                            text = "Алматы · Центр (43.2389, 76.8897)",
+                            text = headerCityText,
                             color = ZholdasTextSecondary,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium
@@ -340,7 +345,7 @@ fun MapTopFiltersSection(
                     }
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Карта событий Жолдас",
+                        text = "map_events_title".localized,
                         color = ZholdasTextPrimary,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
@@ -364,7 +369,7 @@ fun MapTopFiltersSection(
                             Spacer(modifier = Modifier.width(6.dp))
                         }
                         Text(
-                            text = "$eventsCount ивентов",
+                            text = String.format("map_events_count".localized, eventsCount),
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -379,7 +384,7 @@ fun MapTopFiltersSection(
             onValueChange = onSearchQueryChanged,
             placeholder = {
                 Text(
-                    text = "Поиск по названию или месту...",
+                    text = "map_search_by_name_or_place".localized,
                     color = ZholdasTextSecondary,
                     fontSize = 14.sp
                 )
@@ -396,7 +401,7 @@ fun MapTopFiltersSection(
                     IconButton(onClick = onAIRecommendations) {
                         Icon(
                             imageVector = Icons.Default.AutoAwesome,
-                            contentDescription = "Очистить",
+                            contentDescription = "common_clear".localized,
                             tint = ZholdasTextSecondary
                         )
                     }
@@ -501,8 +506,8 @@ private fun AIRecommendationsCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.AutoAwesome, null, tint = ZholdasAccent)
                 Spacer(Modifier.width(8.dp))
-                Text("Рекомендации Жорика", color = ZholdasTextPrimary, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "Закрыть", tint = ZholdasTextSecondary) }
+                Text("map_ai_recs_header".localized, color = ZholdasTextPrimary, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                IconButton(onClick = onDismiss) { Icon(Icons.Default.Close, "common_close".localized, tint = ZholdasTextSecondary) }
             }
             if (isLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
@@ -516,7 +521,7 @@ private fun AIRecommendationsCard(
                 }
             }
             if (!isLoading && error == null && answer != null && events.isEmpty()) {
-                Text("Подходящих событий на карте пока нет", color = ZholdasTextSecondary)
+                Text("map_no_matching_events".localized, color = ZholdasTextSecondary)
             }
         }
     }
@@ -573,7 +578,7 @@ fun SelectedEventBottomCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Закрыть",
+                        contentDescription = "common_close".localized,
                         tint = ZholdasTextSecondary
                     )
                 }
@@ -627,7 +632,7 @@ fun SelectedEventBottomCard(
                     )
                     event.distanceMeters?.let { distance ->
                         Text(
-                            text = if (distance >= 1000) String.format("%.1f км", distance / 1000) else "${distance.toInt()} м",
+                            text = if (distance >= 1000) String.format(java.util.Locale.US, "%.1f %s", distance / 1000.0, "unit_km".localized) else "${distance.toInt()} ${"unit_m".localized}",
                             color = ZholdasAccent,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold
@@ -649,7 +654,7 @@ fun SelectedEventBottomCard(
                 )
             ) {
                 Text(
-                    text = "Подробнее об ивенте",
+                    text = "map_event_detail_btn".localized,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(vertical = 4.dp)

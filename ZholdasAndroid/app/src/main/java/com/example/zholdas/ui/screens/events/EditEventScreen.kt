@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,21 +61,21 @@ fun EditEventScreen(
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
-    var title by remember { mutableStateOf(event.title) }
-    var description by remember { mutableStateOf(event.description) }
-    var descriptionHasHadFocus by remember { mutableStateOf(false) }
+    var title by rememberSaveable { mutableStateOf(event.title) }
+    var description by rememberSaveable { mutableStateOf(event.description) }
+    var descriptionHasHadFocus by rememberSaveable { mutableStateOf(false) }
     var isDescriptionFocused by remember { mutableStateOf(false) }
-    var attemptedSubmit by remember { mutableStateOf(false) }
+    var attemptedSubmit by rememberSaveable { mutableStateOf(false) }
     val showDescriptionError = (attemptedSubmit || (descriptionHasHadFocus && !isDescriptionFocused)) && description.isBlank()
-    var category by remember { mutableStateOf(event.category.ifBlank { "cat_mountains" }) }
-    var locationName by remember { mutableStateOf(event.locationName) }
-    var latitude by remember { mutableStateOf(event.latitude.toString()) }
-    var longitude by remember { mutableStateOf(event.longitude.toString()) }
-    var maxParticipants by remember { mutableStateOf(event.maxParticipants.takeIf { it > 0 } ?: 10) }
-    var genderFilter by remember { mutableStateOf(event.genderFilter ?: "All") }
-    var minAgeText by remember { mutableStateOf(event.minAge?.toString() ?: "") }
-    var maxAgeText by remember { mutableStateOf(event.maxAge?.toString() ?: "") }
-    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    var category by rememberSaveable { mutableStateOf(event.category.ifBlank { "cat_mountains" }) }
+    var locationName by rememberSaveable { mutableStateOf(event.locationName) }
+    var latitude by rememberSaveable { mutableStateOf(event.latitude.toString()) }
+    var longitude by rememberSaveable { mutableStateOf(event.longitude.toString()) }
+    var maxParticipants by rememberSaveable { mutableStateOf(event.maxParticipants.takeIf { it > 0 } ?: 10) }
+    var genderFilter by rememberSaveable { mutableStateOf(event.genderFilter ?: "All") }
+    var minAgeText by rememberSaveable { mutableStateOf(event.minAge?.toString() ?: "") }
+    var maxAgeText by rememberSaveable { mutableStateOf(event.maxAge?.toString() ?: "") }
+    var selectedImageUri by rememberSaveable { mutableStateOf<Uri?>(null) }
     var imageUploadError by remember { mutableStateOf<String?>(null) }
     val initialStart = remember(event.startTime) {
         try {
@@ -90,8 +91,8 @@ fun EditEventScreen(
             initialStart.plusHours(1)
         }
     }
-    var startDateTime by remember { mutableStateOf(initialStart) }
-    var endDateTime by remember { mutableStateOf(initialEnd) }
+    var startDateTime by rememberSaveable(stateSaver = ZonedDateTimeSaver) { mutableStateOf(initialStart) }
+    var endDateTime by rememberSaveable(stateSaver = ZonedDateTimeSaver) { mutableStateOf(initialEnd) }
     var showLocationPicker by remember { mutableStateOf(false) }
 
     var isSubmitting by remember { mutableStateOf(false) }
@@ -153,7 +154,7 @@ fun EditEventScreen(
         ) {
             ModernCard {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Фотография события", color = ZholdasTextSecondary, fontWeight = FontWeight.Bold)
+                    Text("edit_ev_photo_title".localized, color = ZholdasTextSecondary, fontWeight = FontWeight.Bold)
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -174,7 +175,7 @@ fun EditEventScreen(
                                 modifier = Modifier.fillMaxSize()
                             )
                             Text(
-                                if (selectedImageUri != null) "Новая фотография выбрана" else "Нажмите, чтобы заменить",
+                                if (selectedImageUri != null) "edit_ev_photo_new_selected".localized else "edit_ev_photo_tap_to_change".localized,
                                 color = Color.White,
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
@@ -182,12 +183,12 @@ fun EditEventScreen(
                                     .padding(10.dp)
                             )
                         } else {
-                            Text("Выбрать фотографию", color = ZholdasAccent)
+                            Text("edit_ev_photo_choose".localized, color = ZholdasAccent)
                         }
                     }
                     if (imageUploadError != null) {
                         Text(imageUploadError!!, color = ZholdasDanger)
-                        Text("Нажмите «Сохранить» для повторной попытки", color = ZholdasTextSecondary)
+                        Text("edit_ev_photo_retry_hint".localized, color = ZholdasTextSecondary)
                     }
                 }
             }
@@ -518,7 +519,7 @@ fun EditEventScreen(
                         return@PrimaryButton
                     }
                     if (title.isBlank() || locationName.isBlank()) {
-                        Toast.makeText(context, "Заполните обязательные поля", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "common_fill_required_fields".localized, Toast.LENGTH_SHORT).show()
                         return@PrimaryButton
                     }
                     if (!endDateTime.isAfter(startDateTime)) {

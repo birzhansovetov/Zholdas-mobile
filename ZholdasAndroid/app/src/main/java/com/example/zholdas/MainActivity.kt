@@ -10,7 +10,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
@@ -18,6 +21,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
@@ -45,6 +49,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val authViewModel: AuthViewModel = viewModel(factory = authViewModelFactory)
+            val isCheckingAuth by authViewModel.isCheckingAuth.collectAsState()
             val isAuthenticated by authViewModel.isAuthenticated.collectAsState()
             val language by app.preferences.language.collectAsState(initial = "ru")
             val theme by app.preferences.theme.collectAsState(initial = AppTheme.SYSTEM)
@@ -78,8 +83,20 @@ class MainActivity : ComponentActivity() {
                         ResetPasswordScreen(
                             link = resetLink,
                             authViewModel = authViewModel,
-                            onFinished = { passwordResetLink.value = null }
+                            onFinished = {
+                                passwordResetLink.value = null
+                                intent?.data = null
+                            }
                         )
+                    } else if (isCheckingAuth) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.background),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
                     } else if (isAuthenticated) {
                         MainAppShell(authViewModel)
                     } else {

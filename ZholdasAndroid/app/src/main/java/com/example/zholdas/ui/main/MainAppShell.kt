@@ -12,6 +12,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -42,17 +43,19 @@ fun MainAppShell(
     authViewModel: AuthViewModel,
     modifier: Modifier = Modifier
 ) {
-    var selectedTab by remember { mutableStateOf<TabItem>(TabItem.Map) }
+    val tabs = remember {
+        listOf(
+            TabItem.Map,
+            TabItem.Events,
+            TabItem.Chats,
+            TabItem.Activity,
+            TabItem.Profile
+        )
+    }
+    var selectedTabIndex by rememberSaveable { mutableStateOf(0) }
+    val selectedTab = tabs.getOrElse(selectedTabIndex) { TabItem.Map }
     val unreadNotificationsCount by authViewModel.unreadNotificationsCount.collectAsState()
     val currentUserProfile by authViewModel.currentUserProfile.collectAsState()
-
-    val tabs = listOf(
-        TabItem.Map,
-        TabItem.Events,
-        TabItem.Chats,
-        TabItem.Activity,
-        TabItem.Profile
-    )
 
     Scaffold(
         modifier = modifier,
@@ -65,13 +68,13 @@ fun MainAppShell(
                         color = MaterialTheme.colorScheme.outlineVariant
                     )
             ) {
-                tabs.forEach { tab ->
-                    val isSelected = selectedTab == tab
+                tabs.forEachIndexed { index, tab ->
+                    val isSelected = selectedTabIndex == index
                     val badgeCount = if (tab == TabItem.Activity) unreadNotificationsCount else 0
 
                     NavigationBarItem(
                         selected = isSelected,
-                        onClick = { selectedTab = tab },
+                        onClick = { selectedTabIndex = index },
                         icon = {
                             BadgedBox(
                                 badge = {
