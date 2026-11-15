@@ -196,7 +196,8 @@ class ChatViewModel(
             eventId,
             tokenManager,
             apiClient.backendBaseUrl.replaceFirst("http", "ws"),
-            refreshSession = { runCatching { apiClient.apiService.getProfile() }.isSuccess }
+            refreshSession = { runCatching { apiClient.apiService.getProfile() }.isSuccess },
+            ticketProvider = { id -> apiClient.apiService.createWebSocketTicket(id).ticket }
         ).also { ws ->
             webSocketManager = ws
             ws.onConnectionStateChanged = { _isRoomConnected.value = it }
