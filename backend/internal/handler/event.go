@@ -30,6 +30,7 @@ type EventHandler struct {
 	notificationService *service.NotificationService
 	ChatHub             *service.ChatHub
 	tokenConfig         middleware.TokenConfig
+	wsTicketStore       *JTIStore
 }
 
 func NewEventHandler(pool *pgxpool.Pool, aiService *service.AIService, notificationService *service.NotificationService) *EventHandler {
@@ -39,6 +40,21 @@ func NewEventHandler(pool *pgxpool.Pool, aiService *service.AIService, notificat
 		aiService:           aiService,
 		notificationService: notificationService,
 		ChatHub:             service.NewChatHub(),
+		wsTicketStore:       NewJTIStore(),
+	}
+}
+
+func (h *EventHandler) getTicketStore() *JTIStore {
+	if h != nil && h.wsTicketStore != nil {
+		return h.wsTicketStore
+	}
+	return defaultJTIStore
+}
+
+// SetTicketStore sets a custom JTIStore (useful for testing).
+func (h *EventHandler) SetTicketStore(store *JTIStore) {
+	if h != nil {
+		h.wsTicketStore = store
 	}
 }
 

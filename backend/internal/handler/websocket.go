@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"strconv"
@@ -28,35 +29,17 @@ var upgrader = websocket.Upgrader{
 	},
 }
 
-// WebSocketChatUpgrader upgrades HTTP requests to WebSocket connection for event chats
-func (h *EventHandler) WebSocketChatUpgrader(c *gin.Context) {
-	eventIDStr := c.Param("id")
-	eventID, err := strconv.Atoi(eventIDStr)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
-		return
+// checkChatAccess checks whether the user is banned and whether they are the creator or a participant of the event.
+func (h *EventHandler) checkChatAccess(ctx context.Context, userID string, eventID int32) (int, string) {
+	if h.pool == nil {
+		// Never grant chat access without a database check.
+		return http.StatusInternalServerError, "Database unavailable"
 	}
-
-	tokenStr := c.Query("token")
-	if tokenStr == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication token query param is required"})
-		return
-	}
-
-	claims, err := middleware.ParseTokenWithConfig(tokenStr, h.tokenConfig)
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
-		return
-	}
-
-	ctx := c.Request.Context()
 
 	var isBanned bool
-	userID := claims.Subject
-	err = h.pool.QueryRow(ctx, "SELECT is_banned FROM profiles WHERE user_id = $1", userID).Scan(&isBanned)
+	err := h.pool.QueryRow(ctx, "SELECT is_banned FROM profiles WHERE user_id = $1", userID).Scan(&isBanned)
 	if err == nil && isBanned {
-		c.JSON(http.StatusForbidden, gin.H{"error": "User is banned"})
-		return
+		return http.StatusForbidden, "User is banned"
 	}
 
 	var isMember bool
@@ -66,14 +49,96 @@ func (h *EventHandler) WebSocketChatUpgrader(c *gin.Context) {
 			UNION ALL
 			SELECT 1 FROM event_participants WHERE event_id = $1 AND user_id = $2
 		)
-	`, int32(eventID), userID).Scan(&isMember)
+	`, eventID, userID).Scan(&isMember)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error checking membership: " + err.Error()})
-		return
+		return http.StatusInternalServerError, "Database error checking membership: " + err.Error()
 	}
 
 	if !isMember {
-		c.JSON(http.StatusForbidden, gin.H{"error": "Вы не являетесь участником этого события"})
+		return http.StatusForbidden, "Вы не являетесь участником этого события"
+	}
+
+	return 0, ""
+}
+
+// CreateWebSocketTicket issues a short-lived one-time ticket for event WebSocket chat.
+func (h *EventHandler) CreateWebSocketTicket(c *gin.Context) {
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	userID, ok := userIDVal.(string)
+	if !ok || userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	eventIDStr := c.Param("id")
+	eventID, err := strconv.Atoi(eventIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
+		return
+	}
+
+	ctx := c.Request.Context()
+	if status, errMsg := h.checkChatAccess(ctx, userID, int32(eventID)); status != 0 {
+		c.JSON(status, gin.H{"error": errMsg})
+		return
+	}
+
+	key := DeriveWSTicketKey(h.tokenConfig.Secret)
+	ticket, err := IssueWSTicket(userID, int32(eventID), key, time.Now())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create ticket"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"ticket":     ticket,
+		"expires_in": WSTicketExpiresInSeconds,
+	})
+}
+
+// WebSocketChatUpgrader upgrades HTTP requests to WebSocket connection for event chats
+func (h *EventHandler) WebSocketChatUpgrader(c *gin.Context) {
+	eventIDStr := c.Param("id")
+	eventID, err := strconv.Atoi(eventIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
+		return
+	}
+
+	ticketStr := c.Query("ticket")
+	tokenStr := c.Query("token")
+
+	if ticketStr == "" && tokenStr == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication ticket or token query param is required"})
+		return
+	}
+
+	var userID string
+	if ticketStr != "" {
+		key := DeriveWSTicketKey(h.tokenConfig.Secret)
+		claims, err := ValidateWSTicket(ticketStr, int32(eventID), key, time.Now(), h.getTicketStore())
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired ticket"})
+			return
+		}
+		userID = claims.Subject
+	} else {
+		// deprecated: remove after clients move to ws-ticket
+		claims, err := middleware.ParseTokenWithConfig(tokenStr, h.tokenConfig)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
+			return
+		}
+		userID = claims.Subject
+	}
+
+	ctx := c.Request.Context()
+	if status, errMsg := h.checkChatAccess(ctx, userID, int32(eventID)); status != 0 {
+		c.JSON(status, gin.H{"error": errMsg})
 		return
 	}
 
