@@ -17,6 +17,11 @@ class ChatWebSocketManager: NSObject {
     private var isReconnecting = false
     private var reconnectAttempts = 0
     private var reconnectTask: Task<Void, Never>?
+    private var connectTask: Task<Void, Never>?
+    
+    private struct WSTicketResponse: Decodable, Sendable {
+        let ticket: String
+    }
     
     init(eventID: Int32) {
         self.eventID = eventID
@@ -24,6 +29,7 @@ class ChatWebSocketManager: NSObject {
     }
     
     deinit {
+        connectTask?.cancel()
         reconnectTask?.cancel()
         webSocketTask?.cancel(with: .goingAway, reason: nil)
         _session?.invalidateAndCancel()
@@ -55,21 +61,50 @@ class ChatWebSocketManager: NSObject {
             return
         }
         
-        var components = URLComponents(
-            url: AppConfig.webSocketBaseURL.appendingPathComponent("events/\(eventID)/ws"),
-            resolvingAgainstBaseURL: false
-        )
-        components?.queryItems = [URLQueryItem(name: "token", value: token)]
-        guard let url = components?.url else { return }
-        
-        webSocketTask?.cancel()
-        let session = getOrCreateSession()
-        let task = session.webSocketTask(with: url)
-        self.webSocketTask = task
-        task.resume()
-        
-        startReceiveLoop()
-        logger.debug("Connected to event \(self.eventID)")
+        connectTask?.cancel()
+        connectTask = Task { @MainActor [weak self] in
+            guard let self = self, !self.isClosed else { return }
+            
+            let queryItem: URLQueryItem
+            do {
+                let response: WSTicketResponse = try await APIClient.shared.request(
+                    "/events/\(self.eventID)/ws-ticket",
+                    method: "POST",
+                    requiresAuth: true
+                )
+                guard !self.isClosed else { return }
+                queryItem = URLQueryItem(name: "ticket", value: response.ticket)
+            } catch {
+                guard !Task.isCancelled, !self.isClosed else { return }
+                if case .serverError(let statusCode, _) = error as? APIError, statusCode == 404 {
+                    // fallback for old backend, remove later
+                    let currentToken = TokenStorage.shared.getAccessToken() ?? token
+                    queryItem = URLQueryItem(name: "token", value: currentToken)
+                } else {
+                    logger.error("Failed to obtain ws ticket: \(error.localizedDescription)")
+                    self.handleDisconnect()
+                    return
+                }
+            }
+            
+            guard !Task.isCancelled, !self.isClosed else { return }
+            
+            var components = URLComponents(
+                url: AppConfig.webSocketBaseURL.appendingPathComponent("events/\(self.eventID)/ws"),
+                resolvingAgainstBaseURL: false
+            )
+            components?.queryItems = [queryItem]
+            guard let url = components?.url else { return }
+            
+            self.webSocketTask?.cancel()
+            let session = self.getOrCreateSession()
+            let task = session.webSocketTask(with: url)
+            self.webSocketTask = task
+            task.resume()
+            
+            self.startReceiveLoop()
+            logger.debug("Connected to event \(self.eventID)")
+        }
     }
     
     func disconnect() {
@@ -81,6 +116,8 @@ class ChatWebSocketManager: NSObject {
         }
         isClosed = true
         isReconnecting = false
+        connectTask?.cancel()
+        connectTask = nil
         reconnectTask?.cancel()
         reconnectTask = nil
         webSocketTask?.cancel(with: .goingAway, reason: nil)
