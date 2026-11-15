@@ -17,6 +17,8 @@ import com.example.zholdas.data.remote.APIClient
 import com.example.zholdas.data.remote.toUserMessage
 import com.example.zholdas.ui.screens.map.EventCategories
 import com.example.zholdas.ui.screens.map.MapViewModel
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -24,7 +26,14 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.Locale
+
+sealed interface WeatherState {
+    object Loading : WeatherState
+    data class Loaded(val summary: EventWeatherSummary) : WeatherState
+    object Unavailable : WeatherState
+}
 
 class EventsViewModel(
     private val apiClient: APIClient
@@ -39,6 +48,9 @@ class EventsViewModel(
 
     private val _events = MutableStateFlow<List<Event>>(emptyList())
     val events: StateFlow<List<Event>> = _events.asStateFlow()
+
+    private val _weatherState = MutableStateFlow<WeatherState>(WeatherState.Unavailable)
+    val weatherState: StateFlow<WeatherState> = _weatherState.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -322,6 +334,48 @@ class EventsViewModel(
     private fun matchesCategory(eventCategory: String, filterCategory: String): Boolean {
         return EventCategories.matches(eventCategory, filterCategory)
     }
+
+    fun loadWeather(lat: Double, lon: Double) {
+        if (lat == 0.0 && lon == 0.0) {
+            _weatherState.value = WeatherState.Unavailable
+            return
+        }
+
+        viewModelScope.launch {
+            _weatherState.value = WeatherState.Loading
+            try {
+                val summary = fetchWeather(lat, lon)
+                if (summary != null) {
+                    _weatherState.value = WeatherState.Loaded(summary)
+                } else {
+                    _weatherState.value = WeatherState.Unavailable
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to load weather for ($lat, $lon)", e)
+                _weatherState.value = WeatherState.Unavailable
+            }
+        }
+    }
+
+    private suspend fun fetchWeather(lat: Double, lon: Double): EventWeatherSummary? =
+        withContext(Dispatchers.IO) {
+            val url = "https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current=temperature_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&timezone=auto"
+            val request = okhttp3.Request.Builder()
+                .url(url)
+                .get()
+                .build()
+
+            apiClient.okHttpClient.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) {
+                    Log.e(TAG, "Open-Meteo returned status ${response.code}")
+                    return@withContext null
+                }
+                val body = response.body?.string() ?: return@withContext null
+                parseWeatherJson(body)
+            }
+        }
 
     class Factory(private val apiClient: APIClient) : ViewModelProvider.Factory {
         override fun <T : ViewModel> create(modelClass: Class<T>): T {

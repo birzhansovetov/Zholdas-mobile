@@ -314,6 +314,14 @@ class APIClient(
 
     private val contentType = "application/json".toMediaType()
 
+    val okHttpClient: OkHttpClient by lazy {
+        OkHttpClient.Builder()
+            .addInterceptor(HttpLoggingInterceptor().apply {
+                level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BASIC else HttpLoggingInterceptor.Level.NONE
+            })
+            .build()
+    }
+
     // 1. Supabase Auth service
     val supabaseAuth: SupabaseAuthService by lazy {
         Retrofit.Builder()
