@@ -201,10 +201,10 @@ struct ActivityView: View {
 
             if item.notificationType == "friend_request", let actorID = item.actorID, !actorID.isEmpty {
                 HStack(spacing: 10) {
-                    friendRequestActionButton(title: "Принять", color: ZholdasTheme.accent, isPrimary: true) {
+                    friendRequestActionButton(title: "user_detail_accept".localized, color: ZholdasTheme.accent, isPrimary: true) {
                         await handleFriendRequest(item: item, accept: true)
                     }
-                    friendRequestActionButton(title: "Отклонить", color: ZholdasTheme.surface, isPrimary: false) {
+                    friendRequestActionButton(title: "user_detail_reject".localized, color: ZholdasTheme.surface, isPrimary: false) {
                         await handleFriendRequest(item: item, accept: false)
                     }
                 }

@@ -96,7 +96,7 @@ struct ProfileTabView: View {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .font(.system(size: 48))
                                 .foregroundColor(ZholdasTheme.accent)
-                        Text(authViewModel.errorMessage ?? "Не удалось загрузить профиль")
+                        Text(authViewModel.errorMessage ?? "profile_load_error".localized)
                                 .foregroundColor(ZholdasTheme.textPrimary)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 32)
@@ -177,7 +177,7 @@ struct ProfileTabView: View {
                     .background(Circle().fill((isConfirmed ? Color.green : Color.yellow).opacity(0.14)))
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(isConfirmed ? "Email подтвержден" : "Подтвердите email")
+                    Text(isConfirmed ? "profile_email_confirmed".localized : "profile_email_unconfirmed".localized)
                         .font(.subheadline.weight(.bold))
                         .foregroundColor(ZholdasTheme.textPrimary)
 
@@ -195,7 +195,7 @@ struct ProfileTabView: View {
                         await authViewModel.resendEmailConfirmation(email: profile.email)
                     }
                 } label: {
-                    Text("Отправить письмо еще раз")
+                    Text("profile_resend_email".localized)
                         .font(.caption.weight(.bold))
                         .foregroundColor(ZholdasTheme.accent)
                 }
@@ -488,7 +488,7 @@ struct ProfileTabView: View {
                     Text("prof_lang".localized)
                         .foregroundColor(ZholdasTheme.textPrimary)
                     Spacer()
-                    Picker("Язык", selection: $selectedLanguage) {
+                    Picker("prof_lang".localized, selection: $selectedLanguage) {
                         Text("Русский").tag("ru")
                         Text("Қазақша").tag("kk")
                         Text("English").tag("en")

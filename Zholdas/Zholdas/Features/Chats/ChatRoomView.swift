@@ -210,10 +210,10 @@ struct ChatRoomView: View {
             Image(systemName: "bubble.left.and.bubble.right.fill")
                 .font(.system(size: 48))
                 .foregroundColor(.gray)
-            Text("Здесь пока пусто")
+            Text("chat_empty_title".localized)
                 .font(.headline)
                 .foregroundColor(ZholdasTheme.textPrimary)
-            Text("Напишите первое сообщение, чтобы начать общение!")
+            Text("chat_empty_subtitle".localized)
                 .font(.subheadline)
                 .foregroundColor(.gray)
                 .multilineTextAlignment(.center)
@@ -250,7 +250,7 @@ struct ChatRoomView: View {
                         Image(systemName: "photo.fill")
                             .font(.title)
                             .foregroundColor(.gray)
-                        Text("Ошибка загрузки фото")
+                        Text("chat_photo_load_error".localized)
                             .font(.system(size: 10))
                             .foregroundColor(.gray)
                     }
@@ -262,7 +262,7 @@ struct ChatRoomView: View {
                 }
             }
         } else {
-            Text("Некорректная ссылка на фото")
+            Text("chat_invalid_photo_url".localized)
                 .foregroundColor(.gray)
                 .font(.footnote)
         }
@@ -318,7 +318,7 @@ struct ChatRoomView: View {
                                         selectedReportSenderID = message.senderID
                                         isShowingReportSheet = true
                                     } label: {
-                                        Label("Пожаловаться", systemImage: "exclamationmark.triangle")
+                                        Label("rep_title".localized, systemImage: "exclamationmark.triangle")
                                     }
                                 }
                         } else if isJorykMessage(message) {
@@ -332,7 +332,7 @@ struct ChatRoomView: View {
                                     selectedReportSenderID = message.senderID
                                     isShowingReportSheet = true
                                 } label: {
-                                    Label("Пожаловаться", systemImage: "exclamationmark.triangle")
+                                    Label("rep_title".localized, systemImage: "exclamationmark.triangle")
                                 }
                             }
                         } else {
@@ -348,7 +348,7 @@ struct ChatRoomView: View {
                                         selectedReportSenderID = message.senderID
                                         isShowingReportSheet = true
                                     } label: {
-                                        Label("Пожаловаться", systemImage: "exclamationmark.triangle")
+                                        Label("rep_title".localized, systemImage: "exclamationmark.triangle")
                                     }
                                 }
                         }
@@ -421,7 +421,7 @@ struct ChatRoomView: View {
                         .buttonStyle(SpringButtonStyle())
                     }
 
-                    TextField(isJorykMentionActive ? "Спросите Жорика..." : "chat_placeholder".localized, text: $messageText)
+                    TextField(isJorykMentionActive ? "chat_ask_joryk_placeholder".localized : "chat_placeholder".localized, text: $messageText)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
                         .glassBackground(cornerRadius: 12)
@@ -453,29 +453,29 @@ struct ChatRoomView: View {
     private var jorykSuggestionBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                jorykSuggestionButton("Активный отдых") {
-                    applyJorykSuggestion("Предложи активный отдых: 5 вариантов, что подготовить, сколько займет и как собрать людей.")
+                jorykSuggestionButton("chat_suggestion_active".localized) {
+                    applyJorykSuggestion("chat_suggestion_active_prompt".localized)
                 }
-                jorykSuggestionButton("Спокойный формат") {
-                    applyJorykSuggestion("Предложи спокойный формат встречи: 5 вариантов, без перегруза, с планом и вопросами для общения.")
+                jorykSuggestionButton("chat_suggestion_calm".localized) {
+                    applyJorykSuggestion("chat_suggestion_calm_prompt".localized)
                 }
-                jorykSuggestionButton("Бюджетно") {
-                    applyJorykSuggestion("Предложи бюджетный формат встречи: варианты без больших трат, что подготовить и как распределить роли.")
+                jorykSuggestionButton("chat_suggestion_budget".localized) {
+                    applyJorykSuggestion("chat_suggestion_budget_prompt".localized)
                 }
-                jorykSuggestionButton("С заведением") {
-                    applyJorykSuggestion("Предложи формат встречи с кафе или заведением: как выбрать место, бюджет, бронь и темы для общения.")
+                jorykSuggestionButton("chat_suggestion_venue".localized) {
+                    applyJorykSuggestion("chat_suggestion_venue_prompt".localized)
                 }
-                jorykSuggestionButton("Что взять") {
-                    applyJorykSuggestion("Составь короткий список что взять с собой: еда, напитки, одежда, вещи и что лучше не брать.")
+                jorykSuggestionButton("chat_suggestion_what_to_bring".localized) {
+                    applyJorykSuggestion("chat_suggestion_what_to_bring_prompt".localized)
                 }
-                jorykSuggestionButton("Игры") {
-                    applyJorykSuggestion("Предложи 5 игр или активностей для этой встречи: правила, время, количество людей и реквизит.")
+                jorykSuggestionButton("cat_games".localized) {
+                    applyJorykSuggestion("chat_suggestion_games_prompt".localized)
                 }
-                jorykSuggestionButton("Маршрут") {
-                    applyJorykSuggestion("Помоги организовать маршрут: точка сбора, как дойти, запасной план и что написать участникам.")
+                jorykSuggestionButton("chat_suggestion_route".localized) {
+                    applyJorykSuggestion("chat_suggestion_route_prompt".localized)
                 }
-                jorykSuggestionButton("План") {
-                    applyJorykSuggestion("Сделай план организации встречи по шагам: до начала, на месте, после встречи.")
+                jorykSuggestionButton("chat_suggestion_plan".localized) {
+                    applyJorykSuggestion("chat_suggestion_plan_prompt".localized)
                 }
             }
             .padding(.horizontal, 2)
@@ -511,17 +511,17 @@ struct ChatRoomView: View {
     private var jorykFollowUpActions: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                jorykSuggestionButton("Активнее") {
-                    applyJorykSuggestion("Сделай вариант активнее: больше движения, 3 сценария, что подготовить и как безопасно провести.")
+                jorykSuggestionButton("chat_suggestion_more_active".localized) {
+                    applyJorykSuggestion("chat_suggestion_more_active_prompt".localized)
                 }
-                jorykSuggestionButton("Спокойнее") {
-                    applyJorykSuggestion("Сделай спокойнее: меньше движения, уютный формат, вопросы для общения и простой план.")
+                jorykSuggestionButton("chat_suggestion_calmer".localized) {
+                    applyJorykSuggestion("chat_suggestion_calmer_prompt".localized)
                 }
-                jorykSuggestionButton("Дешевле") {
-                    applyJorykSuggestion("Сделай бюджетный план без лишних трат: что взять, где сэкономить и как распределить роли.")
+                jorykSuggestionButton("chat_suggestion_cheaper".localized) {
+                    applyJorykSuggestion("chat_suggestion_cheaper_prompt".localized)
                 }
-                jorykSuggestionButton("Финальный план") {
-                    applyJorykSuggestion("Собери финальный план встречи по шагам: до начала, на месте, после встречи и что написать в чат.")
+                jorykSuggestionButton("chat_suggestion_final_plan".localized) {
+                    applyJorykSuggestion("chat_suggestion_final_plan_prompt".localized)
                 }
             }
         }
@@ -599,7 +599,7 @@ struct ChatRoomView: View {
 
             return JorykDisplaySection(
                 id: "\(index)-answer",
-                title: index == 0 ? "Ответ Жорика" : "Детали",
+                title: index == 0 ? "chat_joryk_answer".localized : "chat_joryk_details".localized,
                 body: block
             )
         }
@@ -640,7 +640,7 @@ struct ChatRoomView: View {
             // Append user message locally first for AI assistant
             let newMsg = ChatMessage(
                 id: UUID(),
-                senderName: "Вы",
+                senderName: "ev_live_location_you".localized,
                 senderAvatarURL: nil,
                 text: cleanText,
                 timestamp: Date(),
@@ -655,7 +655,7 @@ struct ChatRoomView: View {
                     let chatHistory = session.messages.dropLast().compactMap { msg -> AIChatMessage? in
                         let role = msg.isCurrentUser ? "user" : "model"
                         // Skip system messages or invalid sender roles
-                        if msg.senderName == "Система" { return nil }
+                        if msg.senderName == "Система" || msg.senderName == "chat_system_sender".localized { return nil }
                         return AIChatMessage(role: role, text: msg.text)
                     }
                     
@@ -681,9 +681,9 @@ struct ChatRoomView: View {
                         isSimulatingReply = false
                         let errorMsg = ChatMessage(
                             id: UUID(),
-                            senderName: "Система",
+                            senderName: "chat_system_sender".localized,
                             senderAvatarURL: nil,
-                            text: "⚠️ Ошибка: \(error.localizedDescription)",
+                            text: "\("chat_error_prefix".localized)\(error.localizedDescription)",
                             timestamp: Date(),
                             isCurrentUser: false
                         )
@@ -700,7 +700,7 @@ struct ChatRoomView: View {
         let tempUUID = UUID()
         let tempMsg = ChatMessage(
             id: tempUUID,
-            senderName: authViewModel.currentUserProfile?.fullName ?? "Вы",
+            senderName: authViewModel.currentUserProfile?.fullName ?? "ev_live_location_you".localized,
             senderAvatarURL: authViewModel.currentUserProfile?.avatarURL,
             text: outgoingText,
             timestamp: Date(),
@@ -912,7 +912,7 @@ struct ChatRoomView: View {
         let tempUUID = UUID()
         let tempMsg = ChatMessage(
             id: tempUUID,
-            senderName: authViewModel.currentUserProfile?.fullName ?? "Вы",
+            senderName: authViewModel.currentUserProfile?.fullName ?? "ev_live_location_you".localized,
             senderAvatarURL: authViewModel.currentUserProfile?.avatarURL,
             text: "[photo] (загрузка...)",
             timestamp: Date(),
@@ -962,9 +962,9 @@ struct ChatRoomView: View {
                     
                     let errorMsg = ChatMessage(
                         id: UUID(),
-                        senderName: "Система",
+                        senderName: "chat_system_sender".localized,
                         senderAvatarURL: nil,
-                        text: "⚠️ Ошибка отправки фото: \(error.localizedDescription)",
+                        text: "\("chat_photo_send_error_prefix".localized)\(error.localizedDescription)",
                         timestamp: Date(),
                         isCurrentUser: false
                     )

@@ -33,7 +33,7 @@ struct EditEventView: View {
         (value: "networking", titleKey: "cat_networking"),
         (value: "other", titleKey: "cat_other")
     ]
-    private let genderOptions = [("all", "Все"), ("men", "Мужчины"), ("women", "Женщины")]
+    private let genderOptions = [("all", "create_ev_gender_all"), ("men", "create_ev_gender_men"), ("women", "create_ev_gender_women")]
 
     init(event: Event, eventsViewModel: EventsViewModel, onSaved: (() -> Void)? = nil) {
         self.event = event
@@ -85,10 +85,10 @@ struct EditEventView: View {
 
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 18) {
-                        inputField("Название", text: $title, placeholder: "Например: Поход на Кок-Жайляу")
+                        inputField("edit_ev_name".localized, text: $title, placeholder: "create_ev_title_placeholder".localized)
 
                         VStack(alignment: .leading, spacing: 8) {
-                            sectionTitle("Описание")
+                            sectionTitle("edit_ev_desc".localized)
                             TextEditor(text: $description)
                                 .frame(minHeight: 110)
                                 .scrollContentBackground(.hidden)
@@ -99,12 +99,12 @@ struct EditEventView: View {
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                                         .stroke(ZholdasTheme.border, lineWidth: 1)
-                                )
+                                 )
                         }
 
                         VStack(alignment: .leading, spacing: 8) {
-                            sectionTitle("Категория")
-                            Picker("Категория", selection: $category) {
+                            sectionTitle("edit_ev_category".localized)
+                            Picker("edit_ev_category".localized, selection: $category) {
                                 ForEach(categories, id: \.value) { item in
                                     Text(item.titleKey.localized).tag(item.value)
                                 }
@@ -117,20 +117,20 @@ struct EditEventView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                         }
 
-                        inputField("Место встречи", text: $locationName, placeholder: "Название места")
+                        inputField("edit_ev_location".localized, text: $locationName, placeholder: "edit_ev_location_placeholder".localized)
 
                         HStack(spacing: 12) {
-                            inputField("Широта", text: $latitude, placeholder: "43.238900")
+                            inputField("edit_ev_latitude".localized, text: $latitude, placeholder: "43.238900")
                                 .keyboardType(.decimalPad)
-                            inputField("Долгота", text: $longitude, placeholder: "76.889700")
+                            inputField("edit_ev_longitude".localized, text: $longitude, placeholder: "76.889700")
                                 .keyboardType(.decimalPad)
                         }
 
                         VStack(alignment: .leading, spacing: 10) {
-                            sectionTitle("Дата и время")
-                            DatePicker("Начало", selection: $startTime, displayedComponents: [.date, .hourAndMinute])
+                            sectionTitle("ev_date_time".localized)
+                            DatePicker("create_ev_start".localized, selection: $startTime, displayedComponents: [.date, .hourAndMinute])
                                 .datePickerStyle(.compact)
-                            DatePicker("Окончание", selection: $endTime, displayedComponents: [.date, .hourAndMinute])
+                            DatePicker("create_ev_end".localized, selection: $endTime, displayedComponents: [.date, .hourAndMinute])
                                 .datePickerStyle(.compact)
                         }
                         .foregroundColor(ZholdasTheme.textPrimary)
@@ -140,7 +140,7 @@ struct EditEventView: View {
 
                         Stepper(value: $maxParticipants, in: 1...200) {
                             HStack {
-                                Text("Лимит участников")
+                                Text("edit_ev_max_participants".localized)
                                     .foregroundColor(ZholdasTheme.textPrimary)
                                 Spacer()
                                 Text("\(maxParticipants)")
@@ -154,13 +154,13 @@ struct EditEventView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                         VStack(alignment: .leading, spacing: 10) {
-                            sectionTitle("Ограничения")
+                            sectionTitle("edit_ev_restrictions".localized)
                             HStack(spacing: 8) {
-                                ForEach(genderOptions, id: \.0) { value, title in
+                                ForEach(genderOptions, id: \.0) { value, titleKey in
                                     Button {
                                         genderFilter = value
                                     } label: {
-                                        Text(title)
+                                        Text(titleKey.localized)
                                             .font(.caption.weight(.bold))
                                             .foregroundColor(genderFilter == value ? .white : ZholdasTheme.textSecondary)
                                             .frame(maxWidth: .infinity)
@@ -173,11 +173,11 @@ struct EditEventView: View {
                             }
 
                             Stepper(value: $minAge, in: 0...80) {
-                                Text("Возраст от: \(minAge == 0 ? "без лимита" : "\(minAge)")")
+                                Text(String(format: "edit_ev_age_from_format".localized, minAge == 0 ? "edit_ev_no_limit".localized : "\(minAge)"))
                                     .foregroundColor(ZholdasTheme.textPrimary)
                             }
                             Stepper(value: $maxAge, in: 0...80) {
-                                Text("Возраст до: \(maxAge == 0 ? "без лимита" : "\(maxAge)")")
+                                Text(String(format: "edit_ev_age_to_format".localized, maxAge == 0 ? "edit_ev_no_limit".localized : "\(maxAge)"))
                                     .foregroundColor(ZholdasTheme.textPrimary)
                             }
                         }
@@ -199,7 +199,7 @@ struct EditEventView: View {
                                 if isSaving {
                                     ProgressView().tint(.white)
                                 }
-                                Text("Сохранить изменения")
+                                Text("edit_ev_save_btn".localized)
                                     .fontWeight(.bold)
                             }
                             .foregroundColor(.white)
@@ -215,11 +215,11 @@ struct EditEventView: View {
                     .padding(20)
                 }
             }
-            .navigationTitle("Редактировать")
+            .navigationTitle("edit_ev_nav_title".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Отмена") { dismiss() }
+                    Button("btn_cancel".localized) { dismiss() }
                         .foregroundColor(ZholdasTheme.accent)
                 }
             }
@@ -253,28 +253,28 @@ struct EditEventView: View {
         errorText = nil
 
         guard !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            errorText = "Введите название"
+            errorText = "edit_ev_err_title".localized
             return
         }
 
         guard !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            errorText = "Введите описание"
+            errorText = "edit_ev_err_desc".localized
             return
         }
 
         guard !locationName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            errorText = "Введите место встречи"
+            errorText = "edit_ev_err_location".localized
             return
         }
 
         guard let lat = Double(latitude.replacingOccurrences(of: ",", with: ".")),
               let lon = Double(longitude.replacingOccurrences(of: ",", with: ".")) else {
-            errorText = "Проверьте координаты"
+            errorText = "edit_ev_err_coordinates".localized
             return
         }
 
         guard endTime > startTime else {
-            errorText = "Окончание должно быть позже начала"
+            errorText = "edit_ev_err_end_after_start".localized
             return
         }
 
@@ -303,7 +303,7 @@ struct EditEventView: View {
                 onSaved?()
                 dismiss()
             } else {
-                errorText = eventsViewModel.errorMessage ?? "Не удалось сохранить событие"
+                errorText = eventsViewModel.errorMessage ?? "edit_ev_err_save_failed".localized
             }
         }
     }

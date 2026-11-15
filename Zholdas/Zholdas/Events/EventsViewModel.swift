@@ -26,12 +26,12 @@ class EventsViewModel: ObservableObject {
                 UserDefaults.standard.set(encoded, forKey: "cached_nearby_events")
             }
         } catch {
-            self.errorMessage = "Не удалось загрузить события: \(error.localizedDescription)"
+            self.errorMessage = String(format: "ev_list_load_error".localized, error.localizedDescription)
             
             if let data = UserDefaults.standard.data(forKey: "cached_nearby_events"),
                let cached = try? JSONDecoder().decode([Event].self, from: data) {
                 self.events = cached
-                self.errorMessage = "Показываем сохраненные события (офлайн-режим)"
+                self.errorMessage = "ev_list_offline_mode".localized
             }
         }
         
@@ -84,7 +84,7 @@ class EventsViewModel: ObservableObject {
             self.isLoading = false
             return true
         } catch {
-            self.errorMessage = "Ошибка при создании события: \(error.localizedDescription)"
+            self.errorMessage = String(format: "ev_list_create_error".localized, error.localizedDescription)
             self.isLoading = false
             return false
         }
@@ -146,7 +146,7 @@ class EventsViewModel: ObservableObject {
             self.isLoading = false
             return true
         } catch {
-            self.errorMessage = "Ошибка при обновлении события: \(error.localizedDescription)"
+            self.errorMessage = String(format: "ev_list_update_error".localized, error.localizedDescription)
             self.isLoading = false
             return false
         }
@@ -160,7 +160,7 @@ class EventsViewModel: ObservableObject {
         
         // Кодируем запрос query
         guard let encodedQuery = query.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
-            self.errorMessage = "Некорректный текст запроса"
+            self.errorMessage = "map_ai_invalid_query".localized
             self.isLoading = false
             return
         }
@@ -172,7 +172,7 @@ class EventsViewModel: ObservableObject {
             self.recommendationAnswer = response.answer
             self.recommendedEventIDs = response.recommendedCardIDs
         } catch {
-            self.errorMessage = "Ошибка ИИ-рекомендаций: \(error.localizedDescription)"
+            self.errorMessage = String(format: "map_ai_recommendations_error".localized, error.localizedDescription)
         }
         
         self.isLoading = false
@@ -218,7 +218,7 @@ class EventsViewModel: ObservableObject {
             self.isLoading = false
             return true
         } catch {
-            self.errorMessage = "Не удалось присоединиться: \(error.localizedDescription)"
+            self.errorMessage = String(format: "ev_list_join_error".localized, error.localizedDescription)
             self.isLoading = false
             return false
         }
@@ -264,7 +264,7 @@ class EventsViewModel: ObservableObject {
             self.isLoading = false
             return true
         } catch {
-            self.errorMessage = "Не удалось отменить участие: \(error.localizedDescription)"
+            self.errorMessage = String(format: "ev_list_leave_error".localized, error.localizedDescription)
             self.isLoading = false
             return false
         }
@@ -302,7 +302,7 @@ class EventsViewModel: ObservableObject {
             self.isLoading = false
             return true
         } catch {
-            self.errorMessage = "Не удалось отметить прибытие: \(error.localizedDescription)"
+            self.errorMessage = String(format: "ev_list_arrive_error".localized, error.localizedDescription)
             self.isLoading = false
             return false
         }
@@ -321,7 +321,7 @@ class EventsViewModel: ObservableObject {
             )
             return true
         } catch {
-            self.errorMessage = "Не удалось обновить статус: \(error.localizedDescription)"
+            self.errorMessage = String(format: "ev_list_status_update_error".localized, error.localizedDescription)
             return false
         }
     }
@@ -345,7 +345,7 @@ class EventsViewModel: ObservableObject {
             )
             return true
         } catch {
-            self.errorMessage = "Не удалось обновить локацию: \(error.localizedDescription)"
+            self.errorMessage = String(format: "ev_list_location_update_error".localized, error.localizedDescription)
             return false
         }
     }
@@ -359,7 +359,7 @@ class EventsViewModel: ObservableObject {
             )
             return list
         } catch {
-            self.errorMessage = "Не удалось загрузить локации участников: \(error.localizedDescription)"
+            self.errorMessage = String(format: "ev_list_live_locations_error".localized, error.localizedDescription)
             return []
         }
     }

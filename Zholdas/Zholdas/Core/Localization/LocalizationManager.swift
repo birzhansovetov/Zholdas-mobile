@@ -1766,6 +1766,971 @@ class LocalizationManager: ObservableObject {
             "ru": "Удалить",
             "kk": "Өшіру",
             "en": "Remove"
+        ],
+        
+        // chat_ texts
+        "chat_empty_title": [
+            "ru": "Здесь пока пусто",
+            "kk": "Мұнда әзірге бос",
+            "en": "It's empty here yet"
+        ],
+        "chat_empty_subtitle": [
+            "ru": "Напишите первое сообщение, чтобы начать общение!",
+            "kk": "Сөйлесуді бастау үшін алғашқы хабарламаны жазыңыз!",
+            "en": "Send the first message to start chatting!"
+        ],
+        "chat_photo_load_error": [
+            "ru": "Ошибка загрузки фото",
+            "kk": "Фотоны жүктеу қатесі",
+            "en": "Failed to load photo"
+        ],
+        "chat_invalid_photo_url": [
+            "ru": "Некорректная ссылка на фото",
+            "kk": "Фотоға жарамсыз сілтеме",
+            "en": "Invalid photo link"
+        ],
+        "chat_ask_joryk_placeholder": [
+            "ru": "Спросите Жорика...",
+            "kk": "Жоликтен сұраңыз...",
+            "en": "Ask Zhorik..."
+        ],
+        "chat_suggestion_active": [
+            "ru": "Активный отдых",
+            "kk": "Белсенді демалыс",
+            "en": "Active recreation"
+        ],
+        "chat_suggestion_active_prompt": [
+            "ru": "Предложи активный отдых: 5 вариантов, что подготовить, сколько займет и как собрать людей.",
+            "kk": "Белсенді демалыс ұсын: 5 нұсқа, нені дайындау керек, қанша уақыт алады және адамдарды қалай жинау керек.",
+            "en": "Suggest active recreation: 5 options, what to prepare, how long it takes, and how to gather people."
+        ],
+        "chat_suggestion_calm": [
+            "ru": "Спокойный формат",
+            "kk": "Тыныш формат",
+            "en": "Calm format"
+        ],
+        "chat_suggestion_calm_prompt": [
+            "ru": "Предложи спокойный формат встречи: 5 вариантов, без перегруза, с планом и вопросами для общения.",
+            "kk": "Кездесудің тыныш форматын ұсын: 5 нұсқа, артық жүктемесіз, жоспармен және араласуға арналған сұрақтармен.",
+            "en": "Suggest a calm meeting format: 5 options, no overwhelm, with a plan and conversation questions."
+        ],
+        "chat_suggestion_budget": [
+            "ru": "Бюджетно",
+            "kk": "Үнемді",
+            "en": "Budget-friendly"
+        ],
+        "chat_suggestion_budget_prompt": [
+            "ru": "Предложи бюджетный формат встречи: варианты без больших трат, что подготовить и как распределить роли.",
+            "kk": "Кездесудің үнемді форматын ұсын: үлкен шығынсыз нұсқалар, нені дайындау керек және рөлдерді қалай бөлу керек.",
+            "en": "Suggest a budget meeting format: low-cost options, what to prepare, and how to distribute roles."
+        ],
+        "chat_suggestion_venue": [
+            "ru": "С заведением",
+            "kk": "Орынмен бірге",
+            "en": "At a venue"
+        ],
+        "chat_suggestion_venue_prompt": [
+            "ru": "Предложи формат встречи с кафе или заведением: как выбрать место, бюджет, бронь и темы для общения.",
+            "kk": "Дәмхана немесе орынмен кездесу форматын ұсын: орынды қалай таңдау керек, бюджет, брондау және араласу тақырыптары.",
+            "en": "Suggest a meeting format with a cafe or venue: how to choose a place, budget, booking, and conversation topics."
+        ],
+        "chat_suggestion_what_to_bring": [
+            "ru": "Что взять",
+            "kk": "Не алу керек",
+            "en": "What to bring"
+        ],
+        "chat_suggestion_what_to_bring_prompt": [
+            "ru": "Составь короткий список что взять с собой: еда, напитки, одежда, вещи и что лучше не брать.",
+            "kk": "Өзіңмен бірге не алу керектігі туралы қысқа тізім жаса: тамақ, сусындар, киім, заттар және нені алмаған дұрыс.",
+            "en": "Make a short checklist of what to bring: food, drinks, clothing, items, and what not to bring."
+        ],
+        "chat_suggestion_games_prompt": [
+            "ru": "Предложи 5 игр или активностей для этой встречи: правила, время, количество людей и реквизит.",
+            "kk": "Осы кездесу үшін 5 ойын немесе белсенділік ұсын: ережелер, уақыт, адам саны және қажетті заттар.",
+            "en": "Suggest 5 games or activities for this meeting: rules, duration, group size, and props."
+        ],
+        "chat_suggestion_route": [
+            "ru": "Маршрут",
+            "kk": "Бағыт",
+            "en": "Route"
+        ],
+        "chat_suggestion_route_prompt": [
+            "ru": "Помоги организовать маршрут: точка сбора, как дойти, запасной план и что написать участникам.",
+            "kk": "Бағытты ұйымдастыруға көмектес: жиналу нүктесі, қалай жету керек, қосалқы жоспар және қатысушыларға не жазу керек.",
+            "en": "Help organize a route: meeting point, directions, backup plan, and what to post to participants."
+        ],
+        "chat_suggestion_plan": [
+            "ru": "План",
+            "kk": "Жоспар",
+            "en": "Plan"
+        ],
+        "chat_suggestion_plan_prompt": [
+            "ru": "Сделай план организации встречи по шагам: до начала, на месте, после встречи.",
+            "kk": "Кездесуді ұйымдастыру жоспарын қадам бойынша жаса: басталғанға дейін, орнында, кездесуден кейін.",
+            "en": "Make a step-by-step meeting plan: before start, on-site, after the meeting."
+        ],
+        "chat_suggestion_more_active": [
+            "ru": "Активнее",
+            "kk": "Белсендірек",
+            "en": "More active"
+        ],
+        "chat_suggestion_more_active_prompt": [
+            "ru": "Сделай вариант активнее: больше движения, 3 сценария, что подготовить и как безопасно провести.",
+            "kk": "Нұсқаны белсендірек ет: көбірек қимыл, 3 сценарий, нені дайындау керек және қалай қауіпсіз өткізу керек.",
+            "en": "Make it more active: more movement, 3 scenarios, what to prepare, and how to conduct safely."
+        ],
+        "chat_suggestion_calmer": [
+            "ru": "Спокойнее",
+            "kk": "Тынышырақ",
+            "en": "Calmer"
+        ],
+        "chat_suggestion_calmer_prompt": [
+            "ru": "Сделай спокойнее: меньше движения, уютный формат, вопросы для общения и простой план.",
+            "kk": "Тынышырақ ет: азырақ қозғалыс, жайлы формат, сөйлесуге арналған сұрақтар және қарапайым жоспар.",
+            "en": "Make it calmer: less movement, cozy format, conversation questions, and a simple plan."
+        ],
+        "chat_suggestion_cheaper": [
+            "ru": "Дешевле",
+            "kk": "Арзанырақ",
+            "en": "Cheaper"
+        ],
+        "chat_suggestion_cheaper_prompt": [
+            "ru": "Сделай бюджетный план без лишних трат: что взять, где сэкономить и как распределить роли.",
+            "kk": "Артық шығынсыз үнемді жоспар жаса: не алу керек, қайдан үнемдеуге болады және рөлдерді қалай бөлу керек.",
+            "en": "Make a budget plan without extra spending: what to bring, where to save, and how to distribute roles."
+        ],
+        "chat_suggestion_final_plan": [
+            "ru": "Финальный план",
+            "kk": "Қорытынды жоспар",
+            "en": "Final plan"
+        ],
+        "chat_suggestion_final_plan_prompt": [
+            "ru": "Собери финальный план встречи по шагам: до начала, на месте, после встречи и что написать в чат.",
+            "kk": "Кездесудің қорытынды жоспарын қадам бойынша жина: басталғанға дейін, орнында, кездесуден кейін және чатқа не жазу керек.",
+            "en": "Put together a final step-by-step meeting plan: before start, on-site, after the meeting, and what to post in chat."
+        ],
+        "chat_joryk_answer": [
+            "ru": "Ответ Жорика",
+            "kk": "Жоликтің жауабы",
+            "en": "Zhorik's answer"
+        ],
+        "chat_joryk_details": [
+            "ru": "Детали",
+            "kk": "Мәліметтер",
+            "en": "Details"
+        ],
+        "chat_error_prefix": [
+            "ru": "⚠️ Ошибка: ",
+            "kk": "⚠️ Қате: ",
+            "en": "⚠️ Error: "
+        ],
+        "chat_photo_send_error_prefix": [
+            "ru": "⚠️ Ошибка отправки фото: ",
+            "kk": "⚠️ Фото жіберу қатесі: ",
+            "en": "⚠️ Failed to send photo: "
+        ],
+        "chat_ai_active": [
+            "ru": "Активен",
+            "kk": "Белсенді",
+            "en": "Active"
+        ],
+        "chat_time_yesterday": [
+            "ru": "Вчера",
+            "kk": "Кеше",
+            "en": "Yesterday"
+        ],
+        
+        // map_ / ev_list_ texts
+        "map_filters": [
+            "ru": "Фильтры",
+            "kk": "Сүзгілер",
+            "en": "Filters"
+        ],
+        "map_distance_km": [
+            "ru": "%d км",
+            "kk": "%d км",
+            "en": "%d km"
+        ],
+        "map_filter_distance": [
+            "ru": "Дистанция",
+            "kk": "Қашықтық",
+            "en": "Distance"
+        ],
+        "map_filter_only_today": [
+            "ru": "Только сегодня",
+            "kk": "Тек бүгін",
+            "en": "Today only"
+        ],
+        "map_filter_near_me": [
+            "ru": "Рядом со мной",
+            "kk": "Маған жақын",
+            "en": "Near me"
+        ],
+        "map_location_permission_denied": [
+            "ru": "Доступ к геолокации выключен",
+            "kk": "Геолокацияға рұқсат өшірілген",
+            "en": "Location access is turned off"
+        ],
+        "map_location_inaccurate": [
+            "ru": "GPS слишком неточный",
+            "kk": "GPS тым дәл емес",
+            "en": "GPS is too inaccurate"
+        ],
+        "map_location_failed": [
+            "ru": "Не удалось получить GPS",
+            "kk": "GPS алу мүмкін болмады",
+            "en": "Failed to get GPS"
+        ],
+        "map_ai_invalid_query": [
+            "ru": "Некорректный текст запроса",
+            "kk": "Сұраныс мәтіні қате",
+            "en": "Invalid query text"
+        ],
+        "map_ai_recommendations_error": [
+            "ru": "Ошибка ИИ-рекомендаций: %@",
+            "kk": "ИИ-ұсыныстар қатесі: %@",
+            "en": "AI recommendations error: %@"
+        ],
+        "ev_list_filters_prefix": [
+            "ru": "Фильтры: %@",
+            "kk": "Сүзгілер: %@",
+            "en": "Filters: %@"
+        ],
+        "ev_list_filter_distance": [
+            "ru": "Дистанция",
+            "kk": "Қашықтық",
+            "en": "Distance"
+        ],
+        "ev_list_distance_km": [
+            "ru": "%d км",
+            "kk": "%d км",
+            "en": "%d km"
+        ],
+        "ev_list_filter_age_format": [
+            "ru": "%d лет",
+            "kk": "%d жас",
+            "en": "%d y.o."
+        ],
+        "ev_list_filter_today": [
+            "ru": "сегодня",
+            "kk": "бүгін",
+            "en": "today"
+        ],
+        "ev_list_filter_nearby": [
+            "ru": "рядом",
+            "kk": "маңайда",
+            "en": "nearby"
+        ],
+        "ev_list_filter_only_today": [
+            "ru": "Только сегодня",
+            "kk": "Тек бүгін",
+            "en": "Today only"
+        ],
+        "ev_list_filter_near_me": [
+            "ru": "Рядом со мной",
+            "kk": "Маған жақын",
+            "en": "Near me"
+        ],
+        "ev_list_load_error": [
+            "ru": "Не удалось загрузить события: %@",
+            "kk": "Оқиғаларды жүктеу мүмкін болмады: %@",
+            "en": "Failed to load events: %@"
+        ],
+        "ev_list_offline_mode": [
+            "ru": "Показываем сохраненные события (офлайн-режим)",
+            "kk": "Сақталған оқиғалар көрсетілуде (офлайн-режим)",
+            "en": "Showing saved events (offline mode)"
+        ],
+        "ev_list_create_error": [
+            "ru": "Ошибка при создании события: %@",
+            "kk": "Оқиғаны жасау қатесі: %@",
+            "en": "Failed to create event: %@"
+        ],
+        "ev_list_update_error": [
+            "ru": "Ошибка при обновлении события: %@",
+            "kk": "Оқиғаны жаңарту қатесі: %@",
+            "en": "Failed to update event: %@"
+        ],
+        "ev_list_join_error": [
+            "ru": "Не удалось присоединиться: %@",
+            "kk": "Қосылу мүмкін болмады: %@",
+            "en": "Failed to join: %@"
+        ],
+        "ev_list_leave_error": [
+            "ru": "Не удалось отменить участие: %@",
+            "kk": "Қатысудан бас тарту мүмкін болмады: %@",
+            "en": "Failed to leave: %@"
+        ],
+        "ev_list_arrive_error": [
+            "ru": "Не удалось отметить прибытие: %@",
+            "kk": "Келуді белгілеу мүмкін болмады: %@",
+            "en": "Failed to mark arrival: %@"
+        ],
+        "ev_list_status_update_error": [
+            "ru": "Не удалось обновить статус: %@",
+            "kk": "Мәртебені жаңарту мүмкін болмады: %@",
+            "en": "Failed to update status: %@"
+        ],
+        "ev_list_location_update_error": [
+            "ru": "Не удалось обновить локацию: %@",
+            "kk": "Локацияны жаңарту мүмкін болмады: %@",
+            "en": "Failed to update location: %@"
+        ],
+        "ev_list_live_locations_error": [
+            "ru": "Не удалось загрузить локации участников: %@",
+            "kk": "Қатысушылардың локацияларын жүктеу мүмкін болмады: %@",
+            "en": "Failed to load participant locations: %@"
+        ],
+        
+        // ev_ texts
+        "ev_weather_forecast": [
+            "ru": "Прогноз",
+            "kk": "Ауа райы болжамы",
+            "en": "Forecast"
+        ],
+        "ev_weather_clear": [
+            "ru": "Ясно",
+            "kk": "Ашық",
+            "en": "Clear"
+        ],
+        "ev_weather_partly_cloudy": [
+            "ru": "Переменная облачность",
+            "kk": "Ауыспалы бұлтты",
+            "en": "Partly cloudy"
+        ],
+        "ev_weather_fog": [
+            "ru": "Туман",
+            "kk": "Тұман",
+            "en": "Fog"
+        ],
+        "ev_weather_rain": [
+            "ru": "Дождь",
+            "kk": "Жаңбыр",
+            "en": "Rain"
+        ],
+        "ev_weather_snow": [
+            "ru": "Снег",
+            "kk": "Қар",
+            "en": "Snow"
+        ],
+        "ev_weather_thunderstorm": [
+            "ru": "Гроза",
+            "kk": "Найзағай",
+            "en": "Thunderstorm"
+        ],
+        "ev_weather_feels_like": [
+            "ru": "ощущается %d°C",
+            "kk": "сезілуі %d°C",
+            "en": "feels like %d°C"
+        ],
+        "ev_weather_precipitation": [
+            "ru": "осадки %.1f мм",
+            "kk": "жауын-шашын %.1f мм",
+            "en": "precipitation %.1f mm"
+        ],
+        "ev_weather_wind": [
+            "ru": "ветер %d км/ч",
+            "kk": "жел %d км/сағ",
+            "en": "wind %d km/h"
+        ],
+        "ev_distance_km_format": [
+            "ru": "%.1f км",
+            "kk": "%.1f км",
+            "en": "%.1f km"
+        ],
+        "ev_weather_title": [
+            "ru": "Погода для встречи",
+            "kk": "Кездесу ауа райы",
+            "en": "Event weather"
+        ],
+        "ev_weather_loading": [
+            "ru": "Загружаем прогноз...",
+            "kk": "Ауа райы болжамы жүктелуде...",
+            "en": "Loading forecast..."
+        ],
+        "ev_weather_unavailable": [
+            "ru": "Прогноз пока недоступен",
+            "kk": "Ауа райы болжамы әзірге қолжетімсіз",
+            "en": "Forecast unavailable yet"
+        ],
+        "ev_edit_event_btn": [
+            "ru": "Редактировать встречу",
+            "kk": "Кездесуді өңдеу",
+            "en": "Edit Event"
+        ],
+        "ev_i_am_here": [
+            "ru": "Я на месте",
+            "kk": "Мен жеттім",
+            "en": "I'm here"
+        ],
+        "ev_you_are_here": [
+            "ru": "Вы на месте",
+            "kk": "Сіз осындасыз",
+            "en": "You are here"
+        ],
+        "ev_gps_checking": [
+            "ru": "Проверяем GPS...",
+            "kk": "GPS тексерілуде...",
+            "en": "Checking GPS..."
+        ],
+        "ev_my_status": [
+            "ru": "Мой статус",
+            "kk": "Менің мәртебем",
+            "en": "My Status"
+        ],
+        "ev_my_status_hint": [
+            "ru": "Покажите организатору и участникам, что с вами.",
+            "kk": "Ұйымдастырушы мен қатысушыларға жағдайыңызды көрсетіңіз.",
+            "en": "Show the organizer and participants your status."
+        ],
+        "ev_status_going": [
+            "ru": "Иду",
+            "kk": "Барамын",
+            "en": "Going"
+        ],
+        "ev_status_late": [
+            "ru": "Опаздываю",
+            "kk": "Кешігемін",
+            "en": "I'll be late"
+        ],
+        "ev_status_arrived": [
+            "ru": "На месте",
+            "kk": "Осында",
+            "en": "Arrived"
+        ],
+        "ev_status_cant_go": [
+            "ru": "Не смогу",
+            "kk": "Бара алмаймын",
+            "en": "Can't make it"
+        ],
+        "ev_arrival_gps_error": [
+            "ru": "Не удалось получить GPS. Проверьте доступ к геолокации.",
+            "kk": "GPS алу мүмкін болмады. Геолокация рұқсатын тексеріңіз.",
+            "en": "Failed to get GPS. Check location permissions."
+        ],
+        "ev_participant_status_late": [
+            "ru": "Опаздывает",
+            "kk": "Кешігеді",
+            "en": "Late"
+        ],
+        "ev_participant_status_cant_go": [
+            "ru": "Не сможет",
+            "kk": "Келе алмайды",
+            "en": "Can't make it"
+        ],
+        "ev_participant_status_going": [
+            "ru": "Идёт",
+            "kk": "Бара жатыр",
+            "en": "Going"
+        ],
+        "edit_ev_name": [
+            "ru": "Название",
+            "kk": "Атауы",
+            "en": "Title"
+        ],
+        "edit_ev_desc": [
+            "ru": "Описание",
+            "kk": "Сипаттама",
+            "en": "Description"
+        ],
+        "edit_ev_category": [
+            "ru": "Категория",
+            "kk": "Санаты",
+            "en": "Category"
+        ],
+        "edit_ev_location": [
+            "ru": "Место встречи",
+            "kk": "Кездесу орны",
+            "en": "Meeting place"
+        ],
+        "edit_ev_location_placeholder": [
+            "ru": "Название места",
+            "kk": "Орын атауы",
+            "en": "Location name"
+        ],
+        "edit_ev_latitude": [
+            "ru": "Широта",
+            "kk": "Ендік",
+            "en": "Latitude"
+        ],
+        "edit_ev_longitude": [
+            "ru": "Долгота",
+            "kk": "Бойлық",
+            "en": "Longitude"
+        ],
+        "edit_ev_max_participants": [
+            "ru": "Лимит участников",
+            "kk": "Қатысушылар лимиті",
+            "en": "Participant limit"
+        ],
+        "edit_ev_restrictions": [
+            "ru": "Ограничения",
+            "kk": "Шектеулер",
+            "en": "Restrictions"
+        ],
+        "edit_ev_no_limit": [
+            "ru": "без лимита",
+            "kk": "шектеусіз",
+            "en": "no limit"
+        ],
+        "edit_ev_age_from_format": [
+            "ru": "Возраст от: %@",
+            "kk": "Жас шамасы (бастап): %@",
+            "en": "Min age: %@"
+        ],
+        "edit_ev_age_to_format": [
+            "ru": "Возраст до: %@",
+            "kk": "Жас шамасы (дейін): %@",
+            "en": "Max age: %@"
+        ],
+        "edit_ev_save_btn": [
+            "ru": "Сохранить изменения",
+            "kk": "Өзгерістерді сақтау",
+            "en": "Save changes"
+        ],
+        "edit_ev_nav_title": [
+            "ru": "Редактировать",
+            "kk": "Өңдеу",
+            "en": "Edit"
+        ],
+        "edit_ev_err_title": [
+            "ru": "Введите название",
+            "kk": "Атауын енгізіңіз",
+            "en": "Enter title"
+        ],
+        "edit_ev_err_desc": [
+            "ru": "Введите описание",
+            "kk": "Сипаттамасын енгізіңіз",
+            "en": "Enter description"
+        ],
+        "edit_ev_err_location": [
+            "ru": "Введите место встречи",
+            "kk": "Кездесу орнын енгізіңіз",
+            "en": "Enter meeting place"
+        ],
+        "edit_ev_err_coordinates": [
+            "ru": "Проверьте координаты",
+            "kk": "Координаталарды тексеріңіз",
+            "en": "Check coordinates"
+        ],
+        "edit_ev_err_end_after_start": [
+            "ru": "Окончание должно быть позже начала",
+            "kk": "Аяқталуы басталуынан кеш болуы керек",
+            "en": "End must be after start"
+        ],
+        "edit_ev_err_save_failed": [
+            "ru": "Не удалось сохранить событие",
+            "kk": "Оқиғаны сақтау мүмкін болмады",
+            "en": "Failed to save event"
+        ],
+        
+        // profile_ / mod_ / rate_ texts
+        "user_detail_load_error": [
+            "ru": "Не удалось загрузить пользователя",
+            "kk": "Пайдаланушыны жүктеу мүмкін болмады",
+            "en": "Failed to load user"
+        ],
+        "user_detail_reviews_title": [
+            "ru": "Отзывы участников",
+            "kk": "Қатысушылар пікірлері",
+            "en": "Participant Reviews"
+        ],
+        "user_detail_its_you": [
+            "ru": "Это вы",
+            "kk": "Бұл сіз",
+            "en": "This is you"
+        ],
+        "user_detail_add_friend": [
+            "ru": "Добавить в друзья",
+            "kk": "Досқа қосу",
+            "en": "Add to Friends"
+        ],
+        "user_detail_cancel_request": [
+            "ru": "Отменить запрос",
+            "kk": "Сұрауды бас тарту",
+            "en": "Cancel Request"
+        ],
+        "user_detail_sent_request": [
+            "ru": "Отправил вам запрос в друзья",
+            "kk": "Сізге достық сұранысын жіберді",
+            "en": "Sent you a friend request"
+        ],
+        "user_detail_reject": [
+            "ru": "Отклонить",
+            "kk": "Қабылдамау",
+            "en": "Decline"
+        ],
+        "user_detail_accept": [
+            "ru": "Принять",
+            "kk": "Қабылдау",
+            "en": "Accept"
+        ],
+        "user_detail_friends_status": [
+            "ru": "Вы друзья",
+            "kk": "Сіздер доссыздар",
+            "en": "You are friends"
+        ],
+        "user_detail_unfriend": [
+            "ru": "Удалить из друзей",
+            "kk": "Достардан жою",
+            "en": "Remove from Friends"
+        ],
+        "rate_subtitle": [
+            "ru": "Поделитесь впечатлениями о других участниках события",
+            "kk": "Оқиғаның басқа қатысушылары туралы әсеріңізбен бөлісіңіз",
+            "en": "Share your impressions about other event participants"
+        ],
+        "rate_no_participants_title": [
+            "ru": "Нет других участников",
+            "kk": "Басқа қатысушылар жоқ",
+            "en": "No other participants"
+        ],
+        "rate_no_participants_desc": [
+            "ru": "Вы были единственным участником этого события.",
+            "kk": "Сіз бұл оқиғаның жалғыз қатысушысы болдыңыз.",
+            "en": "You were the only participant in this event."
+        ],
+        "rate_rated_badge": [
+            "ru": "Оценено",
+            "kk": "Бағаланды",
+            "en": "Rated"
+        ],
+        "rate_rate_btn": [
+            "ru": "Оценить",
+            "kk": "Бағалау",
+            "en": "Rate"
+        ],
+        "rate_sheet_title": [
+            "ru": "Оценка участника",
+            "kk": "Қатысушыны бағалау",
+            "en": "Rate Participant"
+        ],
+        "rate_star_1": [
+            "ru": "Ужасно 😟",
+            "kk": "Өте нашар 😟",
+            "en": "Terrible 😟"
+        ],
+        "rate_star_2": [
+            "ru": "Плохо 🙁",
+            "kk": "Нашар 🙁",
+            "en": "Bad 🙁"
+        ],
+        "rate_star_3": [
+            "ru": "Нормально 😐",
+            "kk": "Қалыпты 😐",
+            "en": "Okay 😐"
+        ],
+        "rate_star_4": [
+            "ru": "Хорошо 🙂",
+            "kk": "Жақсы 🙂",
+            "en": "Good 🙂"
+        ],
+        "rate_star_5": [
+            "ru": "Отлично! 🤩",
+            "kk": "Керемет! 🤩",
+            "en": "Excellent! 🤩"
+        ],
+        "rate_comment_label": [
+            "ru": "ОТЗЫВ (НЕОБЯЗАТЕЛЬНО)",
+            "kk": "ПІКІР (МІНДЕТТІ ЕМЕС)",
+            "en": "REVIEW (OPTIONAL)"
+        ],
+        "rate_comment_placeholder": [
+            "ru": "Напишите пару слов о вашем впечатлении...",
+            "kk": "Әсеріңіз туралы бірнеше сөз жазыңыз...",
+            "en": "Write a few words about your impression..."
+        ],
+        "rate_submit_btn": [
+            "ru": "Отправить оценку",
+            "kk": "Бағаны жіберу",
+            "en": "Submit Rating"
+        ],
+        "my_events_created": [
+            "ru": "Созданные",
+            "kk": "Жасалғандар",
+            "en": "Created"
+        ],
+        "my_events_participation": [
+            "ru": "Участие",
+            "kk": "Қатысу",
+            "en": "Participation"
+        ],
+        "my_events_empty": [
+            "ru": "Нет таких событий",
+            "kk": "Мұндай оқиғалар жоқ",
+            "en": "No such events"
+        ],
+        "events_filter": [
+            "ru": "Фильтр",
+            "kk": "Сүзгі",
+            "en": "Filter"
+        ],
+        "profile_load_error": [
+            "ru": "Не удалось загрузить профиль",
+            "kk": "Профильді жүктеу мүмкін болмады",
+            "en": "Failed to load profile"
+        ],
+        "profile_email_confirmed": [
+            "ru": "Email подтвержден",
+            "kk": "Email расталды",
+            "en": "Email confirmed"
+        ],
+        "profile_email_unconfirmed": [
+            "ru": "Подтвердите email",
+            "kk": "Email-ді растаңыз",
+            "en": "Confirm email"
+        ],
+        "profile_resend_email": [
+            "ru": "Отправить письмо еще раз",
+            "kk": "Хатты қайта жіберу",
+            "en": "Resend email"
+        ],
+        "mod_user_email_not_confirmed": [
+            "ru": "Email не подтвержден",
+            "kk": "Email расталмаған",
+            "en": "Email unconfirmed"
+        ],
+        "mod_user_signin_prefix": [
+            "ru": "Вход: %@",
+            "kk": "Кіру: %@",
+            "en": "Sign-in: %@"
+        ],
+        "mod_user_reports_sent": [
+            "ru": "Репорты",
+            "kk": "Репорттар",
+            "en": "Reports"
+        ],
+        "mod_ban_reason_format": [
+            "ru": "Причина: %@",
+            "kk": "Себебі: %@",
+            "en": "Reason: %@"
+        ],
+        "mod_tools_ai_helper": [
+            "ru": "AI помощник",
+            "kk": "ЖИ көмекшісі",
+            "en": "AI assistant"
+        ],
+        "mod_tools_default_city": [
+            "ru": "Город по умолчанию",
+            "kk": "Әдепкі қала",
+            "en": "Default city"
+        ],
+        "mod_tools_ai_rate_limit": [
+            "ru": "Лимит ИИ / 10 мин",
+            "kk": "ЖИ лимиті / 10 мин",
+            "en": "AI limit / 10 min"
+        ],
+        "mod_msg_report_dismissed": [
+            "ru": "Жалоба успешно отклонена/закрыта",
+            "kk": "Шағым сәтті қабылданбады/жабылды",
+            "en": "Report successfully dismissed/closed"
+        ],
+        "mod_msg_user_banned": [
+            "ru": "Пользователь заблокирован",
+            "kk": "Пайдаланушы бұғатталды",
+            "en": "User banned"
+        ],
+        "mod_msg_user_unbanned": [
+            "ru": "Пользователь успешно разблокирован",
+            "kk": "Пайдаланушы бұғаттан сәтті шығарылды",
+            "en": "User successfully unbanned"
+        ],
+        "mod_msg_user_deleted": [
+            "ru": "Пользователь удален навсегда",
+            "kk": "Пайдаланушы біржола жойылды",
+            "en": "User deleted permanently"
+        ],
+        "mod_msg_role_updated": [
+            "ru": "Роль пользователя обновлена на %@",
+            "kk": "Пайдаланушы рөлі келесіге жаңартылды: %@",
+            "en": "User role updated to %@"
+        ],
+        "mod_msg_event_deleted": [
+            "ru": "Событие удалено",
+            "kk": "Оқиға жойылды",
+            "en": "Event deleted"
+        ],
+        "mod_msg_event_status_updated": [
+            "ru": "Статус события обновлен на %@",
+            "kk": "Оқиға мәртебесі келесіге жаңартылды: %@",
+            "en": "Event status updated to %@"
+        ],
+        "mod_msg_broadcast_sent": [
+            "ru": "Объявление успешно отправлено всем пользователям!",
+            "kk": "Хабарландыру барлық пайдаланушыларға сәтті жіберілді!",
+            "en": "Announcement successfully sent to all users!"
+        ],
+        "mod_err_ai_rate_limit": [
+            "ru": "Лимит ИИ должен быть положительным числом",
+            "kk": "ЖИ лимиті оң сан болуы керек",
+            "en": "AI limit must be a positive number"
+        ],
+        "mod_err_default_city": [
+            "ru": "Город по умолчанию не должен быть пустым",
+            "kk": "Әдепкі қала бос болмауы керек",
+            "en": "Default city cannot be empty"
+        ],
+        "mod_events_age_up_to": [
+            "ru": "до %d",
+            "kk": "%d дейін",
+            "en": "up to %d"
+        ],
+        "mod_audit_action_ban": [
+            "ru": "Блокировка пользователя",
+            "kk": "Пайдаланушыны бұғаттау",
+            "en": "User ban"
+        ],
+        "mod_audit_action_unban": [
+            "ru": "Разблокировка пользователя",
+            "kk": "Пайдаланушыны бұғаттан шығару",
+            "en": "User unban"
+        ],
+        "mod_audit_action_update_role": [
+            "ru": "Изменение роли",
+            "kk": "Рөлді өзгерту",
+            "en": "Role change"
+        ],
+        "mod_audit_action_close_report": [
+            "ru": "Жалоба закрыта",
+            "kk": "Шағым жабылды",
+            "en": "Report closed"
+        ],
+        "mod_audit_action_delete_event": [
+            "ru": "Ивент удален",
+            "kk": "Оқиға жойылды",
+            "en": "Event deleted"
+        ],
+        "mod_audit_action_delete_profile": [
+            "ru": "Профиль удален",
+            "kk": "Профиль жойылды",
+            "en": "Profile deleted"
+        ],
+        "mod_audit_action_update_event_status": [
+            "ru": "Статус ивента изменен",
+            "kk": "Оқиға мәртебесі өзгертілді",
+            "en": "Event status updated"
+        ],
+        "mod_reason_spam": [
+            "ru": "СПАМ",
+            "kk": "СПАМ",
+            "en": "SPAM"
+        ],
+        "mod_reason_abuse": [
+            "ru": "ОСКОРБЛЕНИЯ",
+            "kk": "ҚОРЛАУ",
+            "en": "ABUSE"
+        ],
+        "mod_reason_inappropriate": [
+            "ru": "НЕПРИЕМЛЕМЫЙ КОНТЕНТ",
+            "kk": "ҚОЛАЙСЫЗ КОНТЕНТ",
+            "en": "INAPPROPRIATE CONTENT"
+        ],
+        "mod_reason_default": [
+            "ru": "ЖАЛОБА",
+            "kk": "ШАҒЫМ",
+            "en": "REPORT"
+        ],
+        
+        // auth_ texts
+        "auth_reset_password_title": [
+            "ru": "Сброс пароля",
+            "kk": "Құпия сөзді қайта орнату",
+            "en": "Reset Password"
+        ],
+        "auth_reset_password_subtitle": [
+            "ru": "Введите email аккаунта. Мы отправим ссылку для создания нового пароля.",
+            "kk": "Аккаунттың email-ін енгізіңіз. Біз жаңа құпия сөз жасау сілтемесін жібереміз.",
+            "en": "Enter your account email. We will send a link to create a new password."
+        ],
+        "forgot_btn": [
+            "ru": "Отправить ссылку",
+            "kk": "Сілтемені жіберу",
+            "en": "Send Link"
+        ],
+        "auth_back_to_login": [
+            "ru": "Вернуться ко входу",
+            "kk": "Кіруге оралу",
+            "en": "Back to Sign In"
+        ],
+        "auth_new_password_title": [
+            "ru": "Новый пароль",
+            "kk": "Жаңа құпия сөз",
+            "en": "New Password"
+        ],
+        "auth_new_password_subtitle": [
+            "ru": "Придумайте новый пароль для аккаунта.",
+            "kk": "Аккаунт үшін жаңа құпия сөз ойлап табыңыз.",
+            "en": "Create a new password for your account."
+        ],
+        "auth_repeat_password": [
+            "ru": "Повторите пароль",
+            "kk": "Құпия сөзді қайталаңыз",
+            "en": "Repeat password"
+        ],
+        "auth_repeat_password_placeholder": [
+            "ru": "Введите пароль еще раз",
+            "kk": "Құпия сөзді қайта енгізіңіз",
+            "en": "Enter password again"
+        ],
+        "auth_err_password_min_length": [
+            "ru": "Пароль должен быть минимум 6 символов",
+            "kk": "Құпия сөз кемінде 6 таңбадан тұруы керек",
+            "en": "Password must be at least 6 characters"
+        ],
+        "auth_save_password_btn": [
+            "ru": "Сохранить пароль",
+            "kk": "Құпия сөзді сақтау",
+            "en": "Save Password"
+        ],
+        "login_forgot_password": [
+            "ru": "Забыли пароль?",
+            "kk": "Құпия сөзді ұмыттыңыз ба?",
+            "en": "Forgot password?"
+        ],
+        "auth_err_save_tokens": [
+            "ru": "Не удалось сохранить токены безопасности",
+            "kk": "Қауіпсіздік токендерін сақтау мүмкін болмады",
+            "en": "Failed to save security tokens"
+        ],
+        "auth_signup_success_verify": [
+            "ru": "Аккаунт создан. Введите код из письма для подтверждения email.",
+            "kk": "Аккаунт жасалды. Email-ді растау үшін хаттағы кодты енгізіңіз.",
+            "en": "Account created. Enter the code from the email to verify your email address."
+        ],
+        "auth_reset_email_sent": [
+            "ru": "Письмо для сброса пароля отправлено. Проверьте почту.",
+            "kk": "Құпия сөзді қалпына келтіру хаты жіберілді. Поштаңызды тексеріңіз.",
+            "en": "Password reset email sent. Please check your inbox."
+        ],
+        "auth_resend_confirmation_sent": [
+            "ru": "Письмо подтверждения отправлено еще раз. Проверьте почту.",
+            "kk": "Растау хаты қайта жіберілді. Поштаңызды тексеріңіз.",
+            "en": "Confirmation email sent again. Please check your inbox."
+        ],
+        "auth_reset_link_invalid_or_expired": [
+            "ru": "Неверная или устаревшая ссылка для сброса пароля",
+            "kk": "Құпия сөзді қалпына келтіру сілтемесі қате немесе мерзімі өткен",
+            "en": "Password reset link is invalid or expired"
+        ],
+        "auth_reset_link_invalid": [
+            "ru": "Ссылка для сброса пароля недействительна",
+            "kk": "Құпия сөзді қалпына келтіру сілтемесі жарамсыз",
+            "en": "Password reset link is invalid"
+        ],
+        "auth_password_updated_success": [
+            "ru": "Пароль обновлен. Теперь можно войти с новым паролем.",
+            "kk": "Құпия сөз жаңартылды. Енді жаңа құпия сөзбен кіруге болады.",
+            "en": "Password updated. You can now sign in with your new password."
+        ],
+        "auth_err_load_profile_format": [
+            "ru": "Не удалось загрузить профиль: %@",
+            "kk": "Профильді жүктеу мүмкін болмады: %@",
+            "en": "Failed to load profile: %@"
+        ],
+        "auth_err_update_profile_format": [
+            "ru": "Не удалось обновить профиль: %@",
+            "kk": "Профильді жаңарту мүмкін болмады: %@",
+            "en": "Failed to update profile: %@"
         ]
     ]
     

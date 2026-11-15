@@ -19,18 +19,18 @@ struct ForgotPasswordView: View {
                         .frame(width: 72, height: 72)
                         .background(Circle().fill(ZholdasTheme.accent.opacity(0.16)))
 
-                    Text("Сброс пароля")
+                    Text("auth_reset_password_title".localized)
                         .font(.title2.weight(.bold))
                         .foregroundColor(ZholdasTheme.textPrimary)
 
-                    Text("Введите email аккаунта. Мы отправим ссылку для создания нового пароля.")
+                    Text("auth_reset_password_subtitle".localized)
                         .font(.subheadline)
                         .foregroundColor(ZholdasTheme.textSecondary)
                         .multilineTextAlignment(.center)
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Электронная почта")
+                    Text("auth_email".localized)
                         .font(.caption.weight(.bold))
                         .foregroundColor(ZholdasTheme.textSecondary)
                         .tracking(1)
@@ -74,7 +74,7 @@ struct ForgotPasswordView: View {
                         if authViewModel.isLoading {
                             ProgressView().tint(.white)
                         } else {
-                            Text("Отправить ссылку")
+                            Text("forgot_btn".localized)
                                 .font(.headline.weight(.bold))
                         }
                     }
@@ -83,7 +83,7 @@ struct ForgotPasswordView: View {
                 .buttonStyle(SpringButtonStyle())
                 .disabled(email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || authViewModel.isLoading)
 
-                Button("Вернуться ко входу") {
+                Button("auth_back_to_login".localized) {
                     dismiss()
                 }
                 .font(.footnote.weight(.bold))
@@ -124,11 +124,11 @@ struct ResetPasswordView: View {
                             .frame(width: 72, height: 72)
                             .background(Circle().fill(ZholdasTheme.accent.opacity(0.16)))
 
-                        Text("Новый пароль")
+                        Text("auth_new_password_title".localized)
                             .font(.title2.weight(.bold))
                             .foregroundColor(ZholdasTheme.textPrimary)
 
-                        Text("Придумайте новый пароль для аккаунта.")
+                        Text("auth_new_password_subtitle".localized)
                             .font(.subheadline)
                             .foregroundColor(ZholdasTheme.textSecondary)
                             .multilineTextAlignment(.center)
@@ -136,15 +136,15 @@ struct ResetPasswordView: View {
 
                     VStack(spacing: 16) {
                         passwordField(
-                            title: "Новый пароль",
-                            placeholder: "Минимум 6 символов",
+                            title: "auth_new_password_title".localized,
+                            placeholder: "reg_password_placeholder".localized,
                             text: $password,
                             field: .password
                         )
 
                         passwordField(
-                            title: "Повторите пароль",
-                            placeholder: "Введите пароль еще раз",
+                            title: "auth_repeat_password".localized,
+                            placeholder: "auth_repeat_password_placeholder".localized,
                             text: $confirmPassword,
                             field: .confirmPassword
                         )
@@ -161,11 +161,11 @@ struct ResetPasswordView: View {
                     Button {
                         focusedField = nil
                         guard password.count >= 6 else {
-                            localError = "Пароль должен быть минимум 6 символов"
+                            localError = "auth_err_password_min_length".localized
                             return
                         }
                         guard password == confirmPassword else {
-                            localError = "Пароли не совпадают"
+                            localError = "reg_err_mismatch".localized
                             return
                         }
 
@@ -178,7 +178,7 @@ struct ResetPasswordView: View {
                             if authViewModel.isLoading {
                                 ProgressView().tint(.white)
                             } else {
-                                Text("Сохранить пароль")
+                                Text("auth_save_password_btn".localized)
                                     .font(.headline.weight(.bold))
                             }
                         }

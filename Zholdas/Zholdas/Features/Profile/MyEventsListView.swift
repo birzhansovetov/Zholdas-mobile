@@ -11,9 +11,9 @@ struct MyEventsListView: View {
             .ignoresSafeArea()
             
             VStack {
-                Picker("Фильтр", selection: $selectedFilter) {
-                    Text("Созданные").tag(0)
-                    Text("Участие").tag(1)
+                Picker("events_filter".localized, selection: $selectedFilter) {
+                    Text("my_events_created".localized).tag(0)
+                    Text("my_events_participation".localized).tag(1)
                 }
                 .pickerStyle(SegmentedPickerStyle())
                 .padding()
@@ -38,7 +38,7 @@ struct MyEventsListView: View {
                             Image(systemName: "calendar.badge.exclamationmark")
                                 .font(.largeTitle)
                                 .foregroundColor(.gray)
-                            Text("Нет таких событий")
+                            Text("my_events_empty".localized)
                                 .foregroundColor(.gray)
                         }
                         Spacer()
@@ -76,7 +76,7 @@ struct MyEventsListView: View {
                 }
             }
         }
-        .navigationTitle("Мои события")
+        .navigationTitle("prof_my_events".localized)
         .navigationBarTitleDisplayMode(.inline)
         .task {
             // Use Almaty coordinates to fetch user events list

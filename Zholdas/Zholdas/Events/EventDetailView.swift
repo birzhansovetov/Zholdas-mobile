@@ -14,15 +14,15 @@ private struct EventWeatherSummary: Equatable {
     let code: Int?
 
     var conditionText: String {
-        guard let code else { return "Прогноз" }
+        guard let code else { return "ev_weather_forecast".localized }
         switch code {
-        case 0: return "Ясно"
-        case 1...3: return "Переменная облачность"
-        case 45, 48: return "Туман"
-        case 51...67, 80...82: return "Дождь"
-        case 71...77, 85...86: return "Снег"
-        case 95...99: return "Гроза"
-        default: return "Прогноз"
+        case 0: return "ev_weather_clear".localized
+        case 1...3: return "ev_weather_partly_cloudy".localized
+        case 45, 48: return "ev_weather_fog".localized
+        case 51...67, 80...82: return "ev_weather_rain".localized
+        case 71...77, 85...86: return "ev_weather_snow".localized
+        case 95...99: return "ev_weather_thunderstorm".localized
+        default: return "ev_weather_forecast".localized
         }
     }
 
@@ -42,13 +42,13 @@ private struct EventWeatherSummary: Equatable {
     var checklistText: String {
         var parts = ["\(conditionText), \(Int(round(temperature)))°C"]
         if let apparentTemperature {
-            parts.append("ощущается \(Int(round(apparentTemperature)))°C")
+            parts.append(String(format: "ev_weather_feels_like".localized, Int(round(apparentTemperature))))
         }
         if let precipitation, precipitation > 0 {
-            parts.append("осадки \(String(format: "%.1f", precipitation)) мм")
+            parts.append(String(format: "ev_weather_precipitation".localized, precipitation))
         }
         if let windSpeed {
-            parts.append("ветер \(Int(round(windSpeed))) км/ч")
+            parts.append(String(format: "ev_weather_wind".localized, Int(round(windSpeed))))
         }
         return parts.joined(separator: ", ")
     }
@@ -121,7 +121,7 @@ struct EventDetailView: View {
                 localSession ?? ChatSession(
                     id: event.id,
                     title: event.title,
-                    timeLabel: "Активен",
+                    timeLabel: "chat_ai_active".localized,
                     lastMessage: "",
                     lastMessageSender: "",
                     lastMessageTime: event.startTime,
@@ -316,7 +316,7 @@ struct EventDetailView: View {
                                     .fontWeight(.bold)
                                 
                                 if let dist = currentDistanceMeters {
-                                    Text("\("ev_distance".localized): \(String(format: "%.1f км", dist / 1000.0))")
+                                    Text("\("ev_distance".localized): \(String(format: "ev_distance_km_format".localized, dist / 1000.0))")
                                         .font(.caption)
                                         .foregroundColor(ZholdasTheme.textSecondary)
                                 } else {
@@ -520,7 +520,7 @@ struct EventDetailView: View {
             localSession = ChatSession(
                 id: event.id,
                 title: event.title,
-                timeLabel: "Активен",
+                timeLabel: "chat_ai_active".localized,
                 lastMessage: "",
                 lastMessageSender: "",
                 lastMessageTime: event.startTime,
@@ -758,7 +758,7 @@ struct EventDetailView: View {
                 .background(Circle().fill(ZholdasTheme.accent.opacity(0.14)))
 
             VStack(alignment: .leading, spacing: 5) {
-                Text("Погода для встречи".uppercased())
+                Text("ev_weather_title".localized.uppercased())
                     .font(.caption2)
                     .fontWeight(.bold)
                     .foregroundColor(ZholdasTheme.textSecondary)
@@ -774,11 +774,11 @@ struct EventDetailView: View {
                         .foregroundColor(ZholdasTheme.textSecondary)
                         .lineLimit(2)
                 } else if isLoadingWeather {
-                    Text("Загружаем прогноз...")
+                    Text("ev_weather_loading".localized)
                         .foregroundColor(ZholdasTheme.textSecondary)
                         .font(.subheadline)
                 } else {
-                    Text("Прогноз пока недоступен")
+                    Text("ev_weather_unavailable".localized)
                         .foregroundColor(ZholdasTheme.textSecondary)
                         .font(.subheadline)
                 }
@@ -975,7 +975,7 @@ struct EventDetailView: View {
                 } label: {
                     HStack {
                         Image(systemName: "pencil")
-                        Text("Редактировать встречу")
+                        Text("ev_edit_event_btn".localized)
                             .fontWeight(.bold)
                     }
                     .foregroundColor(.white)
@@ -1091,7 +1091,7 @@ struct EventDetailView: View {
                 } else {
                     Image(systemName: isArrived ? "checkmark.seal.fill" : "location.fill")
                 }
-                Text(isArrived ? "Вы на месте" : (isArrivalLoading ? "Проверяем GPS..." : "Я на месте"))
+                Text(isArrived ? "ev_you_are_here".localized : (isArrivalLoading ? "ev_gps_checking".localized : "ev_i_am_here".localized))
                     .font(.headline)
                     .fontWeight(.bold)
             }
@@ -1113,11 +1113,11 @@ struct EventDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Мой статус")
+                    Text("ev_my_status".localized)
                         .font(.headline)
                         .fontWeight(.bold)
                         .foregroundColor(ZholdasTheme.textPrimary)
-                    Text("Покажите организатору и участникам, что с вами.")
+                    Text("ev_my_status_hint".localized)
                         .font(.caption)
                         .foregroundColor(ZholdasTheme.textSecondary)
                 }
@@ -1129,10 +1129,10 @@ struct EventDetailView: View {
             }
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                participantStatusButton(status: "going", title: "Иду", icon: "figure.walk", color: ZholdasTheme.accent)
-                participantStatusButton(status: "late", title: "Опаздываю", icon: "clock.fill", color: .orange)
-                participantStatusButton(status: "arrived", title: "На месте", icon: "checkmark.seal.fill", color: .green)
-                participantStatusButton(status: "not_going", title: "Не смогу", icon: "xmark.circle.fill", color: .red)
+                participantStatusButton(status: "going", title: "ev_status_going".localized, icon: "figure.walk", color: ZholdasTheme.accent)
+                participantStatusButton(status: "late", title: "ev_status_late".localized, icon: "clock.fill", color: .orange)
+                participantStatusButton(status: "arrived", title: "ev_status_arrived".localized, icon: "checkmark.seal.fill", color: .green)
+                participantStatusButton(status: "not_going", title: "ev_status_cant_go".localized, icon: "xmark.circle.fill", color: .red)
             }
 
             if let participantStatusError {
@@ -1353,7 +1353,7 @@ struct EventDetailView: View {
             let location = await waitForCurrentLocation()
             guard let location else {
                 await MainActor.run {
-                    self.arrivalError = liveLocationManager.errorMessage ?? "Не удалось получить GPS. Проверьте доступ к геолокации."
+                    self.arrivalError = liveLocationManager.errorMessage ?? "ev_arrival_gps_error".localized
                     self.isArrivalLoading = false
                 }
                 return
@@ -1747,13 +1747,13 @@ struct ParticipantsListView: View {
     private func participantStatusInfo(_ status: String) -> (title: String, icon: String, color: Color) {
         switch status {
         case "late":
-            return ("Опаздывает", "clock.fill", .orange)
+            return ("ev_participant_status_late".localized, "clock.fill", .orange)
         case "arrived":
-            return ("На месте", "checkmark.circle.fill", .green)
+            return ("ev_status_arrived".localized, "checkmark.circle.fill", .green)
         case "not_going":
-            return ("Не сможет", "xmark.circle.fill", .red)
+            return ("ev_participant_status_cant_go".localized, "xmark.circle.fill", .red)
         default:
-            return ("Идёт", "figure.walk", ZholdasTheme.accent)
+            return ("ev_participant_status_going".localized, "figure.walk", ZholdasTheme.accent)
         }
     }
 }
@@ -1816,7 +1816,7 @@ struct PreparationChecklistView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Готово") {
+                    Button("btn_done".localized) {
                         dismiss()
                     }
                     .foregroundColor(ZholdasTheme.accent)
