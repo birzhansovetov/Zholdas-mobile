@@ -5,14 +5,14 @@ enum AppConfig {
 
     #if DEBUG
     #if targetEnvironment(simulator)
-    static let backendBaseURL = URL(string: "http://localhost:8080")!
+    nonisolated static let backendBaseURL = URL(string: "http://localhost:8080")!
     static let webSocketBaseURL = URL(string: "ws://localhost:8080")!
     #else
-    static let backendBaseURL = URL(string: "https://zholdas-api-de89a64e4196.herokuapp.com")!
+    nonisolated static let backendBaseURL = URL(string: "https://zholdas-api-de89a64e4196.herokuapp.com")!
     static let webSocketBaseURL = URL(string: "wss://zholdas-api-de89a64e4196.herokuapp.com")!
     #endif
     #else
-    static let backendBaseURL = URL(string: "https://zholdas-api-de89a64e4196.herokuapp.com")!
+    nonisolated static let backendBaseURL = URL(string: "https://zholdas-api-de89a64e4196.herokuapp.com")!
     static let webSocketBaseURL = URL(string: "wss://zholdas-api-de89a64e4196.herokuapp.com")!
     #endif
 

@@ -2791,6 +2791,11 @@ class LocalizationManager: ObservableObject {
             "ru": "Чтобы продолжить, примите условия и политику",
             "kk": "Жалғастыру үшін шарттар мен саясатты қабылдаңыз",
             "en": "Please accept the terms and privacy policy to continue"
+        ],
+        "ev_open_not_found": [
+            "ru": "Событие не найдено или недоступно",
+            "kk": "Оқиға табылмады немесе қолжетімсіз",
+            "en": "Event not found or unavailable"
         ]
     ]
     
