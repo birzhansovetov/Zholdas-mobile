@@ -127,6 +127,9 @@ interface ZholdasApiService {
     @POST("/auth/logout")
     suspend fun logout(): GenericMessageResponse
 
+    @DELETE("/auth/me")
+    suspend fun deleteAccount(): GenericMessageResponse
+
     @GET("/auth/me")
     suspend fun getProfile(): User
 
