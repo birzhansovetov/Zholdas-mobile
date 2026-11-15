@@ -140,6 +140,8 @@ func main() {
 	})
 
 	router.GET("/events/:id", eventHandler.GetPublicEventPage)
+	router.GET("/privacy", handler.GetPrivacyPage)
+	router.GET("/terms", handler.GetTermsPage)
 
 	// WebSocket Route (JWT validation is handled inside query parameters)
 	router.GET("/events/:id/ws", eventHandler.WebSocketChatUpgrader)
@@ -164,6 +166,7 @@ func main() {
 	{
 		protectedRoutes.POST("/auth/logout", authHandler.LogOut)
 		protectedRoutes.GET("/auth/me", authHandler.GetProfile)
+		protectedRoutes.DELETE("/auth/me", authHandler.DeleteOwnAccount)
 		protectedRoutes.PUT("/auth/profile", authHandler.UpdateProfile)
 		protectedRoutes.POST("/upload", authHandler.UploadImage)
 		protectedRoutes.POST("/auth/device-token", authHandler.RegisterDeviceToken)
