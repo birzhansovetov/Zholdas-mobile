@@ -2,6 +2,9 @@ import Foundation
 import Combine
 import UIKit
 import UserNotifications
+import os
+
+private let logger = Logger(subsystem: "app.zholdas.Zholdas", category: "AuthViewModel")
 
 @MainActor
 class AuthViewModel: ObservableObject {
@@ -74,6 +77,7 @@ class AuthViewModel: ObservableObject {
         birthYear: Int? = nil
     ) async {
         self.isLoading = true
+        defer { self.isLoading = false }
         self.errorMessage = nil
         self.infoMessage = nil
         let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -82,13 +86,11 @@ class AuthViewModel: ObservableObject {
             if let response = try await APIClient.shared.signUp(email: normalizedEmail, password: password, username: username, fullName: fullName) {
                 guard saveAuthTokens(response) else {
                     self.errorMessage = "auth_err_save_tokens".localized
-                    self.isLoading = false
                     return
                 }
                 self.isAuthenticated = true
             } else {
                 self.infoMessage = "auth_signup_success_verify".localized
-                self.isLoading = false
                 return
             }
             
@@ -105,7 +107,6 @@ class AuthViewModel: ObservableObject {
             }
         } catch {
             self.errorMessage = error.localizedDescription
-            self.isLoading = false
         }
     }
 
@@ -120,6 +121,7 @@ class AuthViewModel: ObservableObject {
         birthYear: Int? = nil
     ) async {
         self.isLoading = true
+        defer { self.isLoading = false }
         self.errorMessage = nil
         self.infoMessage = nil
         let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -129,7 +131,6 @@ class AuthViewModel: ObservableObject {
 
             guard saveAuthTokens(response) else {
                 self.errorMessage = "auth_err_save_tokens".localized
-                self.isLoading = false
                 return
             }
 
@@ -146,7 +147,6 @@ class AuthViewModel: ObservableObject {
             await fetchUserProfile()
         } catch {
             self.errorMessage = error.localizedDescription
-            self.isLoading = false
         }
     }
 
@@ -203,8 +203,11 @@ class AuthViewModel: ObservableObject {
     func signOut() {
         self.isLoading = true
         
-        // Посылаем запрос логаута в фоне на сервер
         Task {
+            // Независимая попытка отвязать push-токен на сервере
+            await registerDeviceToken("")
+            
+            // Независимая попытка логаута на сервере
             do {
                 let _: [String: String] = try await APIClient.shared.request(
                     "/auth/logout",
@@ -212,7 +215,7 @@ class AuthViewModel: ObservableObject {
                     requiresAuth: true
                 )
             } catch {
-                print("Ошибка логаута на сервере: \(error.localizedDescription)")
+                logger.error("Failed to logout on server: \(error.localizedDescription)")
             }
             
             // В любом случае очищаем Keychain локально
@@ -222,7 +225,31 @@ class AuthViewModel: ObservableObject {
                 self.isAuthenticated = false
                 self.currentUserProfile = nil
                 self.isLoading = false
+                self.infoMessage = nil
             }
+        }
+    }
+
+    func deleteAccount() async -> Bool {
+        self.isLoading = true
+        self.errorMessage = nil
+
+        do {
+            try await APIClient.shared.requestNoContent(
+                "/auth/me",
+                method: "DELETE",
+                requiresAuth: true
+            )
+
+            TokenStorage.shared.clear()
+            self.isAuthenticated = false
+            self.currentUserProfile = nil
+            self.isLoading = false
+            return true
+        } catch {
+            self.errorMessage = "profile_delete_account_error".localized
+            self.isLoading = false
+            return false
         }
     }
 
@@ -244,6 +271,7 @@ class AuthViewModel: ObservableObject {
 
     func resendEmailConfirmation(email: String) async {
         self.isLoading = true
+        defer { self.isLoading = false }
         self.errorMessage = nil
         self.infoMessage = nil
         let normalizedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
@@ -254,8 +282,6 @@ class AuthViewModel: ObservableObject {
         } catch {
             self.errorMessage = error.localizedDescription
         }
-
-        self.isLoading = false
     }
 
     func handlePasswordResetURL(_ url: URL) {
@@ -365,7 +391,7 @@ class AuthViewModel: ObservableObject {
             )
             return profile
         } catch {
-            print("Failed to fetch user profile \(id): \(error)")
+            logger.error("Failed to fetch user profile: \(error.localizedDescription)")
             return nil
         }
     }
@@ -379,7 +405,7 @@ class AuthViewModel: ObservableObject {
             )
             self.unreadNotificationsCount = list.filter { !$0.isRead }.count
         } catch {
-            print("Failed to fetch notification count: \(error)")
+            logger.error("Failed to fetch notification count: \(error.localizedDescription)")
         }
     }
     
@@ -454,7 +480,7 @@ class AuthViewModel: ObservableObject {
             )
             return true
         } catch {
-            print("Failed to send friend request: \(error)")
+            logger.error("Failed to send friend request: \(error.localizedDescription)")
             return false
         }
     }
@@ -468,7 +494,7 @@ class AuthViewModel: ObservableObject {
             )
             return true
         } catch {
-            print("Failed to accept friend request: \(error)")
+            logger.error("Failed to accept friend request: \(error.localizedDescription)")
             return false
         }
     }
@@ -482,7 +508,7 @@ class AuthViewModel: ObservableObject {
             )
             return true
         } catch {
-            print("Failed to reject friend request: \(error)")
+            logger.error("Failed to reject friend request: \(error.localizedDescription)")
             self.errorMessage = error.localizedDescription
             return false
         }
@@ -497,7 +523,7 @@ class AuthViewModel: ObservableObject {
             )
             return list
         } catch {
-            print("Failed to fetch friends: \(error)")
+            logger.error("Failed to fetch friends: \(error.localizedDescription)")
             return []
         }
     }
@@ -511,7 +537,7 @@ class AuthViewModel: ObservableObject {
             )
             return list
         } catch {
-            print("Failed to fetch friend requests: \(error)")
+            logger.error("Failed to fetch friend requests: \(error.localizedDescription)")
             return []
         }
     }
@@ -528,7 +554,7 @@ class AuthViewModel: ObservableObject {
             )
             return res.status
         } catch {
-            print("Failed to get friendship status: \(error)")
+            logger.error("Failed to get friendship status: \(error.localizedDescription)")
             return "none"
         }
     }
@@ -559,7 +585,7 @@ class AuthViewModel: ObservableObject {
             )
             return true
         } catch {
-            print("Failed to rate participant: \(error)")
+            logger.error("Failed to rate participant: \(error.localizedDescription)")
             return false
         }
     }
@@ -573,7 +599,7 @@ class AuthViewModel: ObservableObject {
             )
             return list
         } catch {
-            print("Failed to fetch user reviews: \(error)")
+            logger.error("Failed to fetch user reviews: \(error.localizedDescription)")
             return []
         }
     }
@@ -615,7 +641,7 @@ class AuthViewModel: ObservableObject {
             )
             return true
         } catch {
-            print("Failed to send report: \(error)")
+            logger.error("Failed to send report: \(error.localizedDescription)")
             return false
         }
     }
@@ -631,7 +657,7 @@ class AuthViewModel: ObservableObject {
             )
             return list
         } catch {
-            print("Failed to fetch reports: \(error)")
+            logger.error("Failed to fetch reports: \(error.localizedDescription)")
             return []
         }
     }
@@ -651,7 +677,7 @@ class AuthViewModel: ObservableObject {
             )
             return true
         } catch {
-            print("Failed to ban user: \(error)")
+            logger.error("Failed to ban user: \(error.localizedDescription)")
             return false
         }
     }
@@ -665,7 +691,7 @@ class AuthViewModel: ObservableObject {
             )
             return true
         } catch {
-            print("Failed to unban user: \(error)")
+            logger.error("Failed to unban user: \(error.localizedDescription)")
             return false
         }
     }
@@ -679,7 +705,7 @@ class AuthViewModel: ObservableObject {
             )
             return true
         } catch {
-            print("Failed to close report: \(error)")
+            logger.error("Failed to close report: \(error.localizedDescription)")
             return false
         }
     }
@@ -693,7 +719,7 @@ class AuthViewModel: ObservableObject {
             )
             return true
         } catch {
-            print("Failed to block user: \(error)")
+            logger.error("Failed to block user: \(error.localizedDescription)")
             self.errorMessage = error.localizedDescription
             return false
         }
@@ -708,7 +734,7 @@ class AuthViewModel: ObservableObject {
             )
             return true
         } catch {
-            print("Failed to unblock user: \(error)")
+            logger.error("Failed to unblock user: \(error.localizedDescription)")
             return false
         }
     }
@@ -725,7 +751,7 @@ class AuthViewModel: ObservableObject {
             )
             return relativePath
         } catch {
-            print("Failed to upload image: \(error)")
+            logger.error("Failed to upload image: \(error.localizedDescription)")
             return nil
         }
     }
@@ -750,9 +776,13 @@ class AuthViewModel: ObservableObject {
                 body: body,
                 requiresAuth: true
             )
-            print("AuthViewModel: Push device token registered successfully: \(token)")
+            if token.isEmpty {
+                logger.debug("Device token cleared on server successfully")
+            } else {
+                logger.debug("Push device token registered successfully")
+            }
         } catch {
-            print("AuthViewModel Error registering device token: \(error.localizedDescription)")
+            logger.error("Error registering device token: \(error.localizedDescription)")
         }
     }
     
@@ -760,9 +790,6 @@ class AuthViewModel: ObservableObject {
         Task {
             if let savedToken = UserDefaults.standard.string(forKey: "apns_device_token") {
                 await registerDeviceToken(savedToken)
-            } else {
-                let mockToken = "sim_token_\(currentUserProfile?.id ?? "")_apns_key"
-                await registerDeviceToken(mockToken)
             }
         }
     }
@@ -770,12 +797,12 @@ class AuthViewModel: ObservableObject {
     func requestNotificationPermission() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, error in
             if granted {
-                print("Notification permission granted.")
+                logger.debug("Notification permission granted.")
                 DispatchQueue.main.async {
                     UIApplication.shared.registerForRemoteNotifications()
                 }
             } else if let error = error {
-                print("Notification permission error: \(error.localizedDescription)")
+                logger.error("Notification permission error: \(error.localizedDescription)")
             }
         }
     }

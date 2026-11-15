@@ -2731,6 +2731,66 @@ class LocalizationManager: ObservableObject {
             "ru": "Не удалось обновить профиль: %@",
             "kk": "Профильді жаңарту мүмкін болмады: %@",
             "en": "Failed to update profile: %@"
+        ],
+        "profile_delete_account": [
+            "ru": "Удалить аккаунт",
+            "kk": "Аккаунтты жою",
+            "en": "Delete Account"
+        ],
+        "profile_delete_account_title": [
+            "ru": "Удалить аккаунт?",
+            "kk": "Аккаунтты жою керек пе?",
+            "en": "Delete Account?"
+        ],
+        "profile_delete_account_message": [
+            "ru": "Будут удалены ваш профиль, фото, созданные вами события, участие и друзья. Сообщения в чатах останутся от имени «Удалённый пользователь». Это действие нельзя отменить.",
+            "kk": "Сіздің профиліңіз, фотоларыңыз, жасаған іс-шараларыңыз, қатысуларыңыз бен достарыңыз жойылады. Чаттардағы хабарламалар «Жойылған пайдаланушы» атынан қалады. Бұл әрекетті қайтару мүмкін емес.",
+            "en": "Your profile, photos, created events, participation, and friends will be deleted. Chat messages will remain under \"Deleted User\". This action cannot be undone."
+        ],
+        "profile_delete_account_confirm": [
+            "ru": "Удалить",
+            "kk": "Жою",
+            "en": "Delete"
+        ],
+        "profile_delete_account_error": [
+            "ru": "Не удалось удалить аккаунт. Попробуйте ещё раз",
+            "kk": "Аккаунтты жою мүмкін болмады. Қайталап көріңіз",
+            "en": "Failed to delete account. Please try again"
+        ],
+        "profile_privacy_policy": [
+            "ru": "Политика конфиденциальности",
+            "kk": "Құпиялық саясаты",
+            "en": "Privacy Policy"
+        ],
+        "profile_terms": [
+            "ru": "Условия использования",
+            "kk": "Пайдалану шарттары",
+            "en": "Terms of Service"
+        ],
+        "reg_terms_prefix": [
+            "ru": "Я принимаю ",
+            "kk": "Мен қабылдаймын: ",
+            "en": "I accept the "
+        ],
+        "reg_terms_link": [
+            "ru": "Условия использования",
+            "kk": "Пайдалану шарттары",
+            "en": "Terms of Service"
+        ],
+        "reg_terms_and": [
+            "ru": " и ",
+            "kk": " және ",
+            "en": " and "
+        ],
+        "reg_privacy_link": [
+            "ru": "Политику конфиденциальности",
+            "kk": "Құпиялық саясаты",
+            "en": "Privacy Policy"
+        ],
+        "reg_terms_required": [
+            "ru": "Чтобы продолжить, примите условия и политику",
+            "kk": "Жалғастыру үшін шарттар мен саясатты қабылдаңыз",
+            "en": "Please accept the terms and privacy policy to continue"
         ]
     ]
     

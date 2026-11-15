@@ -8,6 +8,8 @@ struct ProfileTabView: View {
     @State private var pendingRequestsCount = 0
     @State private var isShowingModeratorDashboard = false
     @State private var isShowingSignOutConfirmation = false
+    @State private var isShowingDeleteAccountConfirmation = false
+    @State private var isShowingDeleteAccountError = false
     @AppStorage("app_language") private var selectedLanguage = "ru"
     @AppStorage("zholdas_theme_preference") private var themePreferenceRaw = ThemePreference.system.rawValue
     
@@ -84,6 +86,10 @@ struct ProfileTabView: View {
                                 // Sign Out Button
                                 signOutButton
                                     .padding(.horizontal, 24)
+
+                                // Delete Account Button
+                                deleteAccountButton
+                                    .padding(.horizontal, 24)
                                     .padding(.bottom, 16)
                             }
                         }
@@ -148,6 +154,24 @@ struct ProfileTabView: View {
                 Button("btn_cancel".localized, role: .cancel) {}
             } message: {
                 Text("prof_signout_confirm_message".localized)
+            }
+            .alert("profile_delete_account_title".localized, isPresented: $isShowingDeleteAccountConfirmation) {
+                Button("profile_delete_account_confirm".localized, role: .destructive) {
+                    Task {
+                        let success = await authViewModel.deleteAccount()
+                        if !success {
+                            isShowingDeleteAccountError = true
+                        }
+                    }
+                }
+                Button("btn_cancel".localized, role: .cancel) {}
+            } message: {
+                Text("profile_delete_account_message".localized)
+            }
+            .alert("alert_error_title".localized, isPresented: $isShowingDeleteAccountError) {
+                Button("btn_ok".localized, role: .cancel) {}
+            } message: {
+                Text(authViewModel.errorMessage ?? "profile_delete_account_error".localized)
             }
         }
     }
@@ -360,6 +384,34 @@ struct ProfileTabView: View {
                     .stroke(ZholdasTheme.danger.opacity(0.28), lineWidth: 1)
             )
         }
+    }
+
+    @ViewBuilder
+    private var deleteAccountButton: some View {
+        Button {
+            isShowingDeleteAccountConfirmation = true
+        } label: {
+            HStack(spacing: 8) {
+                if authViewModel.isLoading {
+                    ProgressView()
+                        .tint(ZholdasTheme.danger)
+                } else {
+                    Image(systemName: "trash")
+                }
+                Text("profile_delete_account".localized)
+                    .fontWeight(.bold)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(ZholdasTheme.danger.opacity(0.12))
+            .foregroundColor(ZholdasTheme.danger)
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(ZholdasTheme.danger.opacity(0.28), lineWidth: 1)
+            )
+        }
+        .disabled(authViewModel.isLoading)
     }
     
     // MARK: - Helpers
@@ -610,6 +662,44 @@ struct ProfileTabView: View {
                                 .foregroundColor(.white)
                                 .padding(.trailing, 4)
                         }
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(ZholdasTheme.textSecondary)
+                            .font(.caption)
+                    }
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 16)
+                }
+
+                Divider().background(ZholdasTheme.border)
+
+                // 5. Terms of Service Link
+                Link(destination: LegalLinks.termsURL(lang: langManager.currentLanguage)) {
+                    HStack {
+                        Image(systemName: "doc.text")
+                            .foregroundColor(ZholdasTheme.accent)
+                            .frame(width: 24)
+                        Text("profile_terms".localized)
+                            .foregroundColor(ZholdasTheme.textPrimary)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(ZholdasTheme.textSecondary)
+                            .font(.caption)
+                    }
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 16)
+                }
+
+                Divider().background(ZholdasTheme.border)
+
+                // 6. Privacy Policy Link
+                Link(destination: LegalLinks.privacyURL(lang: langManager.currentLanguage)) {
+                    HStack {
+                        Image(systemName: "lock.shield")
+                            .foregroundColor(ZholdasTheme.accent)
+                            .frame(width: 24)
+                        Text("profile_privacy_policy".localized)
+                            .foregroundColor(ZholdasTheme.textPrimary)
+                        Spacer()
                         Image(systemName: "chevron.right")
                             .foregroundColor(ZholdasTheme.textSecondary)
                             .font(.caption)

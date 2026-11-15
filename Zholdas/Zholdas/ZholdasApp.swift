@@ -1,10 +1,13 @@
 import SwiftUI
+import os
+
+private let logger = Logger(subsystem: "app.zholdas.Zholdas", category: "AppDelegate")
 
 class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         let tokenParts = deviceToken.map { data in String(format: "%02.2hhx", data) }
         let token = tokenParts.joined()
-        print("AppDelegate: Registered for push notifications with token: \(token)")
+        logger.debug("Registered for push notifications successfully")
         
         UserDefaults.standard.set(token, forKey: "apns_device_token")
         
@@ -12,7 +15,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
     }
     
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        print("AppDelegate: Failed to register for remote notifications: \(error.localizedDescription)")
+        logger.error("Failed to register for remote notifications: \(error.localizedDescription)")
     }
 }
 

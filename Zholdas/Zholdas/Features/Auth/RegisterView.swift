@@ -18,6 +18,7 @@ struct RegisterView: View {
     @State private var currentStep: RegistrationStep = .userInfo
     @State private var showPassword = false
     @State private var showConfirmPassword = false
+    @State private var acceptedTerms = false
     @State private var localError: String?
     @State private var animateBackground = false
 
@@ -77,6 +78,10 @@ struct RegisterView: View {
                             .foregroundColor(.green)
                             .multilineTextAlignment(.center)
                             .padding(.horizontal)
+                    }
+
+                    if currentStep != .emailCode {
+                        termsAcceptanceSection
                     }
 
                     Button(action: primaryAction) {
@@ -338,6 +343,46 @@ struct RegisterView: View {
         }
     }
 
+    private var termsAcceptanceSection: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Button {
+                acceptedTerms.toggle()
+                if acceptedTerms && localError == "reg_terms_required".localized {
+                    localError = nil
+                }
+            } label: {
+                Image(systemName: acceptedTerms ? "checkmark.square.fill" : "square")
+                    .font(.system(size: 20))
+                    .foregroundColor(acceptedTerms ? ZholdasTheme.accent : .gray)
+            }
+            .buttonStyle(PlainButtonStyle())
+            .padding(.top, 1)
+
+            Text(termsAttributedString)
+                .font(.footnote)
+                .tint(ZholdasTheme.accent)
+                .multilineTextAlignment(.leading)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 4)
+    }
+
+    private var termsAttributedString: AttributedString {
+        let termsURL = LegalLinks.termsURL(lang: langManager.currentLanguage).absoluteString
+        let privacyURL = LegalLinks.privacyURL(lang: langManager.currentLanguage).absoluteString
+
+        let prefix = "reg_terms_prefix".localized
+        let terms = "[\("reg_terms_link".localized)](\(termsURL))"
+        let andText = "reg_terms_and".localized
+        let privacy = "[\("reg_privacy_link".localized)](\(privacyURL))"
+
+        let markdown = "\(prefix)\(terms)\(andText)\(privacy)"
+        if let attr = try? AttributedString(markdown: markdown, options: AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)) {
+            return attr
+        }
+        return AttributedString(markdown)
+    }
+
     private var primaryButtonTitle: String {
         switch currentStep {
         case .userInfo:
@@ -354,12 +399,13 @@ struct RegisterView: View {
 
         switch currentStep {
         case .userInfo:
-            return fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            return !acceptedTerms
+                || fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 || email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 || password.isEmpty
                 || confirmPassword.isEmpty
         case .interests:
-            return selectedCategories.isEmpty
+            return !acceptedTerms || selectedCategories.isEmpty
         case .emailCode:
             return emailCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
@@ -400,6 +446,10 @@ struct RegisterView: View {
                 currentStep = .interests
             }
         case .interests:
+            guard acceptedTerms else {
+                localError = "reg_terms_required".localized
+                return
+            }
             Task {
                 await startSignup()
             }
@@ -426,6 +476,11 @@ struct RegisterView: View {
     }
 
     private func validateUserInfo() -> Bool {
+        guard acceptedTerms else {
+            localError = "reg_terms_required".localized
+            return false
+        }
+
         if password != confirmPassword {
             localError = "reg_err_mismatch".localized
             return false

@@ -1,4 +1,7 @@
 import Foundation
+import os
+
+private let logger = Logger(subsystem: "app.zholdas.Zholdas", category: "ChatWebSocketManager")
 
 class ChatWebSocketManager: NSObject {
     private var webSocketTask: URLSessionWebSocketTask?
@@ -47,7 +50,7 @@ class ChatWebSocketManager: NSObject {
         guard !isClosed else { return }
         
         guard let token = TokenStorage.shared.getAccessToken() else {
-            print("ChatWebSocketManager: Access token missing, cannot connect.")
+            logger.debug("Access token missing, cannot connect.")
             isReconnecting = false
             return
         }
@@ -66,7 +69,7 @@ class ChatWebSocketManager: NSObject {
         task.resume()
         
         startReceiveLoop()
-        print("ChatWebSocketManager: Connected to event \(eventID)")
+        logger.debug("Connected to event \(self.eventID)")
     }
     
     func disconnect() {
@@ -84,7 +87,7 @@ class ChatWebSocketManager: NSObject {
         webSocketTask = nil
         _session?.invalidateAndCancel()
         _session = nil
-        print("ChatWebSocketManager: Disconnected from event \(eventID)")
+        logger.debug("Disconnected from event \(self.eventID)")
     }
     
     private func startReceiveLoop() {
@@ -101,7 +104,7 @@ class ChatWebSocketManager: NSObject {
                     if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
                         return
                     }
-                    print("ChatWebSocketManager Error receiving: \(error)")
+                    logger.error("Error receiving: \(error.localizedDescription)")
                     self.handleDisconnect()
                 case .success(let message):
                     switch message {
@@ -122,7 +125,7 @@ class ChatWebSocketManager: NSObject {
         guard !isClosed, !isReconnecting else { return }
         
         guard TokenStorage.shared.getAccessToken() != nil else {
-            print("ChatWebSocketManager: Access token missing, cannot reconnect.")
+            logger.debug("Access token missing, cannot reconnect.")
             isReconnecting = false
             return
         }
@@ -133,19 +136,19 @@ class ChatWebSocketManager: NSObject {
         let delay = reconnectDelay
         // 3 -> 6 -> 12 -> 24 -> 48 -> 60 с
         reconnectDelay = min(reconnectDelay * 2, 60.0)
-        print("ChatWebSocketManager: Reconnecting in \(delay)s (attempt \(reconnectAttempts))...")
+        logger.debug("Reconnecting in \(delay)s (attempt \(self.reconnectAttempts))...")
         
         DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
             guard let self = self, !self.isClosed else { return }
             
             guard TokenStorage.shared.getAccessToken() != nil else {
-                print("ChatWebSocketManager: Access token missing, stopping reconnect.")
+                logger.debug("Access token missing, stopping reconnect.")
                 self.isReconnecting = false
                 return
             }
             
             if self.reconnectAttempts >= 5 {
-                print("ChatWebSocketManager: 5 consecutive failed attempts, refreshing token via /auth/me before next attempt...")
+                logger.debug("5 consecutive failed attempts, refreshing token via /auth/me before next attempt...")
                 self.reconnectTask?.cancel()
                 self.reconnectTask = Task {
                     let profile: UserProfile? = try? await APIClient.shared.request("/auth/me")
@@ -154,19 +157,19 @@ class ChatWebSocketManager: NSObject {
                         guard let self = self, !self.isClosed else { return }
                         self.reconnectTask = nil
                         if profile != nil, TokenStorage.shared.getAccessToken() != nil {
-                            print("ChatWebSocketManager: Token refreshed via /auth/me, reconnecting...")
+                            logger.debug("Token refreshed via /auth/me, reconnecting...")
                             self.reconnectAttempts = 0
                             self.isReconnecting = false
                             self.connect()
                         } else {
-                            print("ChatWebSocketManager: Token refresh failed after 5 attempts, stopping reconnect.")
+                            logger.error("Token refresh failed after 5 attempts, stopping reconnect.")
                             self.isReconnecting = false
                         }
                     }
                 }
             } else {
                 self.isReconnecting = false
-                print("ChatWebSocketManager: Reconnecting with fresh token...")
+                logger.debug("Reconnecting with fresh token...")
                 self.connect()
             }
         }
@@ -203,7 +206,7 @@ class ChatWebSocketManager: NSObject {
             let messageRes = try decoder.decode(EventMessageResponse.self, from: data)
             self.onMessageReceived?(messageRes)
         } catch {
-            print("ChatWebSocketManager: Failed to decode message: \(error)")
+            logger.error("Failed to decode message: \(error.localizedDescription)")
         }
     }
 }
@@ -213,7 +216,7 @@ extension ChatWebSocketManager: URLSessionWebSocketDelegate {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             guard webSocketTask === self.webSocketTask else { return }
-            print("ChatWebSocketManager: Socket opened")
+            logger.debug("Socket opened")
             self.reconnectDelay = 3.0
             self.reconnectAttempts = 0
             self.isReconnecting = false
@@ -230,7 +233,7 @@ extension ChatWebSocketManager: URLSessionWebSocketDelegate {
         DispatchQueue.main.async { [weak self] in
             guard let self = self else { return }
             guard webSocketTask === self.webSocketTask else { return }
-            print("ChatWebSocketManager: Socket closed with code: \(closeCode)")
+            logger.debug("Socket closed with code: \(closeCode.rawValue)")
             self.handleDisconnect()
         }
     }
