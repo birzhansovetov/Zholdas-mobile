@@ -51,6 +51,19 @@ data class UploadResponse(
 @Serializable
 data class UpdatePasswordPayload(val password: String)
 
+@Serializable
+data class SupabaseVerifyPayload(
+    val type: String = "signup",
+    val email: String,
+    val token: String
+)
+
+@Serializable
+data class SupabaseResendPayload(
+    val type: String = "signup",
+    val email: String
+)
+
 interface SupabaseAuthService {
     @POST("/auth/v1/token?grant_type=password")
     suspend fun signIn(
@@ -65,6 +78,20 @@ interface SupabaseAuthService {
         @Header("apikey") apiKey: String = SupabaseConfig.ANON_KEY,
         @Header("Authorization") auth: String = "Bearer ${SupabaseConfig.ANON_KEY}"
     ): SupabaseSignUpResponse
+
+    @POST("/auth/v1/verify")
+    suspend fun verify(
+        @Body request: SupabaseVerifyPayload,
+        @Header("apikey") apiKey: String = SupabaseConfig.ANON_KEY,
+        @Header("Authorization") auth: String = "Bearer ${SupabaseConfig.ANON_KEY}"
+    ): TokenResponse
+
+    @POST("/auth/v1/resend")
+    suspend fun resend(
+        @Body request: SupabaseResendPayload,
+        @Header("apikey") apiKey: String = SupabaseConfig.ANON_KEY,
+        @Header("Authorization") auth: String = "Bearer ${SupabaseConfig.ANON_KEY}"
+    ): okhttp3.ResponseBody
 
     @POST("/auth/v1/token?grant_type=refresh_token")
     suspend fun refresh(
