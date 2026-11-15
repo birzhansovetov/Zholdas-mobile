@@ -31,16 +31,21 @@ import com.example.zholdas.ui.AuthViewModel
 import com.example.zholdas.ui.main.MainAppShell
 import com.example.zholdas.data.local.AppTheme
 import com.example.zholdas.data.local.Localization
+import com.example.zholdas.ui.EventDeepLink
 import com.example.zholdas.ui.auth.PasswordResetDeepLink
 import com.example.zholdas.ui.auth.PasswordResetLink
 import com.example.zholdas.ui.screens.auth.ResetPasswordScreen
 
 class MainActivity : ComponentActivity() {
     private val passwordResetLink = mutableStateOf<PasswordResetLink?>(null)
+    private val pendingEventId = mutableStateOf<Int?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        passwordResetLink.value = PasswordResetDeepLink.parse(intent?.dataString)
+        if (savedInstanceState == null) {
+            passwordResetLink.value = PasswordResetDeepLink.parse(intent?.dataString)
+            pendingEventId.value = extractEventId(intent)
+        }
         
         enableEdgeToEdge()
         
@@ -98,7 +103,15 @@ class MainActivity : ComponentActivity() {
                             CircularProgressIndicator()
                         }
                     } else if (isAuthenticated) {
-                        MainAppShell(authViewModel)
+                        MainAppShell(
+                            authViewModel = authViewModel,
+                            pendingEventId = pendingEventId.value,
+                            onEventIdConsumed = {
+                                pendingEventId.value = null
+                                intent?.data = null
+                                intent?.removeExtra("event_id")
+                            }
+                        )
                     } else {
                         AuthNavigation(authViewModel)
                     }
@@ -111,5 +124,19 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         PasswordResetDeepLink.parse(intent.dataString)?.let { passwordResetLink.value = it }
+        extractEventId(intent)?.let { pendingEventId.value = it }
+    }
+
+    private fun extractEventId(intent: Intent?): Int? {
+        if (intent == null) return null
+        val extra = intent.extras?.get("event_id")
+        val fromExtra = when (extra) {
+            is Int -> extra.takeIf { it > 0 }
+            is String -> extra.toIntOrNull()
+            is Number -> extra.toInt().takeIf { it > 0 }
+            else -> null
+        }
+        if (fromExtra != null) return fromExtra
+        return EventDeepLink.parse(intent.dataString)
     }
 }

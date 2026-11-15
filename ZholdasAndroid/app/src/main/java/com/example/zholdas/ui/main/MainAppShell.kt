@@ -15,9 +15,12 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.zholdas.ZholdasApplication
 import com.example.zholdas.data.AppContainer
 import com.example.zholdas.data.local.localized
 import com.example.zholdas.theme.ZholdasAccent
@@ -27,6 +30,7 @@ import com.example.zholdas.ui.AuthViewModel
 import com.example.zholdas.ui.screens.activity.ActivityScreen
 import com.example.zholdas.ui.screens.chats.ChatListScreen
 import com.example.zholdas.ui.screens.events.EventListScreen
+import com.example.zholdas.ui.screens.events.EventsViewModel
 import com.example.zholdas.ui.screens.map.MapScreen
 import com.example.zholdas.ui.screens.profile.ProfileScreen
 
@@ -41,8 +45,16 @@ sealed class TabItem(val titleKey: String, val icon: androidx.compose.ui.graphic
 @Composable
 fun MainAppShell(
     authViewModel: AuthViewModel,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    pendingEventId: Int? = null,
+    onEventIdConsumed: (() -> Unit)? = null
 ) {
+    val context = LocalContext.current
+    val app = context.applicationContext as ZholdasApplication
+    val eventsViewModel: EventsViewModel = viewModel(
+        factory = EventsViewModel.Factory(app.container.apiClient)
+    )
+
     val tabs = remember {
         listOf(
             TabItem.Map,
@@ -56,6 +68,13 @@ fun MainAppShell(
     val selectedTab = tabs.getOrElse(selectedTabIndex) { TabItem.Map }
     val unreadNotificationsCount by authViewModel.unreadNotificationsCount.collectAsState()
     val currentUserProfile by authViewModel.currentUserProfile.collectAsState()
+
+    LaunchedEffect(pendingEventId) {
+        val id = pendingEventId ?: return@LaunchedEffect
+        selectedTabIndex = tabs.indexOf(TabItem.Events).coerceAtLeast(0)
+        eventsViewModel.openEventById(id, context)
+        onEventIdConsumed?.invoke()
+    }
 
     Scaffold(
         modifier = modifier,
@@ -121,7 +140,7 @@ fun MainAppShell(
         ) {
             when (selectedTab) {
                 TabItem.Map -> MapScreen()
-                TabItem.Events -> EventListScreen()
+                TabItem.Events -> EventListScreen(viewModel = eventsViewModel)
                 TabItem.Chats -> ChatListScreen(currentUserId = currentUserProfile?.id.orEmpty())
                 TabItem.Activity -> ActivityScreen(authViewModel)
                 TabItem.Profile -> ProfileScreen(authViewModel)

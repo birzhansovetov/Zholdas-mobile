@@ -45,14 +45,16 @@ import java.util.Locale
 @Composable
 fun EventListScreen(
     modifier: Modifier = Modifier,
+    viewModel: EventsViewModel = viewModel(
+        factory = EventsViewModel.Factory(
+            (LocalContext.current.applicationContext as ZholdasApplication).container.apiClient
+        )
+    ),
     onNavigateToDetail: ((Event) -> Unit)? = null,
     onNavigateToCreate: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val app = context.applicationContext as ZholdasApplication
-    val viewModel: EventsViewModel = viewModel(
-        factory = EventsViewModel.Factory(app.container.apiClient)
-    )
 
     LaunchedEffect(Unit) {
         val hasPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
@@ -74,6 +76,23 @@ fun EventListScreen(
     var selectedEventForEdit by remember { mutableStateOf<Event?>(null) }
     var showCreateScreen by remember { mutableStateOf(false) }
     var showMyEvents by remember { mutableStateOf(false) }
+
+    val deepLinkEvent by viewModel.deepLinkEvent.collectAsState()
+
+    LaunchedEffect(deepLinkEvent) {
+        val event = deepLinkEvent
+        if (event != null) {
+            showMyEvents = false
+            showCreateScreen = false
+            selectedEventForEdit = null
+            if (onNavigateToDetail != null) {
+                onNavigateToDetail(event)
+            } else {
+                selectedEventForDetail = event
+            }
+            viewModel.consumeDeepLinkEvent()
+        }
+    }
 
     if (showMyEvents) {
         MyEventsScreen(

@@ -37,6 +37,8 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="zholdas" android:host="reset-password" />
+                <data android:scheme="zholdas" android:host="event" />
+                <data android:scheme="zholdas" android:host="events" />
             </intent-filter>
         </activity>
 

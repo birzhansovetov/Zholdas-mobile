@@ -1,11 +1,14 @@
 package com.example.zholdas.ui.screens.events
 
 import android.content.ContentResolver
+import android.content.Context
 import android.net.Uri
 import android.util.Log
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.zholdas.data.local.localized
 import com.example.zholdas.data.model.CreateEventRequest
 import com.example.zholdas.data.model.Event
 import com.example.zholdas.data.model.EventLiveLocation
@@ -27,6 +30,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import retrofit2.HttpException
+import java.io.IOException
 import java.util.Locale
 
 sealed interface WeatherState {
@@ -48,6 +53,37 @@ class EventsViewModel(
 
     private val _events = MutableStateFlow<List<Event>>(emptyList())
     val events: StateFlow<List<Event>> = _events.asStateFlow()
+
+    private val _deepLinkEvent = MutableStateFlow<Event?>(null)
+    val deepLinkEvent: StateFlow<Event?> = _deepLinkEvent.asStateFlow()
+
+    fun consumeDeepLinkEvent() {
+        _deepLinkEvent.value = null
+    }
+
+    fun openEventById(id: Int, context: Context? = null) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value = null
+            try {
+                val event = apiClient.apiService.getEventDetails(id)
+                _deepLinkEvent.value = event
+            } catch (e: Exception) {
+                Log.w(TAG, "openEventById error: ${e.message}")
+                val message = when {
+                    e is HttpException && e.code() == 404 -> "ev_open_not_found".localized
+                    e is IOException -> "error_network".localized
+                    else -> e.toUserMessage("ev_open_not_found")
+                }
+                _errorMessage.value = message
+                if (context != null) {
+                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                }
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
 
     private val _weatherState = MutableStateFlow<WeatherState>(WeatherState.Unavailable)
     val weatherState: StateFlow<WeatherState> = _weatherState.asStateFlow()

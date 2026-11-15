@@ -216,6 +216,7 @@ object Localization {
         "ev_location_get_failed" to "Не удалось получить текущую геопозицию",
         "ev_location_permission_needed" to "Для этой функции нужен доступ к геопозиции",
         "ev_description_required" to "Описание события обязательно",
+        "ev_open_not_found" to "Событие не найдено или недоступно",
 
         // Create Event Screen
         "create_ev_cover" to "Обложка активности",
@@ -807,6 +808,7 @@ object Localization {
         "ev_location_get_failed" to "Ағымдағы геопозицияны алу мүмкін болмады",
         "ev_location_permission_needed" to "Бұл функция үшін геопозицияға қолжетімділік қажет",
         "ev_description_required" to "Іс-шараның сипаттамасы міндетті",
+        "ev_open_not_found" to "Оқиға табылмады немесе қолжетімсіз",
 
         // Create Event Screen
         "create_ev_cover" to "Мұқаба суреті",
@@ -1398,6 +1400,7 @@ object Localization {
         "ev_location_get_failed" to "Failed to get current location",
         "ev_location_permission_needed" to "Location access is required for this feature",
         "ev_description_required" to "Event description is required",
+        "ev_open_not_found" to "Event not found or unavailable",
 
         // Create Event Screen
         "create_ev_cover" to "Event Cover",
