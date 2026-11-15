@@ -430,6 +430,34 @@ class AuthViewModel(
         }
     }
 
+    fun deleteAccount(onResult: ((Boolean) -> Unit)? = null) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value = null
+            try {
+                apiClient.apiService.deleteAccount()
+                tokenManager.clearTokens()
+                _currentUserProfile.value = null
+                _isAuthenticated.value = false
+                pendingRegistration = null
+                _pendingVerificationEmail.value = null
+                _infoMessage.value = null
+                onResult?.invoke(true)
+            } catch (e: IOException) {
+                Log.e(TAG, "Network error during deleteAccount: ${e.message}", e)
+                _errorMessage.value = "error_network".localized
+                onResult?.invoke(false)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                Log.e(TAG, "deleteAccount failed: ${e.message}", e)
+                _errorMessage.value = "profile_delete_account_error".localized
+                onResult?.invoke(false)
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
     fun fetchUserProfile() {
         viewModelScope.launch {
             try {

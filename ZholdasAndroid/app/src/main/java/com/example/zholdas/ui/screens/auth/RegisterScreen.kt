@@ -1,7 +1,9 @@
 package com.example.zholdas.ui.screens.auth
 
+import android.content.Intent
 import android.net.Uri
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -17,6 +19,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -33,18 +37,25 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import com.example.zholdas.data.local.Localization
 import com.example.zholdas.data.local.localized
 import com.example.zholdas.theme.*
 import com.example.zholdas.ui.AuthViewModel
+import com.example.zholdas.ui.LegalLinks
 import com.example.zholdas.ui.components.ModernCard
 import com.example.zholdas.ui.components.PrimaryButton
 import com.example.zholdas.ui.components.modernFieldSurface
@@ -73,6 +84,7 @@ fun RegisterScreen(
     val cities = listOf("Алматы", "Астана", "Шымкент", "Караганда")
     var selectedPhotoUri by rememberSaveable { mutableStateOf<Uri?>(null) }
     var selectedPhotoBytes by remember { mutableStateOf<ByteArray?>(null) }
+    var acceptedTerms by rememberSaveable { mutableStateOf(false) }
 
     // Focus state
     var isFullNameFocused by remember { mutableStateOf(false) }
@@ -786,11 +798,91 @@ fun RegisterScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
+            val termsUrl = LegalLinks.termsUrl(authViewModel.apiClient.backendBaseUrl, Localization.language)
+            val privacyUrl = LegalLinks.privacyUrl(authViewModel.apiClient.backendBaseUrl, Localization.language)
+
+            val termsAnnotatedText = remember(termsUrl, privacyUrl, Localization.language) {
+                buildAnnotatedString {
+                    append("reg_terms_prefix".localized)
+                    val linkStyle = TextLinkStyles(
+                        style = SpanStyle(
+                            color = ZholdasAccent,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    )
+                    withLink(
+                        LinkAnnotation.Url(
+                            url = termsUrl,
+                            styles = linkStyle,
+                            linkInteractionListener = {
+                                try {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(termsUrl)))
+                                } catch (_: Exception) {
+                                    Toast.makeText(context, "ev_route_no_app".localized, Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        )
+                    ) {
+                        append("reg_terms_link".localized)
+                    }
+                    append("reg_terms_and".localized)
+                    withLink(
+                        LinkAnnotation.Url(
+                            url = privacyUrl,
+                            styles = linkStyle,
+                            linkInteractionListener = {
+                                try {
+                                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(privacyUrl)))
+                                } catch (_: Exception) {
+                                    Toast.makeText(context, "ev_route_no_app".localized, Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        )
+                    ) {
+                        append("reg_privacy_link".localized)
+                    }
+                }
+            }
+
+            // Terms and Privacy acceptance
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Checkbox(
+                    checked = acceptedTerms,
+                    onCheckedChange = {
+                        acceptedTerms = it
+                        if (it && localError == "reg_terms_required".localized) {
+                            localError = null
+                        }
+                    },
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = ZholdasAccent,
+                        uncheckedColor = ZholdasTextSecondary,
+                        checkmarkColor = Color.White
+                    )
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = termsAnnotatedText,
+                    color = ZholdasTextSecondary,
+                    fontSize = 13.sp,
+                    lineHeight = 18.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             // Register Button
             PrimaryButton(
                 text = "register_btn".localized,
                 onClick = {
-                    if (password != confirmPassword) {
+                    if (!acceptedTerms) {
+                        localError = "reg_terms_required".localized
+                    } else if (password != confirmPassword) {
                         localError = "reg_err_mismatch".localized
                     } else if (password.length < 6) {
                         localError = "reg_err_short".localized
@@ -817,7 +909,7 @@ fun RegisterScreen(
                     }
                 },
                 isLoading = isLoading,
-                enabled = email.isNotEmpty() && password.isNotEmpty() && confirmPassword.isNotEmpty() && fullName.isNotEmpty()
+                enabled = acceptedTerms && email.isNotEmpty() && password.isNotEmpty() && confirmPassword.isNotEmpty() && fullName.isNotEmpty()
             )
 
             Spacer(modifier = Modifier.height(24.dp))

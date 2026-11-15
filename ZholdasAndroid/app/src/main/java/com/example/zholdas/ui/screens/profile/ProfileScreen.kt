@@ -25,6 +25,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import coil.compose.AsyncImage
 import com.example.zholdas.ZholdasApplication
 import com.example.zholdas.data.local.AppTheme
@@ -33,6 +36,7 @@ import com.example.zholdas.data.local.localized
 import com.example.zholdas.data.model.User
 import com.example.zholdas.theme.*
 import com.example.zholdas.ui.AuthViewModel
+import com.example.zholdas.ui.LegalLinks
 import com.example.zholdas.ui.components.ModernCard
 import java.util.Calendar
 import java.util.Locale
@@ -49,9 +53,19 @@ fun ProfileScreen(
     val isLoading by authViewModel.isLoading.collectAsState()
     val errorMessage by authViewModel.errorMessage.collectAsState()
     val unreadNotificationsCount by authViewModel.unreadNotificationsCount.collectAsState()
-    val preferences = (LocalContext.current.applicationContext as ZholdasApplication).preferences
+    val context = LocalContext.current
+    val preferences = (context.applicationContext as ZholdasApplication).preferences
     val selectedTheme by preferences.theme.collectAsState(initial = AppTheme.SYSTEM)
     val settingsScope = rememberCoroutineScope()
+
+    val openLegalUrl: (String) -> Unit = { url ->
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            context.startActivity(intent)
+        } catch (_: Exception) {
+            Toast.makeText(context, "ev_route_no_app".localized, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     var friendsCount by remember { mutableStateOf(0) }
     var pendingRequestsCount by remember { mutableStateOf(0) }
@@ -60,6 +74,7 @@ fun ProfileScreen(
     var isShowingModeratorDashboard by remember { mutableStateOf(false) }
     var languageMenuExpanded by remember { mutableStateOf(false) }
     var showSignOutConfirmDialog by remember { mutableStateOf(false) }
+    var showDeleteAccountConfirmDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(currentUserProfile, isShowingFriendsList, isShowingEditProfile) {
         val friends = authViewModel.fetchFriends()
@@ -259,6 +274,12 @@ fun ProfileScreen(
                         onThemeSelected = { theme ->
                             settingsScope.launch { preferences.setTheme(theme) }
                         },
+                        onTermsClick = {
+                            openLegalUrl(LegalLinks.termsUrl(authViewModel.apiClient.backendBaseUrl, Localization.language))
+                        },
+                        onPrivacyClick = {
+                            openLegalUrl(LegalLinks.privacyUrl(authViewModel.apiClient.backendBaseUrl, Localization.language))
+                        },
                         modifier = Modifier.padding(horizontal = 24.dp)
                     )
 
@@ -277,6 +298,14 @@ fun ProfileScreen(
                     // Sign Out Button
                     SignOutButton(
                         onSignOut = { showSignOutConfirmDialog = true },
+                        modifier = Modifier.padding(horizontal = 24.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Delete Account Button
+                    DeleteAccountButton(
+                        onDeleteAccount = { showDeleteAccountConfirmDialog = true },
                         modifier = Modifier.padding(horizontal = 24.dp)
                     )
 
@@ -360,6 +389,82 @@ fun ProfileScreen(
                 TextButton(onClick = { showSignOutConfirmDialog = false }) {
                     Text(
                         text = "btn_cancel".localized,
+                        color = ZholdasTextSecondary
+                    )
+                }
+            },
+            containerColor = ZholdasSurface,
+            titleContentColor = ZholdasTextPrimary,
+            textContentColor = ZholdasTextSecondary
+        )
+    }
+
+    if (showDeleteAccountConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!isLoading) {
+                    showDeleteAccountConfirmDialog = false
+                }
+            },
+            title = {
+                Text(
+                    text = "profile_delete_account_title".localized,
+                    color = ZholdasTextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "profile_delete_account_message".localized,
+                    color = ZholdasTextSecondary
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        authViewModel.deleteAccount { success ->
+                            if (success) {
+                                showDeleteAccountConfirmDialog = false
+                            } else {
+                                showDeleteAccountConfirmDialog = false
+                                Toast.makeText(
+                                    context,
+                                    authViewModel.errorMessage.value ?: "profile_delete_account_error".localized,
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    },
+                    enabled = !isLoading,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = Color.White,
+                        disabledContainerColor = MaterialTheme.colorScheme.error.copy(alpha = 0.5f),
+                        disabledContentColor = Color.White.copy(alpha = 0.7f)
+                    )
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text(
+                            text = "profile_delete_account_confirm".localized,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDeleteAccountConfirmDialog = false },
+                    enabled = !isLoading
+                ) {
+                    Text(
+                        text = "common_cancel".localized,
                         color = ZholdasTextSecondary
                     )
                 }
@@ -568,6 +673,8 @@ private fun SettingsSection(
     selectedTheme: AppTheme,
     onLanguageSelected: (String) -> Unit,
     onThemeSelected: (AppTheme) -> Unit,
+    onTermsClick: () -> Unit,
+    onPrivacyClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -809,6 +916,58 @@ private fun SettingsSection(
                 }
                 Text(">", color = ZholdasTextSecondary)
             }
+
+            Divider(color = ZholdasBorder)
+
+            // 5. Terms of Service Link
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onTermsClick() }
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Description,
+                    contentDescription = null,
+                    tint = ZholdasAccent,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "profile_terms".localized,
+                    color = ZholdasTextPrimary,
+                    fontSize = 15.sp
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                Text(">", color = ZholdasTextSecondary)
+            }
+
+            Divider(color = ZholdasBorder)
+
+            // 6. Privacy Policy Link
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onPrivacyClick() }
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.PrivacyTip,
+                    contentDescription = null,
+                    tint = ZholdasAccent,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "profile_privacy_policy".localized,
+                    color = ZholdasTextPrimary,
+                    fontSize = 15.sp
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                Text(">", color = ZholdasTextSecondary)
+            }
         }
     }
 }
@@ -880,6 +1039,42 @@ private fun SignOutButton(
             Text(
                 text = "prof_signout".localized,
                 color = ZholdasDanger,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun DeleteAccountButton(
+    onDeleteAccount: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.error.copy(alpha = 0.08f))
+            .border(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.20f), RoundedCornerShape(12.dp))
+            .clickable { onDeleteAccount() }
+            .padding(vertical = 14.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "profile_delete_account".localized,
+                color = MaterialTheme.colorScheme.error,
                 fontWeight = FontWeight.Bold,
                 fontSize = 16.sp
             )

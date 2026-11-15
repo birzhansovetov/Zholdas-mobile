@@ -294,3 +294,25 @@ object ChatAIUseCases {
         }
     }
 }
+
+object LegalLinks {
+    fun privacyUrl(baseUrl: String, lang: String = "ru"): String {
+        val cleanBase = baseUrl.trim().trimEnd('/')
+        val resolvedLang = normalizeLang(lang)
+        return "$cleanBase/privacy?lang=$resolvedLang"
+    }
+
+    fun termsUrl(baseUrl: String, lang: String = "ru"): String {
+        val cleanBase = baseUrl.trim().trimEnd('/')
+        val resolvedLang = normalizeLang(lang)
+        return "$cleanBase/terms?lang=$resolvedLang"
+    }
+
+    private fun normalizeLang(lang: String?): String {
+        return when (lang?.trim()?.lowercase(Locale.ROOT)) {
+            "kk" -> "kk"
+            "en" -> "en"
+            else -> "ru"
+        }
+    }
+}

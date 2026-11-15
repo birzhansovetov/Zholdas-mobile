@@ -564,7 +564,20 @@ object Localization {
         "theme_dark" to "Тёмная",
         "common_participant" to "Участник",
         "user_detail_no_reviews" to "Оценок пока нет",
-        "common_ok" to "Готово"
+        "common_ok" to "Готово",
+        "profile_delete_account" to "Удалить аккаунт",
+        "profile_delete_account_title" to "Удалить аккаунт?",
+        "profile_delete_account_message" to "Будут удалены ваш профиль, фото, созданные вами события, участие и друзья. Сообщения в чатах останутся от имени «Удалённый пользователь». Это действие нельзя отменить.",
+        "profile_delete_account_confirm" to "Удалить",
+        "profile_delete_account_error" to "Не удалось удалить аккаунт. Попробуйте ещё раз",
+        "profile_privacy_policy" to "Политика конфиденциальности",
+        "profile_terms" to "Условия использования",
+        "reg_terms_prefix" to "Я принимаю ",
+        "reg_terms_link" to "Условия использования",
+        "reg_terms_and" to " и ",
+        "reg_privacy_link" to "Политику конфиденциальности",
+        "reg_terms_required" to "Чтобы продолжить, примите условия и политику",
+        "common_cancel" to "Отмена"
     )
 
     private val kk = mapOf(
@@ -1124,7 +1137,20 @@ object Localization {
         "theme_dark" to "Қараңғы",
         "common_participant" to "Қатысушы",
         "user_detail_no_reviews" to "Әзірге бағалар жоқ",
-        "common_ok" to "Дайын"
+        "common_ok" to "Дайын",
+        "profile_delete_account" to "Аккаунтты жою",
+        "profile_delete_account_title" to "Аккаунтты жою керек пе?",
+        "profile_delete_account_message" to "Сіздің профиліңіз, фотоларыңыз, жасаған іс-шараларыңыз, қатысуларыңыз бен достарыңыз жойылады. Чаттардағы хабарламалар «Жойылған пайдаланушы» атынан қалады. Бұл әрекетті қайтару мүмкін емес.",
+        "profile_delete_account_confirm" to "Жою",
+        "profile_delete_account_error" to "Аккаунтты жою мүмкін болмады. Қайталап көріңіз",
+        "profile_privacy_policy" to "Құпиялық саясаты",
+        "profile_terms" to "Пайдалану шарттары",
+        "reg_terms_prefix" to "Мен қабылдаймын: ",
+        "reg_terms_link" to "Пайдалану шарттары",
+        "reg_terms_and" to " және ",
+        "reg_privacy_link" to "Құпиялық саясаты",
+        "reg_terms_required" to "Жалғастыру үшін шарттар мен саясатты қабылдаңыз",
+        "common_cancel" to "Бас тарту"
     )
 
     private val en = mapOf(
@@ -1684,7 +1710,20 @@ object Localization {
         "theme_dark" to "Dark",
         "common_participant" to "Participant",
         "user_detail_no_reviews" to "No ratings yet",
-        "common_ok" to "Done"
+        "common_ok" to "Done",
+        "profile_delete_account" to "Delete Account",
+        "profile_delete_account_title" to "Delete Account?",
+        "profile_delete_account_message" to "Your profile, photos, created events, participation, and friends will be deleted. Chat messages will remain under \"Deleted User\". This action cannot be undone.",
+        "profile_delete_account_confirm" to "Delete",
+        "profile_delete_account_error" to "Failed to delete account. Please try again",
+        "profile_privacy_policy" to "Privacy Policy",
+        "profile_terms" to "Terms of Service",
+        "reg_terms_prefix" to "I accept the ",
+        "reg_terms_link" to "Terms of Service",
+        "reg_terms_and" to " and ",
+        "reg_privacy_link" to "Privacy Policy",
+        "reg_terms_required" to "Please accept the terms and privacy policy to continue",
+        "common_cancel" to "Cancel"
     )
 
 
