@@ -53,7 +53,7 @@ class AuthViewModel: ObservableObject {
                 self.isAuthenticated = true
                 await fetchUserProfile()
             } else {
-                self.errorMessage = "Не удалось сохранить токены безопасности"
+                self.errorMessage = "auth_err_save_tokens".localized
             }
         } catch {
             self.errorMessage = error.localizedDescription
@@ -81,13 +81,13 @@ class AuthViewModel: ObservableObject {
         do {
             if let response = try await APIClient.shared.signUp(email: normalizedEmail, password: password, username: username, fullName: fullName) {
                 guard saveAuthTokens(response) else {
-                    self.errorMessage = "Не удалось сохранить токены безопасности"
+                    self.errorMessage = "auth_err_save_tokens".localized
                     self.isLoading = false
                     return
                 }
                 self.isAuthenticated = true
             } else {
-                self.infoMessage = "Аккаунт создан. Введите код из письма для подтверждения email."
+                self.infoMessage = "auth_signup_success_verify".localized
                 self.isLoading = false
                 return
             }
@@ -128,7 +128,7 @@ class AuthViewModel: ObservableObject {
             let response = try await APIClient.shared.verifySignupCode(email: normalizedEmail, code: code)
 
             guard saveAuthTokens(response) else {
-                self.errorMessage = "Не удалось сохранить токены безопасности"
+                self.errorMessage = "auth_err_save_tokens".localized
                 self.isLoading = false
                 return
             }
@@ -234,7 +234,7 @@ class AuthViewModel: ObservableObject {
 
         do {
             try await APIClient.shared.sendPasswordResetEmail(email: normalizedEmail)
-            self.passwordResetMessage = "Письмо для сброса пароля отправлено. Проверьте почту."
+            self.passwordResetMessage = "auth_reset_email_sent".localized
         } catch {
             self.errorMessage = error.localizedDescription
         }
@@ -250,7 +250,7 @@ class AuthViewModel: ObservableObject {
 
         do {
             try await APIClient.shared.resendEmailConfirmation(email: normalizedEmail)
-            self.infoMessage = "Письмо подтверждения отправлено еще раз. Проверьте почту."
+            self.infoMessage = "auth_resend_confirmation_sent".localized
         } catch {
             self.errorMessage = error.localizedDescription
         }
@@ -268,7 +268,7 @@ class AuthViewModel: ObservableObject {
         }
 
         guard params["type"] == "recovery", let accessToken = params["access_token"] else {
-            self.errorMessage = "Неверная или устаревшая ссылка для сброса пароля"
+            self.errorMessage = "auth_reset_link_invalid_or_expired".localized
             return
         }
 
@@ -293,7 +293,7 @@ class AuthViewModel: ObservableObject {
 
     func resetPassword(newPassword: String) async -> Bool {
         guard let accessToken = passwordResetAccessToken ?? TokenStorage.shared.getAccessToken() else {
-            self.errorMessage = "Ссылка для сброса пароля недействительна"
+            self.errorMessage = "auth_reset_link_invalid".localized
             return false
         }
 
@@ -302,7 +302,7 @@ class AuthViewModel: ObservableObject {
 
         do {
             try await APIClient.shared.updateSupabasePassword(accessToken: accessToken, newPassword: newPassword)
-            self.passwordResetMessage = "Пароль обновлен. Теперь можно войти с новым паролем."
+            self.passwordResetMessage = "auth_password_updated_success".localized
             self.passwordResetAccessToken = nil
             self.isShowingPasswordReset = false
             TokenStorage.shared.clear()
@@ -347,7 +347,7 @@ class AuthViewModel: ObservableObject {
             // Trigger device token registration
             triggerDeviceTokenRegistration()
         } catch {
-            self.errorMessage = "Не удалось загрузить профиль: \(error.localizedDescription)"
+            self.errorMessage = String(format: "auth_err_load_profile_format".localized, error.localizedDescription)
             TokenStorage.shared.clear()
             self.isAuthenticated = false
             self.currentUserProfile = nil
@@ -437,7 +437,7 @@ class AuthViewModel: ObservableObject {
             return true
         } catch {
             await MainActor.run {
-                self.errorMessage = "Не удалось обновить профиль: \(error.localizedDescription)"
+                self.errorMessage = String(format: "auth_err_update_profile_format".localized, error.localizedDescription)
             }
             return false
         }

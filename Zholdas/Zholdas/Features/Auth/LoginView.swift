@@ -86,7 +86,7 @@ struct LoginView: View {
                                     Button {
                                         showForgotPasswordScreen = true
                                     } label: {
-                                        Text("Забыли пароль?")
+                                        Text("login_forgot_password".localized)
                                             .font(.caption.weight(.bold))
                                             .foregroundColor(ZholdasTheme.accent)
                                     }
@@ -121,7 +121,7 @@ struct LoginView: View {
                                             await authViewModel.resendEmailConfirmation(email: email)
                                         }
                                     } label: {
-                                        Text("Отправить письмо еще раз")
+                                        Text("profile_resend_email".localized)
                                             .font(.caption.weight(.bold))
                                             .foregroundColor(ZholdasTheme.accent)
                                     }

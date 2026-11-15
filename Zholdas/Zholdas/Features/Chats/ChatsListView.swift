@@ -6,9 +6,9 @@ struct ChatsListView: View {
     @State private var sessions: [ChatSession] = [
         ChatSession(
             id: ChatSession.aiChatSessionID,
-            title: "Жорик (ИИ-помощник)",
-            timeLabel: "Активен",
-            lastMessage: "Привет! Я Жорик, твой ИИ-помощник. Задавай мне любые вопросы про Алматы!",
+            title: "chat_ai_assistant_name".localized,
+            timeLabel: "chat_ai_active".localized,
+            lastMessage: "chat_ai_assistant_welcome".localized,
             lastMessageSender: "Жорик",
             lastMessageTime: Date(),
             isCompleted: false,
@@ -60,7 +60,7 @@ struct ChatsListView: View {
                                 .foregroundColor(.red)
                                 .multilineTextAlignment(.center)
                                 .font(.subheadline)
-                            Button("Повторить") {
+                            Button("btn_retry".localized) {
                                 Task {
                                     await fetchChatSessions()
                                 }
@@ -242,9 +242,9 @@ struct ChatsListView: View {
                 } else {
                     updatedSessions.append(ChatSession(
                         id: ChatSession.aiChatSessionID,
-                        title: "Жорик (ИИ-помощник)",
-                        timeLabel: "Активен",
-                        lastMessage: "Привет! Я Жорик, твой ИИ-помощник. Задавай мне любые вопросы про Алматы!",
+                        title: "chat_ai_assistant_name".localized,
+                        timeLabel: "chat_ai_active".localized,
+                        lastMessage: "chat_ai_assistant_welcome".localized,
                         lastMessageSender: "Жорик",
                         lastMessageTime: Date(),
                         isCompleted: false,
@@ -312,7 +312,7 @@ struct ChatsListView: View {
             formatter.dateFormat = "HH:mm"
             return formatter.string(from: date)
         } else if calendar.isDateInYesterday(date) {
-            return "Вчера"
+            return "chat_time_yesterday".localized
         } else {
             let formatter = DateFormatter()
             formatter.dateFormat = "dd.MM"

@@ -42,7 +42,7 @@ struct UserDetailView: View {
                     ProgressView()
                         .tint(ZholdasTheme.accent)
                         .scaleEffect(1.5)
-                    Text("Загрузка профиля...")
+                    Text("prof_loading".localized)
                         .foregroundColor(.gray)
                         .font(.subheadline)
                         .padding(.top, 8)
@@ -134,7 +134,7 @@ struct UserDetailView: View {
                     }
                 } else {
                     Spacer()
-                    Text("Не удалось загрузить пользователя")
+                    Text("user_detail_load_error".localized)
                         .foregroundColor(.gray)
                     Spacer()
                 }
@@ -272,7 +272,7 @@ struct UserDetailView: View {
                     .font(.title3)
                     .fontWeight(.bold)
                     .foregroundColor(.white)
-                Text("Ивентов")
+                Text("prof_events_count".localized)
                     .font(.caption2)
                     .foregroundColor(.gray)
             }
@@ -287,7 +287,7 @@ struct UserDetailView: View {
                     .font(.title3)
                     .fontWeight(.bold)
                     .foregroundColor(.white)
-                Text("Друзей")
+                Text("prof_friends_count".localized)
                     .font(.caption2)
                     .foregroundColor(.gray)
             }
@@ -302,7 +302,7 @@ struct UserDetailView: View {
                     .font(.title3)
                     .fontWeight(.bold)
                     .foregroundColor(ZholdasTheme.accent)
-                Text("Рейтинг")
+                Text("prof_rating_count".localized)
                     .font(.caption2)
                     .foregroundColor(.gray)
             }
@@ -319,7 +319,7 @@ struct UserDetailView: View {
             // Viewing self
             HStack {
                 Image(systemName: "person.fill")
-                Text("Это вы")
+                Text("user_detail_its_you".localized)
             }
             .frame(maxWidth: .infinity)
             .padding()
@@ -339,7 +339,7 @@ struct UserDetailView: View {
                     } label: {
                         HStack {
                             Image(systemName: "person.badge.plus")
-                            Text("Добавить в друзья")
+                            Text("user_detail_add_friend".localized)
                                 .fontWeight(.bold)
                         }
                         .frame(maxWidth: .infinity)
@@ -361,7 +361,7 @@ struct UserDetailView: View {
                     } label: {
                         HStack {
                             Image(systemName: "person.badge.clock")
-                            Text("Отменить запрос")
+                            Text("user_detail_cancel_request".localized)
                                 .fontWeight(.bold)
                         }
                         .frame(maxWidth: .infinity)
@@ -377,7 +377,7 @@ struct UserDetailView: View {
                     
                 case "pending_received":
                     VStack(spacing: 12) {
-                        Text("Отправил вам запрос в друзья")
+                        Text("user_detail_sent_request".localized)
                             .font(.footnote)
                             .foregroundColor(.gray)
                         
@@ -385,7 +385,7 @@ struct UserDetailView: View {
                             Button {
                                 rejectRequest()
                             } label: {
-                                Text("Отклонить")
+                                Text("user_detail_reject".localized)
                                     .fontWeight(.bold)
                                     .frame(maxWidth: .infinity)
                                     .padding()
@@ -397,7 +397,7 @@ struct UserDetailView: View {
                             Button {
                                 acceptRequest()
                             } label: {
-                                Text("Принять")
+                                Text("user_detail_accept".localized)
                                     .fontWeight(.bold)
                                     .frame(maxWidth: .infinity)
                                     .padding()
@@ -418,8 +418,8 @@ struct UserDetailView: View {
                     VStack(spacing: 12) {
                         HStack {
                             Image(systemName: "checkmark.seal.fill")
-                                .foregroundColor(ZholdasTheme.accent)
-                            Text("Вы друзья")
+                            .foregroundColor(ZholdasTheme.accent)
+                            Text("user_detail_friends_status".localized)
                                 .fontWeight(.bold)
                                 .foregroundColor(.white)
                         }
@@ -429,7 +429,7 @@ struct UserDetailView: View {
                         } label: {
                             HStack {
                                 Image(systemName: "person.badge.minus")
-                                Text("Удалить из друзей")
+                                Text("user_detail_unfriend".localized)
                                     .fontWeight(.bold)
                             }
                             .frame(maxWidth: .infinity)
@@ -627,7 +627,7 @@ struct UserDetailView: View {
     private var reviewsSection: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("Отзывы участников")
+                Text("user_detail_reviews_title".localized)
                     .font(.headline)
                     .fontWeight(.bold)
                     .foregroundColor(.white)

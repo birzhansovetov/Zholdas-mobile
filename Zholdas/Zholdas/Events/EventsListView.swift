@@ -225,14 +225,14 @@ struct EventsListView: View {
     }
 
     private var filtersSummary: String {
-        var parts = ["\(Int(maxDistanceKm)) км", "\(filterAge) лет"]
+        var parts = [String(format: "ev_list_distance_km".localized, Int(maxDistanceKm)), String(format: "ev_list_filter_age_format".localized, filterAge)]
         if onlyToday {
-            parts.append("сегодня")
+            parts.append("ev_list_filter_today".localized)
         }
         if nearMeOnly {
-            parts.append("рядом")
+            parts.append("ev_list_filter_nearby".localized)
         }
-        return "Фильтры: " + parts.joined(separator: " · ")
+        return String(format: "ev_list_filters_prefix".localized, parts.joined(separator: " · "))
     }
     
     // MARK: - Helper matches category
@@ -292,11 +292,11 @@ struct EventsListView: View {
     private var advancedFiltersPanel: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Label("Дистанция", systemImage: "location.circle.fill")
+                Label("ev_list_filter_distance".localized, systemImage: "location.circle.fill")
                     .font(.subheadline.weight(.bold))
                     .foregroundColor(ZholdasTheme.textPrimary)
                 Spacer()
-                Text("\(Int(maxDistanceKm)) км")
+                Text(String(format: "ev_list_distance_km".localized, Int(maxDistanceKm)))
                     .font(.caption.weight(.bold))
                     .foregroundColor(ZholdasTheme.accent)
             }
@@ -305,14 +305,14 @@ struct EventsListView: View {
                 .tint(ZholdasTheme.accent)
 
             HStack(spacing: 8) {
-                filterChip(title: "Все", value: "all")
-                filterChip(title: "Мужчины", value: "men")
-                filterChip(title: "Женщины", value: "women")
+                filterChip(title: "create_ev_gender_all".localized, value: "all")
+                filterChip(title: "create_ev_gender_men".localized, value: "men")
+                filterChip(title: "create_ev_gender_women".localized, value: "women")
             }
 
             Stepper(value: $filterAge, in: 12...80) {
                 HStack {
-                    Text("Возраст")
+                    Text("prof_age".localized)
                         .foregroundColor(ZholdasTheme.textPrimary)
                     Spacer()
                     Text("\(filterAge)")
@@ -323,13 +323,13 @@ struct EventsListView: View {
             .tint(ZholdasTheme.accent)
 
             Toggle(isOn: $onlyToday) {
-                Label("Только сегодня", systemImage: "calendar")
+                Label("ev_list_filter_only_today".localized, systemImage: "calendar")
                     .foregroundColor(ZholdasTheme.textPrimary)
             }
             .tint(ZholdasTheme.accent)
 
             Toggle(isOn: $nearMeOnly) {
-                Label("Рядом со мной", systemImage: "location.fill")
+                Label("ev_list_filter_near_me".localized, systemImage: "location.fill")
                     .foregroundColor(ZholdasTheme.textPrimary)
             }
             .tint(ZholdasTheme.accent)

@@ -33,7 +33,7 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
             manager.requestLocation()
         case .denied, .restricted:
             authorizationStatus = manager.authorizationStatus
-            errorMessage = "Доступ к геолокации выключен"
+            errorMessage = "map_location_permission_denied".localized
         @unknown default:
             break
         }
@@ -46,7 +46,7 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
             manager.startUpdatingLocation()
             manager.requestLocation()
         case .denied, .restricted:
-            errorMessage = "Доступ к геолокации выключен"
+            errorMessage = "map_location_permission_denied".localized
         case .notDetermined:
             manager.requestWhenInUseAuthorization()
         @unknown default:
@@ -59,7 +59,7 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
         guard abs(latest.timestamp.timeIntervalSinceNow) < 60 else { return }
         guard latest.horizontalAccuracy >= 0 else { return }
         guard latest.horizontalAccuracy <= 1000 else {
-            errorMessage = "GPS слишком неточный"
+            errorMessage = "map_location_inaccurate".localized
             return
         }
         self.location = latest
@@ -69,6 +69,6 @@ class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     }
     
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        errorMessage = "Не удалось получить GPS"
+        errorMessage = "map_location_failed".localized
     }
 }

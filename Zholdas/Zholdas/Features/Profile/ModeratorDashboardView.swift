@@ -536,14 +536,14 @@ struct ModeratorDashboardView: View {
 
             HStack(spacing: 8) {
                 adminStatusPill(
-                    title: usr.emailConfirmed ? "Email подтвержден" : "Email не подтвержден",
+                    title: usr.emailConfirmed ? "profile_email_confirmed".localized : "mod_user_email_not_confirmed".localized,
                     icon: usr.emailConfirmed ? "checkmark.seal.fill" : "envelope.badge.fill",
                     color: usr.emailConfirmed ? .green : .yellow
                 )
 
                 if let lastSignIn = usr.lastSignInAt {
                     adminStatusPill(
-                        title: "Вход: \(formatDate(lastSignIn))",
+                        title: String(format: "mod_user_signin_prefix".localized, formatDate(lastSignIn)),
                         icon: "clock.arrow.circlepath",
                         color: ZholdasTheme.accent
                     )
@@ -551,13 +551,13 @@ struct ModeratorDashboardView: View {
             }
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                adminMiniMetric(value: "\(usr.eventsCount)", label: "Ивенты")
-                adminMiniMetric(value: "\(usr.reportsReceived)", label: "Жалобы")
-                adminMiniMetric(value: "\(usr.reportsSent)", label: "Репорты")
+                adminMiniMetric(value: "\(usr.eventsCount)", label: "mod_stats_events".localized)
+                adminMiniMetric(value: "\(usr.reportsReceived)", label: "mod_stats_reports".localized)
+                adminMiniMetric(value: "\(usr.reportsSent)", label: "mod_user_reports_sent".localized)
             }
 
             if usr.isBanned && !usr.banReason.isEmpty {
-                Text("Причина: \(usr.banReason)")
+                Text(String(format: "mod_ban_reason_format".localized, usr.banReason))
                     .font(.caption2)
                     .foregroundColor(.red.opacity(0.9))
                     .padding(8)
@@ -1026,14 +1026,14 @@ struct ModeratorDashboardView: View {
                     .foregroundColor(ZholdasTheme.textSecondary)
                     .tracking(1.0)
                 
-                Toggle("AI помощник", isOn: $aiEnabled)
+                Toggle("mod_tools_ai_helper".localized, isOn: $aiEnabled)
                     .foregroundColor(ZholdasTheme.textPrimary)
                     .padding(.vertical, 4)
                 
                 Divider().background(ZholdasTheme.border)
                 
                 HStack {
-                    Text("Город по умолчанию")
+                    Text("mod_tools_default_city".localized)
                         .foregroundColor(ZholdasTheme.textPrimary)
                     Spacer()
                     TextField("Almaty", text: $defaultCity)
@@ -1044,7 +1044,7 @@ struct ModeratorDashboardView: View {
                 Divider().background(ZholdasTheme.border)
                 
                 HStack {
-                    Text("Лимит ИИ / 10 мин")
+                    Text("mod_tools_ai_rate_limit".localized)
                         .foregroundColor(ZholdasTheme.textPrimary)
                     Spacer()
                     TextField("8", text: $aiRateLimit)
@@ -1201,7 +1201,7 @@ struct ModeratorDashboardView: View {
                 let _: [String: String] = try await APIClient.shared.request("/moderation/reports/\(id)/close", method: "POST", requiresAuth: true)
                 await MainActor.run {
                     self.reports.removeAll(where: { $0.id == id })
-                    self.successMessage = "Жалоба успешно отклонена/закрыта"
+                    self.successMessage = "mod_msg_report_dismissed".localized
                 }
             } catch {
                 await MainActor.run {
@@ -1224,7 +1224,7 @@ struct ModeratorDashboardView: View {
                 }
                 
                 await MainActor.run {
-                    self.successMessage = "Пользователь заблокирован"
+                    self.successMessage = "mod_msg_user_banned".localized
                     self.banReason = ""
                 }
                 
@@ -1242,7 +1242,7 @@ struct ModeratorDashboardView: View {
             do {
                 let _: [String: String] = try await APIClient.shared.request("/moderation/users/\(id)/unban", method: "POST", requiresAuth: true)
                 await MainActor.run {
-                    self.successMessage = "Пользователь успешно разблокирован"
+                    self.successMessage = "mod_msg_user_unbanned".localized
                 }
                 await loadDataForCurrentTab()
             } catch {
@@ -1258,7 +1258,7 @@ struct ModeratorDashboardView: View {
             do {
                 let _: [String: String] = try await APIClient.shared.request("/moderation/users/\(id)/delete", method: "POST", requiresAuth: true)
                 await MainActor.run {
-                    self.successMessage = "Пользователь удален навсегда"
+                    self.successMessage = "mod_msg_user_deleted".localized
                 }
                 await loadDataForCurrentTab()
             } catch {
@@ -1276,7 +1276,7 @@ struct ModeratorDashboardView: View {
                 let body = try JSONSerialization.data(withJSONObject: ["role": newRole], options: [])
                 let _: [String: String] = try await APIClient.shared.request("/moderation/users/\(id)/role", method: "POST", body: body, requiresAuth: true)
                 await MainActor.run {
-                    self.successMessage = "Роль пользователя обновлена на \(newRole)"
+                    self.successMessage = String(format: "mod_msg_role_updated".localized, newRole)
                     self.actionLoading = false
                 }
                 await loadDataForCurrentTab()
@@ -1295,7 +1295,7 @@ struct ModeratorDashboardView: View {
                 let body = try JSONSerialization.data(withJSONObject: ["status": status], options: [])
                 let _: [String: String] = try await APIClient.shared.request("/moderation/events/\(id)/status", method: "POST", body: body, requiresAuth: true)
                 await MainActor.run {
-                    self.successMessage = status == "deleted" ? "Событие удалено" : "Статус события обновлен на \(status)"
+                    self.successMessage = status == "deleted" ? "mod_msg_event_deleted".localized : String(format: "mod_msg_event_status_updated".localized, status)
                 }
                 await loadDataForCurrentTab()
             } catch {
@@ -1313,7 +1313,7 @@ struct ModeratorDashboardView: View {
                 let body = try JSONSerialization.data(withJSONObject: ["title": broadcastTitle, "text": broadcastText], options: [])
                 let _: [String: String] = try await APIClient.shared.request("/moderation/broadcast", method: "POST", body: body, requiresAuth: true)
                 await MainActor.run {
-                    self.successMessage = "Объявление успешно отправлено всем пользователям!"
+                    self.successMessage = "mod_msg_broadcast_sent".localized
                     self.broadcastTitle = ""
                     self.broadcastText = ""
                     self.actionLoading = false
@@ -1329,13 +1329,13 @@ struct ModeratorDashboardView: View {
 
     private func saveSystemSettings() {
         guard let limit = Int(aiRateLimit), limit > 0 else {
-            errorMessage = "Лимит ИИ должен быть положительным числом"
+            errorMessage = "mod_err_ai_rate_limit".localized
             return
         }
 
         let city = defaultCity.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !city.isEmpty else {
-            errorMessage = "Город по умолчанию не должен быть пустым"
+            errorMessage = "mod_err_default_city".localized
             return
         }
 
@@ -1387,7 +1387,7 @@ struct ModeratorDashboardView: View {
             parts.append(user.city)
         }
         if user.age > 0 {
-            parts.append("\(user.age) лет")
+            parts.append("\(user.age) \("reg_age_suffix".localized)")
         }
         if !user.gender.isEmpty {
             parts.append(user.gender)
@@ -1404,7 +1404,7 @@ struct ModeratorDashboardView: View {
         if event.minAge > 0 {
             return "\(event.minAge)+"
         }
-        return "до \(event.maxAge)"
+        return String(format: "mod_events_age_up_to".localized, event.maxAge)
     }
 
     private func categoryIcon(for category: String) -> String {
@@ -1480,23 +1480,23 @@ struct ModeratorDashboardView: View {
 
     private func auditTitle(for action: String) -> String {
         switch action.lowercased() {
-        case "ban": return "Блокировка пользователя"
-        case "unban": return "Разблокировка пользователя"
-        case "update_role": return "Изменение роли"
-        case "close_report": return "Жалоба закрыта"
-        case "delete_event": return "Ивент удален"
-        case "delete_profile": return "Профиль удален"
-        case "update_event_status": return "Статус ивента изменен"
+        case "ban": return "mod_audit_action_ban".localized
+        case "unban": return "mod_audit_action_unban".localized
+        case "update_role": return "mod_audit_action_update_role".localized
+        case "close_report": return "mod_audit_action_close_report".localized
+        case "delete_event": return "mod_audit_action_delete_event".localized
+        case "delete_profile": return "mod_audit_action_delete_profile".localized
+        case "update_event_status": return "mod_audit_action_update_event_status".localized
         default: return action
         }
     }
     
     private func getReasonLabel(_ reason: String) -> String {
         switch reason.lowercased() {
-        case "spam": return "СПАМ"
-        case "abuse": return "ОСКОРБЛЕНИЯ"
-        case "inappropriate": return "НЕПРИЕМЛЕМЫЙ КОНТЕНТ"
-        default: return "ЖАЛОБА"
+        case "spam": return "mod_reason_spam".localized
+        case "abuse": return "mod_reason_abuse".localized
+        case "inappropriate": return "mod_reason_inappropriate".localized
+        default: return "mod_reason_default".localized
         }
     }
     

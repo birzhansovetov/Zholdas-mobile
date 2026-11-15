@@ -24,7 +24,7 @@ struct RateParticipantsView: View {
                 .ignoresSafeArea()
                 
                 VStack(spacing: 16) {
-                    Text("Поделитесь впечатлениями о других участниках события")
+                    Text("rate_subtitle".localized)
                         .font(.subheadline)
                         .foregroundColor(.gray)
                         .multilineTextAlignment(.center)
@@ -39,10 +39,10 @@ struct RateParticipantsView: View {
                             Image(systemName: "person.3.fill")
                                 .font(.system(size: 60))
                                 .foregroundColor(.gray.opacity(0.5))
-                            Text("Нет других участников")
+                            Text("rate_no_participants_title".localized)
                                 .font(.headline)
                                 .foregroundColor(.white)
-                            Text("Вы были единственным участником этого события.")
+                            Text("rate_no_participants_desc".localized)
                                 .font(.subheadline)
                                 .foregroundColor(.gray)
                                 .multilineTextAlignment(.center)
@@ -62,11 +62,11 @@ struct RateParticipantsView: View {
                     }
                 }
             }
-            .navigationTitle("Оценить участников")
+            .navigationTitle("ev_rate_participants".localized)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Готово") {
+                    Button("btn_done".localized) {
                         dismiss()
                     }
                     .foregroundColor(ZholdasTheme.accent)
@@ -109,7 +109,7 @@ struct RateParticipantsView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundColor(.green)
-                    Text("Оценено")
+                    Text("rate_rated_badge".localized)
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundColor(.green)
@@ -123,7 +123,7 @@ struct RateParticipantsView: View {
                     selectedParticipant = participant
                     showFormSheet = true
                 } label: {
-                    Text("Оценить")
+                    Text("rate_rate_btn".localized)
                         .font(.subheadline)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
@@ -195,7 +195,7 @@ struct RateParticipantsView: View {
             VStack(spacing: 24) {
                 // Header
                 VStack(spacing: 8) {
-                    Text("Оценка участника")
+                    Text("rate_sheet_title".localized)
                         .font(.title3)
                         .fontWeight(.bold)
                         .foregroundColor(.white)
@@ -238,13 +238,13 @@ struct RateParticipantsView: View {
                 
                 // Comment Text Field
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("ОТЗЫВ (НЕОБЯЗАТЕЛЬНО)")
+                    Text("rate_comment_label".localized)
                         .font(.caption)
                         .fontWeight(.bold)
                         .foregroundColor(.gray)
                         .tracking(1.0)
                     
-                    TextField("Напишите пару слов о вашем впечатлении...", text: $reviewComment, axis: .vertical)
+                    TextField("rate_comment_placeholder".localized, text: $reviewComment, axis: .vertical)
                         .lineLimit(3...6)
                         .padding()
                         .background(Color.white.opacity(0.04))
@@ -268,7 +268,7 @@ struct RateParticipantsView: View {
                     Button {
                         submitRating(for: participant.id)
                     } label: {
-                        Text("Отправить оценку")
+                        Text("rate_submit_btn".localized)
                             .fontWeight(.bold)
                             .frame(maxWidth: .infinity)
                             .padding()
@@ -326,11 +326,11 @@ struct RateParticipantsView: View {
     
     private func getRatingDescription(for rating: Int) -> String {
         switch rating {
-        case 1: return "Ужасно 😟"
-        case 2: return "Плохо 🙁"
-        case 3: return "Нормально 😐"
-        case 4: return "Хорошо 🙂"
-        case 5: return "Отлично! 🤩"
+        case 1: return "rate_star_1".localized
+        case 2: return "rate_star_2".localized
+        case 3: return "rate_star_3".localized
+        case 4: return "rate_star_4".localized
+        case 5: return "rate_star_5".localized
         default: return ""
         }
     }

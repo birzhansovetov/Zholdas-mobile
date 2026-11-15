@@ -86,7 +86,7 @@ struct EventsMapView: View {
                     controlButtons
                 }
             }
-            .navigationTitle("Карта")
+            .navigationTitle("tab_map".localized)
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarHidden(true) // Скрываем навигационный бар для соответствия макету
             .task {
@@ -477,17 +477,17 @@ struct EventsMapView: View {
     private var advancedFiltersPanel: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Label("Фильтры", systemImage: "slider.horizontal.3")
+                Label("map_filters".localized, systemImage: "slider.horizontal.3")
                     .font(.subheadline.weight(.bold))
                     .foregroundColor(ZholdasTheme.textPrimary)
                 Spacer()
-                Text("\(Int(maxDistanceKm)) км")
+                Text(String(format: "map_distance_km".localized, Int(maxDistanceKm)))
                     .font(.caption.weight(.bold))
                     .foregroundColor(ZholdasTheme.accent)
             }
 
             Slider(value: $maxDistanceKm, in: 1...50, step: 1) {
-                Text("Дистанция")
+                Text("map_filter_distance".localized)
             } minimumValueLabel: {
                 Text("1")
                     .font(.caption2)
@@ -503,14 +503,14 @@ struct EventsMapView: View {
             }
 
             HStack(spacing: 8) {
-                filterChip(title: "Все", value: "all")
-                filterChip(title: "Мужчины", value: "men")
-                filterChip(title: "Женщины", value: "women")
+                filterChip(title: "create_ev_gender_all".localized, value: "all")
+                filterChip(title: "create_ev_gender_men".localized, value: "men")
+                filterChip(title: "create_ev_gender_women".localized, value: "women")
             }
 
             Stepper(value: $filterAge, in: 12...80) {
                 HStack {
-                    Text("Возраст")
+                    Text("prof_age".localized)
                         .foregroundColor(ZholdasTheme.textPrimary)
                     Spacer()
                     Text("\(filterAge)")
@@ -521,13 +521,13 @@ struct EventsMapView: View {
             .tint(ZholdasTheme.accent)
 
             Toggle(isOn: $onlyToday) {
-                Label("Только сегодня", systemImage: "calendar")
+                Label("map_filter_only_today".localized, systemImage: "calendar")
                     .foregroundColor(ZholdasTheme.textPrimary)
             }
             .tint(ZholdasTheme.accent)
 
             Toggle(isOn: $nearMeOnly) {
-                Label("Рядом со мной", systemImage: "location.fill")
+                Label("map_filter_near_me".localized, systemImage: "location.fill")
                     .foregroundColor(ZholdasTheme.textPrimary)
             }
             .tint(ZholdasTheme.accent)
