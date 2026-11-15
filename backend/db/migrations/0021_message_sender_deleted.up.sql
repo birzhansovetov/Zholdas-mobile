@@ -1,0 +1,2 @@
+ALTER TABLE event_messages ADD COLUMN IF NOT EXISTS sender_deleted BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE event_messages ALTER COLUMN sender_id DROP NOT NULL;

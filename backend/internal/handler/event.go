@@ -1773,12 +1773,12 @@ func (h *EventHandler) GetChatSessions(c *gin.Context) {
 			e.title, 
 			e.category, 
 			COALESCE(m.text, 'Будьте первыми! Напишите в чат') AS last_message,
-			COALESCE(p.full_name, '') AS last_message_sender,
+			CASE WHEN m.sender_deleted THEN 'Удалённый пользователь' ELSE COALESCE(p.full_name, '') END AS last_message_sender,
 			COALESCE(m.created_at, e.created_at) AS last_message_time,
 			(e.end_time < CURRENT_TIMESTAMP) AS is_completed
 		FROM events e
 		LEFT JOIN LATERAL (
-			SELECT em.text, em.created_at, em.sender_id
+			SELECT em.text, em.created_at, em.sender_id, em.sender_deleted
 			FROM event_messages em
 			WHERE em.event_id = e.id
 			ORDER BY em.created_at DESC
@@ -1857,10 +1857,10 @@ func (h *EventHandler) GetEventMessages(c *gin.Context) {
 		SELECT 
 			em.id, 
 			em.event_id, 
-			COALESCE(em.sender_id::text, ''), 
-			COALESCE(p.full_name, 'Жорик (ИИ)') AS sender_name, 
-			COALESCE(p.username, 'ai_helper') AS sender_username, 
-			COALESCE(p.avatar_url, '') AS sender_avatar_url, 
+			CASE WHEN em.sender_deleted THEN '' ELSE COALESCE(em.sender_id::text, '') END, 
+			CASE WHEN em.sender_deleted THEN 'Удалённый пользователь' ELSE COALESCE(p.full_name, 'Жорик (ИИ)') END AS sender_name, 
+			CASE WHEN em.sender_deleted THEN 'deleted_user' ELSE COALESCE(p.username, 'ai_helper') END AS sender_username, 
+			CASE WHEN em.sender_deleted THEN '' ELSE COALESCE(p.avatar_url, '') END AS sender_avatar_url, 
 			em.text, 
 			em.created_at
 		FROM event_messages em
@@ -2015,7 +2015,7 @@ func (h *EventHandler) SendEventMessage(c *gin.Context) {
 				}
 
 				rows, err := h.pool.Query(ctx, `
-					SELECT CASE WHEN sender_id IS NULL THEN 'assistant' ELSE 'user' END AS role,
+					SELECT CASE WHEN sender_id IS NULL AND NOT sender_deleted THEN 'assistant' ELSE 'user' END AS role,
 					       text
 					FROM event_messages
 					WHERE event_id = $1
