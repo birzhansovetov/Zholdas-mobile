@@ -1900,7 +1900,7 @@ func (h *EventHandler) GetChatSessions(c *gin.Context) {
 	ctx := c.Request.Context()
 
 	// Query events and lateral join the last message
-	rows, err := h.pool.Query(ctx, `
+	rows, err := h.pool.Query(ctx, withSenderDeleted(`
 		SELECT 
 			e.id, 
 			e.title, 
@@ -1911,7 +1911,7 @@ func (h *EventHandler) GetChatSessions(c *gin.Context) {
 			(e.end_time < CURRENT_TIMESTAMP) AS is_completed
 		FROM events e
 		LEFT JOIN LATERAL (
-			SELECT em.text, em.created_at, em.sender_id, em.sender_deleted
+			SELECT em.text, em.created_at, em.sender_id, em.sender_deleted AS sender_deleted
 			FROM event_messages em
 			WHERE em.event_id = e.id
 			ORDER BY em.created_at DESC
@@ -1925,7 +1925,7 @@ func (h *EventHandler) GetChatSessions(c *gin.Context) {
 			   WHERE ep.event_id = e.id AND ep.user_id = $1
 		   )
 		ORDER BY last_message_time DESC;
-	`, userID)
+	`), userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch chat sessions: " + err.Error()})
 		return
@@ -1986,7 +1986,7 @@ func (h *EventHandler) GetEventMessages(c *gin.Context) {
 	}
 
 	// 2. Fetch messages in chronological order
-	rows, err := h.pool.Query(ctx, `
+	rows, err := h.pool.Query(ctx, withSenderDeleted(`
 		SELECT 
 			em.id, 
 			em.event_id, 
@@ -2000,7 +2000,7 @@ func (h *EventHandler) GetEventMessages(c *gin.Context) {
 		LEFT JOIN profiles p ON p.user_id = em.sender_id
 		WHERE em.event_id = $1
 		ORDER BY em.created_at ASC;
-	`, eventID)
+	`), eventID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch event messages: " + err.Error()})
 		return
@@ -2147,14 +2147,14 @@ func (h *EventHandler) SendEventMessage(c *gin.Context) {
 					return
 				}
 
-				rows, err := h.pool.Query(ctx, `
-					SELECT CASE WHEN sender_id IS NULL AND NOT sender_deleted THEN 'assistant' ELSE 'user' END AS role,
+				rows, err := h.pool.Query(ctx, withSenderDeleted(`
+					SELECT CASE WHEN sender_id IS NULL AND NOT event_messages.sender_deleted THEN 'assistant' ELSE 'user' END AS role,
 					       text
 					FROM event_messages
 					WHERE event_id = $1
 					ORDER BY created_at DESC
 					LIMIT 8
-				`, eID)
+				`), eID)
 				if err == nil {
 					defer rows.Close()
 					reversed := []service.AIChatMessage{}

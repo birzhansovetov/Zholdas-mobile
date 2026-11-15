@@ -75,6 +75,7 @@ func main() {
 	notificationService.SetPool(pool)
 
 	// 4. Initialize Handlers
+	handler.DetectSchemaFeatures(context.Background(), pool)
 	authHandler := handler.NewAuthHandler(pool, cfg.JWTSecret)
 	authHandler.SetNotificationService(notificationService)
 	eventHandler := handler.NewEventHandler(pool, aiService, notificationService)
