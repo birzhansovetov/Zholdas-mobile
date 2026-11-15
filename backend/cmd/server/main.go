@@ -200,6 +200,7 @@ func main() {
 		protectedRoutes.POST("/events/:id/leave", eventHandler.LeaveEvent)
 		protectedRoutes.POST("/events/:id/participant-status", eventHandler.UpdateParticipantStatus)
 		protectedRoutes.POST("/events/:id/arrive", eventHandler.MarkArrived)
+		protectedRoutes.GET("/events/:id/details", eventHandler.GetEventDetails)
 		protectedRoutes.GET("/events/:id/participants", eventHandler.GetEventParticipants)
 		protectedRoutes.POST("/events/:id/live-location", eventHandler.UpdateEventLiveLocation)
 		protectedRoutes.GET("/events/:id/live-locations", eventHandler.GetEventLiveLocations)

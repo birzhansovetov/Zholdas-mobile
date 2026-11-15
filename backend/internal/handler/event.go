@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html"
 	"log"
@@ -661,7 +662,7 @@ func (h *EventHandler) GetPublicEventPage(c *gin.Context) {
 	}
 
 	routeURL := fmt.Sprintf("https://2gis.kz/geo/%f,%f", longitude, latitude)
-	appURL := fmt.Sprintf("zholdas://events/%d", eventID)
+	appURL := fmt.Sprintf("zholdas://event/%d", eventID)
 	page := fmt.Sprintf(`<!doctype html>
 <html lang="ru">
 <head>
@@ -856,6 +857,122 @@ func (h *EventHandler) GetNearbyEvents(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, responseList)
+}
+
+func parseEventID(raw string) (int32, error) {
+	id, err := strconv.Atoi(raw)
+	if err != nil || id <= 0 {
+		return 0, fmt.Errorf("invalid event id")
+	}
+	return int32(id), nil
+}
+
+// GetEventDetails returns full details of a single event in NearbyEventResponse format.
+func (h *EventHandler) GetEventDetails(c *gin.Context) {
+	eventID, err := parseEventID(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
+		return
+	}
+
+	userIDVal, exists := c.Get("user_id")
+	var userID string
+	if exists {
+		if uid, ok := userIDVal.(string); ok {
+			userID = uid
+		}
+	}
+
+	ctx := c.Request.Context()
+
+	query := `
+		SELECT e.id, e.creator_id::text, e.title, e.description, e.category, e.location_name,
+		       (ST_Y(e.location::geometry))::float8 AS latitude,
+		       (ST_X(e.location::geometry))::float8 AS longitude,
+		       e.start_time, e.end_time, e.max_participants, e.status, e.image_url, e.created_at,
+		       0::float8 AS distance_meters,
+		       (SELECT COUNT(*) FROM event_participants ep WHERE ep.event_id = e.id)::int AS participants_count,
+		       EXISTS(SELECT 1 FROM event_participants ep WHERE ep.event_id = e.id AND ep.user_id = NULLIF($2, '')::uuid)::bool AS is_joined,
+		       COALESCE(e.visibility, 'public') AS visibility,
+		       COALESCE(e.gender_filter, 'all') AS gender_filter,
+		       COALESCE(e.min_age, 0)::int AS min_age,
+		       COALESCE(e.max_age, 0)::int AS max_age
+		FROM events e
+		LEFT JOIN profiles viewer ON viewer.user_id = NULLIF($2, '')::uuid
+		WHERE e.id = $1
+		  AND (
+		    e.creator_id = NULLIF($2, '')::uuid
+		    OR (
+		      NOT EXISTS (
+		        SELECT 1 FROM blocks b
+		        WHERE (b.blocker_id = e.creator_id AND b.blocked_id = NULLIF($2, '')::uuid)
+		           OR (b.blocker_id = NULLIF($2, '')::uuid AND b.blocked_id = e.creator_id)
+		      )
+		      AND (e.status = 'active' OR (e.status = 'finished' AND EXISTS(SELECT 1 FROM event_participants ep WHERE ep.event_id = e.id AND ep.user_id = NULLIF($2, '')::uuid)))
+		      AND (
+		        EXISTS(SELECT 1 FROM event_participants ep WHERE ep.event_id = e.id AND ep.user_id = NULLIF($2, '')::uuid)
+		        OR (
+		          (
+		            COALESCE(NULLIF(LOWER(e.gender_filter), ''), 'all') IN ('all', 'any', 'все')
+		            OR CASE
+		                 WHEN LOWER(COALESCE(viewer.gender, '')) IN ('men', 'male', 'm', 'мужской', 'мужчина', 'мужчины') THEN 'men'
+		                 WHEN LOWER(COALESCE(viewer.gender, '')) IN ('women', 'female', 'f', 'женский', 'женщина', 'женщины') THEN 'women'
+		                 ELSE ''
+		               END =
+		               CASE
+		                 WHEN LOWER(COALESCE(e.gender_filter, '')) IN ('men', 'male', 'm', 'мужской', 'мужчина', 'мужчины') THEN 'men'
+		                 WHEN LOWER(COALESCE(e.gender_filter, '')) IN ('women', 'female', 'f', 'женский', 'женщина', 'женщины') THEN 'women'
+		                 ELSE 'all'
+		               END
+		          )
+		          AND (
+		            COALESCE(e.min_age, 0) = 0
+		            OR (viewer.birth_year IS NOT NULL AND viewer.birth_year > 0 AND EXTRACT(YEAR FROM CURRENT_DATE)::int - viewer.birth_year >= COALESCE(e.min_age, 0))
+		          )
+		          AND (
+		            COALESCE(e.max_age, 0) = 0
+		            OR (viewer.birth_year IS NOT NULL AND viewer.birth_year > 0 AND EXTRACT(YEAR FROM CURRENT_DATE)::int - viewer.birth_year <= COALESCE(e.max_age, 0))
+		          )
+		        )
+		      )
+		    )
+		  );
+	`
+
+	var item NearbyEventResponse
+	err = h.pool.QueryRow(ctx, query, eventID, userID).Scan(
+		&item.ID,
+		&item.CreatorID,
+		&item.Title,
+		&item.Description,
+		&item.Category,
+		&item.LocationName,
+		&item.Latitude,
+		&item.Longitude,
+		&item.StartTime,
+		&item.EndTime,
+		&item.MaxParticipants,
+		&item.Status,
+		&item.ImageURL,
+		&item.CreatedAt,
+		&item.DistanceMeters,
+		&item.ParticipantsCont,
+		&item.IsJoined,
+		&item.Visibility,
+		&item.GenderFilter,
+		&item.MinAge,
+		&item.MaxAge,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) || err == pgx.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch event details: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, item)
 }
 
 // GetAIRecommendations matches nearby events based on structured LLM outputs (Rate Limited)
