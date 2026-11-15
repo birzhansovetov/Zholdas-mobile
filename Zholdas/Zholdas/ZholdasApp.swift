@@ -46,7 +46,11 @@ struct ZholdasApp: App {
             .environmentObject(langManager)
             .preferredColorScheme(preferredColorScheme)
             .onOpenURL { url in
-                authViewModel.handlePasswordResetURL(url)
+                if let eventID = EventDeepLink.eventID(from: url) {
+                    authViewModel.pendingEventID = eventID
+                } else {
+                    authViewModel.handlePasswordResetURL(url)
+                }
             }
             .sheet(isPresented: $authViewModel.isShowingPasswordReset) {
                 ResetPasswordView()

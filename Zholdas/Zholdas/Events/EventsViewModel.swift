@@ -41,6 +41,17 @@ class EventsViewModel: ObservableObject {
         self.isLoading = false
     }
     
+    func loadEventDetails(id: Int) async -> Event? {
+        do {
+            let event: Event = try await APIClient.shared.request("/events/\(id)/details", requiresAuth: true)
+            upsertEvent(event)
+            return event
+        } catch {
+            logger.error("Failed to load event details: \(error.localizedDescription)")
+            return nil
+        }
+    }
+    
     func createEvent(
         title: String,
         description: String,

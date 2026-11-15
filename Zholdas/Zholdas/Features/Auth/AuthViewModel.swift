@@ -17,6 +17,7 @@ class AuthViewModel: ObservableObject {
     @Published var isShowingPasswordReset = false
     @Published var passwordResetMessage: String?
     @Published var passwordResetAccessToken: String?
+    @Published var pendingEventID: Int?
     
     private var cancellables = Set<AnyCancellable>()
     
