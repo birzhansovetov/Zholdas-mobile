@@ -206,6 +206,7 @@ func main() {
 		protectedRoutes.GET("/events/:id/live-locations", eventHandler.GetEventLiveLocations)
 		protectedRoutes.DELETE("/events/:id/live-location", eventHandler.DeleteEventLiveLocation)
 		protectedRoutes.POST("/events/:id/rate", authHandler.RateParticipant)
+		protectedRoutes.POST("/events/:id/ws-ticket", eventHandler.CreateWebSocketTicket)
 
 		// Chat Room Routes
 		protectedRoutes.GET("/chats", eventHandler.GetChatSessions)
