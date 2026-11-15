@@ -74,14 +74,18 @@ func (h *AuthHandler) DeleteOwnAccount(c *gin.Context) {
 	defer tx.Rollback(ctx)
 
 	// 1. Preserve chat messages: mark as deleted sender and detach user ID.
-	_, err = tx.Exec(ctx, `
+	// Without migration 0021 the column is missing; messages are then removed
+	// together with the user (ON DELETE CASCADE) instead of being anonymized.
+	if senderDeletedColumn.Load() {
+		_, err = tx.Exec(ctx, `
 		UPDATE event_messages
 		SET sender_id = NULL, sender_deleted = TRUE
 		WHERE sender_id = $1
 	`, userID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to anonymize event messages: " + err.Error()})
-		return
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to anonymize event messages: " + err.Error()})
+			return
+		}
 	}
 
 	// 2. Reports handling:
