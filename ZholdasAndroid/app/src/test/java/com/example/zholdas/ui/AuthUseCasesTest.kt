@@ -124,4 +124,23 @@ class AuthUseCasesTest {
         val username = AuthUseCases.extractUsernameFromEmail("arman.zholdas@mail.kz")
         assertEquals("arman.zholdas", username)
     }
+
+    @Test
+    fun testCleanVerificationCode() {
+        assertEquals("123456", AuthUseCases.cleanVerificationCode("123456"))
+        assertEquals("123456", AuthUseCases.cleanVerificationCode("12 34 56"))
+        assertEquals("123456", AuthUseCases.cleanVerificationCode("123-456-789"))
+        assertEquals("987", AuthUseCases.cleanVerificationCode("abc 987 xyz"))
+        assertEquals("", AuthUseCases.cleanVerificationCode("no digits here"))
+    }
+
+    @Test
+    fun testIsEmailNotConfirmedError() {
+        assertTrue(AuthUseCases.isEmailNotConfirmedError("""{"error_code":"email_not_confirmed","msg":"Email not confirmed"}"""))
+        assertTrue(AuthUseCases.isEmailNotConfirmedError("""{"code":400,"message":"Email not confirmed"}"""))
+        assertTrue(AuthUseCases.isEmailNotConfirmedError("Error: email_not_confirmed"))
+        assertFalse(AuthUseCases.isEmailNotConfirmedError("""{"error_code":"invalid_credentials","msg":"Invalid login credentials"}"""))
+        assertFalse(AuthUseCases.isEmailNotConfirmedError(null))
+        assertFalse(AuthUseCases.isEmailNotConfirmedError(""))
+    }
 }

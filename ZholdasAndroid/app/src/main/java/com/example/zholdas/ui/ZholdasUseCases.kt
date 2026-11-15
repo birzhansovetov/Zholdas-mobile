@@ -102,6 +102,16 @@ object AuthUseCases {
     fun extractUsernameFromEmail(email: String): String {
         return email.substringBefore("@").trim()
     }
+
+    fun cleanVerificationCode(rawCode: String): String {
+        return rawCode.filter { it.isDigit() }.take(6)
+    }
+
+    fun isEmailNotConfirmedError(errorBody: String?): Boolean {
+        if (errorBody.isNullOrBlank()) return false
+        return errorBody.contains("email_not_confirmed", ignoreCase = true) ||
+                errorBody.contains("Email not confirmed", ignoreCase = true)
+    }
 }
 
 enum class FriendshipAction {
