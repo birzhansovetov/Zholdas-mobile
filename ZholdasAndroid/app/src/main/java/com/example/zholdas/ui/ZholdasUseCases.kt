@@ -1,8 +1,10 @@
 package com.example.zholdas.ui
 
+import com.example.zholdas.BuildConfig
 import com.example.zholdas.data.local.localized
 import com.example.zholdas.data.model.Event
 import com.example.zholdas.ui.screens.map.EventCategories
+import java.net.URI
 import java.util.Locale
 
 data class ValidationResult(
@@ -314,5 +316,49 @@ object LegalLinks {
             "en" -> "en"
             else -> "ru"
         }
+    }
+}
+
+object EventDeepLink {
+    fun parse(uri: String?, backendBaseUrl: String = BuildConfig.BACKEND_BASE_URL): Int? {
+        if (uri.isNullOrBlank()) return null
+        val parsedUri = runCatching { URI(uri.trim()) }.getOrNull() ?: return null
+
+        val scheme = parsedUri.scheme ?: return null
+        if (scheme.equals("zholdas", ignoreCase = true)) {
+            val host = parsedUri.host
+            val segments = parsedUri.path.orEmpty().split('/').filter { it.isNotEmpty() }
+            val idStr = when {
+                (host.equals("event", ignoreCase = true) || host.equals("events", ignoreCase = true)) && segments.size == 1 ->
+                    segments[0]
+                host.isNullOrEmpty() && segments.size == 2 &&
+                    (segments[0].equals("event", ignoreCase = true) || segments[0].equals("events", ignoreCase = true)) ->
+                    segments[1]
+                else -> null
+            }
+            return idStr?.toIntOrNull()
+        }
+
+        if (scheme.equals("https", ignoreCase = true) || scheme.equals("http", ignoreCase = true)) {
+            val parsedBase = runCatching { URI(backendBaseUrl.trim().trimEnd('/')) }.getOrNull() ?: return null
+            if (!parsedUri.host.equals(parsedBase.host, ignoreCase = true)) {
+                return null
+            }
+            if (parsedBase.port != -1 && parsedUri.port != parsedBase.port) {
+                return null
+            }
+            val basePath = parsedBase.path.orEmpty().trimEnd('/')
+            val fullPath = parsedUri.path.orEmpty()
+            if (!fullPath.startsWith(basePath)) {
+                return null
+            }
+            val relativePath = fullPath.removePrefix(basePath)
+            val segments = relativePath.split('/').filter { it.isNotEmpty() }
+            if (segments.size == 2 && (segments[0].equals("events", ignoreCase = true) || segments[0].equals("event", ignoreCase = true))) {
+                return segments[1].toIntOrNull()
+            }
+        }
+
+        return null
     }
 }

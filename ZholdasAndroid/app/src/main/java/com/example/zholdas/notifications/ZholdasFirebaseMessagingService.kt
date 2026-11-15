@@ -40,7 +40,8 @@ class ZholdasFirebaseMessagingService : FirebaseMessagingService() {
         super.onMessageReceived(message)
         val title = message.notification?.title ?: message.data["title"] ?: "Zholdas"
         val body = message.notification?.body ?: message.data["body"] ?: return
-        showNotification(title, body)
+        val eventId = message.data["event_id"]
+        showNotification(title, body, eventId)
     }
 
     override fun onDestroy() {
@@ -48,7 +49,7 @@ class ZholdasFirebaseMessagingService : FirebaseMessagingService() {
         super.onDestroy()
     }
 
-    private fun showNotification(title: String, body: String) {
+    private fun showNotification(title: String, body: String, eventId: String? = null) {
         if (Build.VERSION.SDK_INT >= 33 && ActivityCompat.checkSelfPermission(
                 this, Manifest.permission.POST_NOTIFICATIONS
             ) != PackageManager.PERMISSION_GRANTED
@@ -62,9 +63,13 @@ class ZholdasFirebaseMessagingService : FirebaseMessagingService() {
         }
         val intent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            if (!eventId.isNullOrBlank()) {
+                putExtra("event_id", eventId)
+            }
         }
+        val notificationId = (System.currentTimeMillis() and 0x7fffffff).toInt()
         val pendingIntent = PendingIntent.getActivity(
-            this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            this, notificationId, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
@@ -73,7 +78,7 @@ class ZholdasFirebaseMessagingService : FirebaseMessagingService() {
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
             .build()
-        manager.notify((System.currentTimeMillis() and 0x7fffffff).toInt(), notification)
+        manager.notify(notificationId, notification)
     }
 
     private companion object { const val CHANNEL_ID = "zholdas_general" }

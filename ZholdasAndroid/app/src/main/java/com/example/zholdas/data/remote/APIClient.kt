@@ -167,6 +167,9 @@ interface ZholdasApiService {
         @Query("offset") offset: Int = 0
     ): List<Event>
 
+    @GET("/events/{id}/details")
+    suspend fun getEventDetails(@Path("id") id: Int): Event
+
     @POST("/events/{id}/join")
     suspend fun joinEvent(@Path("id") id: Int): GenericMessageResponse
 
