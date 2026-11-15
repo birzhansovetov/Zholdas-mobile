@@ -178,6 +178,7 @@ fun EventDetailScreen(
         participantsList = viewModel.fetchParticipants(event.id)
         participantStatus = viewModel.fetchCurrentParticipantStatus(event.id, participantsList)
         reminderText = viewModel.eventReminderText(event.id)
+        viewModel.loadWeather(event.latitude, event.longitude)
     }
 
     LaunchedEffect(event.id, isSharingLocation) {
@@ -539,6 +540,102 @@ fun EventDetailScreen(
                                 fontSize = 12.sp
                             )
                         }
+                    }
+                }
+            }
+
+            // Weather Card
+            val weatherState by viewModel.weatherState.collectAsState()
+            ModernCard {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    val weatherIcon = when (val state = weatherState) {
+                        is WeatherState.Loaded -> state.summary.icon
+                        else -> Icons.Default.Cloud
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(ZholdasAccent.copy(alpha = 0.14f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = weatherIcon,
+                            contentDescription = null,
+                            tint = ZholdasAccent,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        Text(
+                            text = "ev_weather_title".localized.uppercase(),
+                            color = ZholdasTextTertiary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        when (val state = weatherState) {
+                            is WeatherState.Loaded -> {
+                                val summary = state.summary
+                                val condition = conditionKey(summary.weatherCode).localized
+                                val temp = "${kotlin.math.round(summary.temperature).toInt()}°C"
+                                Text(
+                                    text = "$condition, $temp",
+                                    color = ZholdasTextPrimary,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                val hint = summary.checklistText()
+                                if (hint.isNotBlank()) {
+                                    Text(
+                                        text = hint,
+                                        color = ZholdasTextSecondary,
+                                        fontSize = 12.sp,
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                            is WeatherState.Loading -> {
+                                Text(
+                                    text = "ev_weather_loading".localized,
+                                    color = ZholdasTextSecondary,
+                                    fontSize = 14.sp
+                                )
+                            }
+                            is WeatherState.Unavailable -> {
+                                Text(
+                                    text = "ev_weather_unavailable".localized,
+                                    color = ZholdasTextSecondary,
+                                    fontSize = 14.sp
+                                )
+                            }
+                        }
+                    }
+
+                    IconButton(
+                        onClick = { viewModel.loadWeather(event.latitude, event.longitude) },
+                        enabled = weatherState !is WeatherState.Loading,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(ZholdasTextPrimary.copy(alpha = 0.08f))
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Refresh,
+                            contentDescription = "btn_retry".localized,
+                            tint = ZholdasAccent,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
             }
