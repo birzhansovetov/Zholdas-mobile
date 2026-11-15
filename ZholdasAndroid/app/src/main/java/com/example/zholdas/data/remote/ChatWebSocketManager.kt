@@ -8,18 +8,21 @@ import com.example.zholdas.data.model.EventMessageResponse
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import okhttp3.*
+import retrofit2.HttpException
 import java.util.concurrent.TimeUnit
 
 class ChatWebSocketManager(
     private val eventID: Int,
     private val tokenManager: TokenManager,
     private val backendWsUrl: String,
-    private val refreshSession: suspend () -> Boolean = { false }
+    private val refreshSession: suspend () -> Boolean = { false },
+    private val ticketProvider: (suspend (Int) -> String?)? = null
 ) {
     companion object {
         private const val TAG = "ChatWSManager"
@@ -33,6 +36,7 @@ class ChatWebSocketManager(
         .build()
 
     private val coroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var connectJob: Job? = null
     private var webSocket: WebSocket? = null
     private var isClosed = false
     private var reconnectScheduled = false
@@ -56,12 +60,64 @@ class ChatWebSocketManager(
             notifyStateChanged(false)
             return
         }
-        openSocket(token)
+
+        connectJob?.cancel()
+        connectJob = coroutineScope.launch {
+            if (isClosed) return@launch
+            val ticket = try {
+                ticketProvider?.invoke(eventID)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: HttpException) {
+                if (e.code() == 404) {
+                    // fallback for old backend, remove later
+                    Log.d(TAG, "ws-ticket endpoint returned 404, falling back to token query param")
+                    null
+                } else if (e.code() == 403) {
+                    Log.w(TAG, "WebSocket ticket request rejected with code 403, aborting reconnect.")
+                    notifyStateChanged(false)
+                    return@launch
+                } else if (e.code() == 401) {
+                    handleAuthFailure()
+                    return@launch
+                } else {
+                    Log.e(TAG, "WebSocket ticket request failed with HTTP ${e.code()}")
+                    notifyStateChanged(false)
+                    handleDisconnect()
+                    return@launch
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "WebSocket ticket request failed: ${e.message}")
+                notifyStateChanged(false)
+                handleDisconnect()
+                return@launch
+            }
+
+            if (isClosed) return@launch
+
+            if (!ticket.isNullOrBlank()) {
+                openSocket(ticket = ticket, token = null)
+            } else {
+                // fallback for old backend, remove later
+                openSocket(ticket = null, token = token)
+            }
+        }
     }
 
-    private fun openSocket(token: String) {
+    private fun openSocket(ticket: String?, token: String?) {
         webSocket?.cancel()
-        val urlString = "$backendWsUrl/events/$eventID/ws?token=$token"
+        val urlString = when {
+            !ticket.isNullOrBlank() -> "$backendWsUrl/events/$eventID/ws?ticket=$ticket"
+            !token.isNullOrBlank() -> {
+                // fallback for old backend, remove later
+                "$backendWsUrl/events/$eventID/ws?token=$token"
+            }
+            else -> {
+                Log.e(TAG, "Cannot connect to websocket: Neither ticket nor token is available.")
+                notifyStateChanged(false)
+                return
+            }
+        }
 
         val request = Request.Builder()
             .url(urlString)
@@ -118,27 +174,7 @@ class ChatWebSocketManager(
                     return
                 }
                 if (code == 401) {
-                    if (!authRefreshAttempted) {
-                        authRefreshAttempted = true
-                        coroutineScope.launch {
-                            val refreshed = try {
-                                refreshSession()
-                            } catch (e: Exception) {
-                                if (e is CancellationException) throw e
-                                Log.e(TAG, "Failed to refresh session for WebSocket", e)
-                                false
-                            }
-                            if (refreshed && !isClosed) {
-                                Log.d(TAG, "Session refreshed, reconnecting WebSocket...")
-                                connect()
-                            } else {
-                                Log.w(TAG, "Session refresh failed or manager is closed, aborting reconnect.")
-                                notifyStateChanged(false)
-                            }
-                        }
-                    } else {
-                        Log.w(TAG, "WebSocket 401 received again after refresh attempt, aborting reconnect.")
-                    }
+                    handleAuthFailure()
                     return
                 }
                 handleDisconnect()
@@ -146,9 +182,36 @@ class ChatWebSocketManager(
         })
     }
 
+    private fun handleAuthFailure() {
+        notifyStateChanged(false)
+        if (!authRefreshAttempted) {
+            authRefreshAttempted = true
+            coroutineScope.launch {
+                val refreshed = try {
+                    refreshSession()
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    Log.e(TAG, "Failed to refresh session for WebSocket", e)
+                    false
+                }
+                if (refreshed && !isClosed) {
+                    Log.d(TAG, "Session refreshed, reconnecting WebSocket...")
+                    connect()
+                } else {
+                    Log.w(TAG, "Session refresh failed or manager is closed, aborting reconnect.")
+                    notifyStateChanged(false)
+                }
+            }
+        } else {
+            Log.w(TAG, "WebSocket 401 received again after refresh attempt, aborting reconnect.")
+        }
+    }
+
     fun disconnect() {
         isClosed = true
         reconnectScheduled = false
+        connectJob?.cancel()
+        connectJob = null
         coroutineScope.cancel()
         handler.removeCallbacksAndMessages(null)
         onMessageReceived = null

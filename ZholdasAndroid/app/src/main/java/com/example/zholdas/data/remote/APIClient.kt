@@ -49,6 +49,12 @@ data class UploadResponse(
 )
 
 @Serializable
+data class WsTicketResponse(
+    val ticket: String,
+    @SerialName("expires_in") val expiresIn: Int = 60
+)
+
+@Serializable
 data class UpdatePasswordPayload(val password: String)
 
 @Serializable
@@ -225,6 +231,9 @@ interface ZholdasApiService {
         @Path("id") id: Int,
         @Body request: SendMessageRequest
     ): EventMessageResponse
+
+    @POST("/events/{id}/ws-ticket")
+    suspend fun createWebSocketTicket(@Path("id") id: Int): WsTicketResponse
 
     @GET("/notifications")
     suspend fun getNotifications(): List<NotificationItem>

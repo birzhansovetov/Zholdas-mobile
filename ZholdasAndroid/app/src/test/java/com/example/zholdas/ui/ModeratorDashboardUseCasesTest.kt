@@ -295,6 +295,7 @@ private class FakeZholdasApiService : ZholdasApiService {
 
     // Other ZholdasApiService methods
     override suspend fun logout(): GenericMessageResponse = GenericMessageResponse("ok")
+    override suspend fun createWebSocketTicket(id: Int): WsTicketResponse = throw UnsupportedOperationException()
     override suspend fun getEventDetails(id: Int): Event = throw UnsupportedOperationException()
     override suspend fun deleteAccount(): GenericMessageResponse = GenericMessageResponse("Account deleted")
     override suspend fun getProfile(): User = User("1")
