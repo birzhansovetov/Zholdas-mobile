@@ -1,6 +1,9 @@
 import Foundation
 import Combine
 import CoreLocation
+import os
+
+private let logger = Logger(subsystem: "app.zholdas.Zholdas", category: "EventsViewModel")
 
 @MainActor
 class EventsViewModel: ObservableObject {
@@ -277,7 +280,7 @@ class EventsViewModel: ObservableObject {
             let list: [Participant] = try await APIClient.shared.request(path, method: "GET", requiresAuth: true)
             return list
         } catch {
-            print("Ошибка загрузки участников: \(error.localizedDescription)")
+            logger.error("Failed to fetch participants: \(error.localizedDescription)")
             return []
         }
     }
@@ -372,7 +375,7 @@ class EventsViewModel: ObservableObject {
                 requiresAuth: true
             )
         } catch {
-            print("Ошибка остановки live-локации: \(error.localizedDescription)")
+            logger.error("Failed to stop live location: \(error.localizedDescription)")
         }
     }
 }

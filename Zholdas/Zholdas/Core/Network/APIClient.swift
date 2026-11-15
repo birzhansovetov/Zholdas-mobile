@@ -184,6 +184,16 @@ actor APIClient {
         )
     }
     
+    struct EmptyResponse: Decodable {
+        init() {}
+        init(from decoder: Decoder) throws {}
+    }
+
+    /// Request whose response body is not needed (for example DELETE /auth/me).
+    func requestNoContent(_ path: String, method: String = "GET", body: Data? = nil, requiresAuth: Bool = true) async throws {
+        let _: EmptyResponse = try await request(path, method: method, body: body, requiresAuth: requiresAuth)
+    }
+
     func request<T: Decodable>(_ path: String, method: String = "GET", body: Data? = nil, requiresAuth: Bool = true) async throws -> T {
         let request = try buildRequest(path: path, method: method, body: body, requiresAuth: requiresAuth)
         
@@ -414,6 +424,10 @@ actor APIClient {
     }
     
     private func decode<T: Decodable>(_ data: Data) throws -> T {
+        if data.isEmpty, let empty = EmptyResponse() as? T {
+            return empty
+        }
+
         let decoder = JSONDecoder()
         
         decoder.dateDecodingStrategy = .custom { decoder in

@@ -1,4 +1,7 @@
 import SwiftUI
+import os
+
+private let logger = Logger(subsystem: "app.zholdas.Zholdas", category: "ActivityView")
 
 private struct ActivitySelectedUser: Identifiable {
     let id: String
@@ -316,7 +319,7 @@ struct ActivityView: View {
                 authViewModel.unreadNotificationsCount = 0
             }
         } catch {
-            print("Failed to mark notifications as read: \(error)")
+            logger.error("Failed to mark notifications as read: \(error.localizedDescription)")
         }
     }
 

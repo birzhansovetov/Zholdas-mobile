@@ -175,6 +175,9 @@ struct EventsListView: View {
                             }
                             .padding(24)
                         }
+                        .refreshable {
+                            await reloadEvents()
+                        }
                     }
                 }
             }
@@ -184,7 +187,10 @@ struct EventsListView: View {
                 filterAge = profileAge
             }
             locationManager.requestLocation()
-            loadEvents()
+            await reloadEvents()
+        }
+        .refreshable {
+            await reloadEvents()
         }
         .onChange(of: locationManager.location) { location in
             guard location != nil else { return }
@@ -196,15 +202,18 @@ struct EventsListView: View {
     }
 
     private func loadEvents() {
-        let coordinate = effectiveCoordinate
-
         Task {
-            await eventsViewModel.fetchNearbyEvents(
-                latitude: coordinate.latitude,
-                longitude: coordinate.longitude,
-                radiusMeters: Int(maxDistanceKm * 1000)
-            )
+            await reloadEvents()
         }
+    }
+
+    private func reloadEvents() async {
+        let coordinate = effectiveCoordinate
+        await eventsViewModel.fetchNearbyEvents(
+            latitude: coordinate.latitude,
+            longitude: coordinate.longitude,
+            radiusMeters: Int(maxDistanceKm * 1000)
+        )
     }
 
     private func localDistanceMeters(to event: Event) -> Double? {

@@ -2,6 +2,9 @@ import SwiftUI
 import CoreLocation
 import MapKit
 import PhotosUI
+import os
+
+private let logger = Logger(subsystem: "app.zholdas.Zholdas", category: "CreateEventView")
 
 struct CreateEventView: View {
     @Environment(\.dismiss) var dismiss
@@ -166,7 +169,7 @@ struct CreateEventView: View {
                                                     isUploadingCover = false
                                                 }
                                             } catch {
-                                                print("Failed to upload cover: \(error)")
+                                                logger.error("Failed to upload cover: \(error.localizedDescription)")
                                                 await MainActor.run {
                                                     isUploadingCover = false
                                                 }

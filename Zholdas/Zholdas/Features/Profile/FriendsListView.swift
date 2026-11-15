@@ -50,6 +50,9 @@ struct FriendsListView: View {
         .task {
             await loadData()
         }
+        .refreshable {
+            await loadData()
+        }
         .sheet(item: $selectedUser) { user in
             UserDetailView(userID: user.id)
                 .environmentObject(authViewModel)
@@ -145,6 +148,9 @@ struct FriendsListView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 8)
             }
+            .refreshable {
+                await loadData()
+            }
         }
     }
     
@@ -217,6 +223,9 @@ struct FriendsListView: View {
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 8)
+            }
+            .refreshable {
+                await loadData()
             }
         }
     }

@@ -72,6 +72,9 @@ struct MyEventsListView: View {
                             .listRowBackground(Color.white.opacity(0.02))
                         }
                         .scrollContentBackground(.hidden)
+                        .refreshable {
+                            await eventsViewModel.fetchNearbyEvents(latitude: 43.2389, longitude: 76.8897)
+                        }
                     }
                 }
             }
@@ -80,6 +83,9 @@ struct MyEventsListView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task {
             // Use Almaty coordinates to fetch user events list
+            await eventsViewModel.fetchNearbyEvents(latitude: 43.2389, longitude: 76.8897)
+        }
+        .refreshable {
             await eventsViewModel.fetchNearbyEvents(latitude: 43.2389, longitude: 76.8897)
         }
     }
