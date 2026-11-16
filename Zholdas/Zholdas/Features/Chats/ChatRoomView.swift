@@ -84,10 +84,10 @@ struct ChatRoomView: View {
                                 if isSimulatingReply {
                                     HStack {
                                         ProgressView()
-                                            .tint(.gray)
+                                            .tint(ZholdasTheme.textSecondary)
                                             .padding(.horizontal, 16)
                                             .padding(.vertical, 8)
-                                            .background(Color.white.opacity(0.04))
+                                            .background(ZholdasTheme.panel)
                                             .cornerRadius(12)
                                         Spacer()
                                     }
@@ -209,13 +209,13 @@ struct ChatRoomView: View {
         VStack(spacing: 16) {
             Image(systemName: "bubble.left.and.bubble.right.fill")
                 .font(.system(size: 48))
-                .foregroundColor(.gray)
+                .foregroundColor(ZholdasTheme.textSecondary)
             Text("chat_empty_title".localized)
                 .font(.headline)
                 .foregroundColor(ZholdasTheme.textPrimary)
             Text("chat_empty_subtitle".localized)
                 .font(.subheadline)
-                .foregroundColor(.gray)
+                .foregroundColor(ZholdasTheme.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
         }
@@ -233,7 +233,7 @@ struct ChatRoomView: View {
                 case .empty:
                     ProgressView()
                         .frame(width: 200, height: 150)
-                        .background(Color.white.opacity(0.05))
+                        .background(ZholdasTheme.panel)
                         .cornerRadius(12)
                 case .success(let image):
                     image
@@ -243,19 +243,19 @@ struct ChatRoomView: View {
                         .cornerRadius(12)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                                .stroke(ZholdasTheme.border, lineWidth: 1)
                         )
                 case .failure:
                     VStack(spacing: 8) {
                         Image(systemName: "photo.fill")
                             .font(.title)
-                            .foregroundColor(.gray)
+                            .foregroundColor(ZholdasTheme.textSecondary)
                         Text("chat_photo_load_error".localized)
                             .font(.system(size: 10))
-                            .foregroundColor(.gray)
+                            .foregroundColor(ZholdasTheme.textSecondary)
                     }
                     .frame(width: 200, height: 150)
-                    .background(Color.white.opacity(0.05))
+                    .background(ZholdasTheme.panel)
                     .cornerRadius(12)
                 @unknown default:
                     EmptyView()
@@ -263,7 +263,7 @@ struct ChatRoomView: View {
             }
         } else {
             Text("chat_invalid_photo_url".localized)
-                .foregroundColor(.gray)
+                .foregroundColor(ZholdasTheme.textSecondary)
                 .font(.footnote)
         }
     }
@@ -296,7 +296,7 @@ struct ChatRoomView: View {
                     
                     Text(formatTime(message.timestamp))
                         .font(.system(size: 9))
-                        .foregroundColor(.gray)
+                        .foregroundColor(ZholdasTheme.textSecondary)
                         .padding(.trailing, 4)
                 }
                 .padding(.trailing, 16)
@@ -355,7 +355,7 @@ struct ChatRoomView: View {
                         
                         Text(formatTime(message.timestamp))
                             .font(.system(size: 9))
-                            .foregroundColor(.gray)
+                            .foregroundColor(ZholdasTheme.textSecondary)
                     }
                 }
                 .padding(.leading, 16)
@@ -372,10 +372,10 @@ struct ChatRoomView: View {
             HStack(spacing: 8) {
                 Spacer()
                 Image(systemName: "lock.fill")
-                    .foregroundColor(.gray)
+                    .foregroundColor(ZholdasTheme.textSecondary)
                 Text("chat_readonly_completed".localized)
                     .font(.footnote)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ZholdasTheme.textSecondary)
                     .fontWeight(.medium)
                 Spacer()
             }
@@ -392,7 +392,7 @@ struct ChatRoomView: View {
                     if session.id != ChatSession.aiChatSessionID {
                         PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
                             Image(systemName: "photo.fill")
-                                .foregroundColor(.gray)
+                                .foregroundColor(ZholdasTheme.textSecondary)
                                 .font(.system(size: 18))
                                 .padding(10)
                                 .glassBackground(cornerRadius: 20)
@@ -411,7 +411,7 @@ struct ChatRoomView: View {
                                 .frame(width: 40, height: 40)
                                 .background(
                                     Circle()
-                                        .fill(isJorykMentionActive ? ZholdasTheme.accent : Color.white.opacity(0.06))
+                                        .fill(isJorykMentionActive ? ZholdasTheme.accent : ZholdasTheme.panel)
                                 )
                                 .overlay(
                                     Circle()
@@ -422,6 +422,7 @@ struct ChatRoomView: View {
                     }
 
                     TextField(isJorykMentionActive ? "chat_ask_joryk_placeholder".localized : "chat_placeholder".localized, text: $messageText)
+                        .foregroundColor(ZholdasTheme.textPrimary)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
                         .glassBackground(cornerRadius: 12)

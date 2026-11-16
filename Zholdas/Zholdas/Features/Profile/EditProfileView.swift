@@ -82,7 +82,7 @@ struct EditProfileView: View {
                     Button("btn_cancel".localized) {
                         dismiss()
                     }
-                    .foregroundColor(.gray)
+                    .foregroundColor(ZholdasTheme.textSecondary)
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("btn_done".localized) {

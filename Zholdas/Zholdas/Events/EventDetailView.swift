@@ -216,7 +216,7 @@ struct EventDetailView: View {
                             ProgressView()
                                 .frame(height: 180)
                                 .frame(maxWidth: .infinity)
-                                .background(Color.white.opacity(0.05))
+                                .background(ZholdasTheme.panel)
                                 .cornerRadius(16)
                         }
                     } else {
@@ -239,7 +239,7 @@ struct EventDetailView: View {
                         }
                         .frame(height: 180)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.1), lineWidth: 1))
+                        .overlay(RoundedRectangle(cornerRadius: 16).stroke(ZholdasTheme.border, lineWidth: 1))
                     }
                     
                     // 2. Info Container Card
@@ -285,8 +285,8 @@ struct EventDetailView: View {
                                 .font(.title3)
                                 .foregroundColor(ZholdasTheme.accent)
                                 .frame(width: 44, height: 44)
-                                .background(Circle().fill(Color.white.opacity(0.08)))
-                                .overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 1))
+                                .background(Circle().fill(ZholdasTheme.panel))
+                                .overlay(Circle().stroke(ZholdasTheme.border, lineWidth: 1))
                             
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("ev_date_time".localized.uppercased())
@@ -310,8 +310,8 @@ struct EventDetailView: View {
                                 .font(.title3)
                                 .foregroundColor(.red)
                                 .frame(width: 44, height: 44)
-                                .background(Circle().fill(Color.white.opacity(0.08)))
-                                .overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 1))
+                                .background(Circle().fill(ZholdasTheme.panel))
+                                .overlay(Circle().stroke(ZholdasTheme.border, lineWidth: 1))
                             
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("ev_location".localized.uppercased())
@@ -406,7 +406,7 @@ struct EventDetailView: View {
                         GeometryReader { geo in
                             ZStack(alignment: .leading) {
                                 RoundedRectangle(cornerRadius: 4)
-                                    .fill(Color.white.opacity(0.1))
+                                    .fill(ZholdasTheme.border)
                                     .frame(height: 6)
                                 
                                 let progress = CGFloat(participantsCount) / CGFloat(event.maxParticipants)
@@ -824,7 +824,7 @@ struct EventDetailView: View {
                     .font(.subheadline.weight(.bold))
                     .foregroundColor(ZholdasTheme.accent)
                     .frame(width: 34, height: 34)
-                    .background(Circle().fill(Color.white.opacity(0.08)))
+                    .background(Circle().fill(ZholdasTheme.panel))
             }
             .buttonStyle(SpringButtonStyle())
             .disabled(isLoadingWeather)
@@ -894,7 +894,7 @@ struct EventDetailView: View {
             }
             .frame(height: 190)
             .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.white.opacity(0.08), lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(ZholdasTheme.border, lineWidth: 1))
 
             if let error = liveLocationError {
                 Text(error)

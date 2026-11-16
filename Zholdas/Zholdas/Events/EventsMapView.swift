@@ -361,7 +361,7 @@ struct EventsMapView: View {
                     } label: {
                         Image(systemName: isAISearchExpanded ? "xmark" : "sparkles")
                             .font(.system(size: 15, weight: .bold))
-                            .foregroundColor(.white)
+                            .foregroundColor(isAISearchExpanded ? .white : ZholdasTheme.accent)
                             .frame(width: 36, height: 36)
                             .background(
                                 Circle()

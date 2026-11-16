@@ -125,7 +125,7 @@ struct ReportView: View {
                     Button("btn_cancel".localized) {
                         dismiss()
                     }
-                    .foregroundColor(.gray)
+                    .foregroundColor(ZholdasTheme.textSecondary)
                 }
             }
             .alert("rep_alert_title".localized, isPresented: $showSuccessAlert) {

@@ -101,6 +101,13 @@ enum ZholdasTheme {
         )
     }
 
+    static var selectedText: Color {
+        adaptive(
+            dark: .white,
+            light: UIColor(red: 0.34, green: 0.18, blue: 0.78, alpha: 1)
+        )
+    }
+
     static let accent = Color(red: 0.58, green: 0.42, blue: 1.0)
     static let accentDeep = Color(red: 0.34, green: 0.18, blue: 0.78)
     static let accentSoft = Color(red: 0.36, green: 0.27, blue: 0.78)
@@ -166,7 +173,7 @@ struct GlassModifier: ViewModifier {
 }
 
 extension View {
-    func glassBackground(cornerRadius: CGFloat = 8, strokeColor: Color = Color.white.opacity(0.12)) -> some View {
+    func glassBackground(cornerRadius: CGFloat = 8, strokeColor: Color = ZholdasTheme.border) -> some View {
         self.modifier(GlassModifier(cornerRadius: cornerRadius, strokeColor: strokeColor))
     }
 
@@ -223,19 +230,19 @@ struct ZholdasAvatarView: View {
                         .scaledToFill()
                         .frame(width: size, height: size)
                         .clipShape(Circle())
-                        .overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 1))
+                        .overlay(Circle().stroke(ZholdasTheme.border, lineWidth: 1))
                 } else if urlStr.hasPrefix("symbol:") {
                     let symbolName = urlStr.replacingOccurrences(of: "symbol:", with: "")
                     Image(systemName: symbolName)
                         .font(.system(size: size * 0.45))
-                        .foregroundColor(.white)
+                        .foregroundColor(ZholdasTheme.textPrimary)
                         .frame(width: size, height: size)
                         .background(
                             Circle()
-                                .fill(Color.white.opacity(0.1))
+                                .fill(ZholdasTheme.panel)
                         )
                         .clipShape(Circle())
-                        .overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 1))
+                        .overlay(Circle().stroke(ZholdasTheme.border, lineWidth: 1))
                 } else if urlStr.hasPrefix("emoji:") {
                     let emoji = urlStr.replacingOccurrences(of: "emoji:", with: "")
                     Text(emoji)
@@ -243,10 +250,10 @@ struct ZholdasAvatarView: View {
                         .frame(width: size, height: size)
                         .background(
                             Circle()
-                                .fill(Color.white.opacity(0.1))
+                                .fill(ZholdasTheme.panel)
                         )
                         .clipShape(Circle())
-                        .overlay(Circle().stroke(Color.white.opacity(0.1), lineWidth: 1))
+                        .overlay(Circle().stroke(ZholdasTheme.border, lineWidth: 1))
                 } else if let url = URL(string: urlStr) {
                     AsyncImage(url: url) { phase in
                         switch phase {

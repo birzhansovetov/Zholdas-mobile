@@ -105,7 +105,7 @@ struct RegisterView: View {
                     } label: {
                         HStack {
                             Text("reg_already_have_account".localized)
-                                .foregroundColor(.gray)
+                                .foregroundColor(ZholdasTheme.textSecondary)
                             Text("reg_login_link".localized)
                                 .fontWeight(.bold)
                                 .foregroundColor(ZholdasTheme.accent)
@@ -148,12 +148,12 @@ struct RegisterView: View {
                 .shadow(color: ZholdasTheme.accent.opacity(0.35), radius: 10, x: 0, y: 6)
                 .overlay(
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(Color.white.opacity(0.2), lineWidth: 1.2)
+                        .stroke(ZholdasTheme.border, lineWidth: 1.2)
                 )
 
             Text("reg_title".localized)
                 .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundColor(.white)
+                .foregroundColor(ZholdasTheme.textPrimary)
         }
         .padding(.top, 24)
     }
@@ -227,10 +227,10 @@ struct RegisterView: View {
                 Text("reg_interests_title".localized)
                     .font(.title3)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(ZholdasTheme.textPrimary)
                 Text("reg_interests_subtitle".localized)
                     .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ZholdasTheme.textSecondary)
             }
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
@@ -264,10 +264,10 @@ struct RegisterView: View {
                 Text("reg_check_email_title".localized)
                     .font(.title3)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(ZholdasTheme.textPrimary)
                 Text("\("reg_check_email_subtitle".localized) \(normalizedEmail)")
                     .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ZholdasTheme.textSecondary)
                     .multilineTextAlignment(.center)
             }
 
@@ -327,11 +327,11 @@ struct RegisterView: View {
                 Text("\(selectedAge)")
                     .font(.title3)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(ZholdasTheme.textPrimary)
 
                 Text("reg_age_suffix".localized)
                     .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ZholdasTheme.textSecondary)
 
                 Spacer()
 
@@ -353,7 +353,7 @@ struct RegisterView: View {
             } label: {
                 Image(systemName: acceptedTerms ? "checkmark.square.fill" : "square")
                     .font(.system(size: 20))
-                    .foregroundColor(acceptedTerms ? ZholdasTheme.accent : .gray)
+                    .foregroundColor(acceptedTerms ? ZholdasTheme.accent : ZholdasTheme.textSecondary)
             }
             .buttonStyle(PlainButtonStyle())
             .padding(.top, 1)
@@ -544,21 +544,21 @@ struct RegisterView: View {
                 .font(.caption)
                 .fontWeight(.bold)
                 .frame(width: 22, height: 22)
-                .foregroundColor(.white)
-                .background(Circle().fill(active || completed ? ZholdasTheme.accent : Color.white.opacity(0.12)))
+                .foregroundColor(active || completed ? .white : ZholdasTheme.textSecondary)
+                .background(Circle().fill(active || completed ? ZholdasTheme.accent : ZholdasTheme.panel))
 
             Text(title)
                 .font(.caption2)
                 .fontWeight(.semibold)
                 .lineLimit(1)
-                .foregroundColor(active ? .white : .gray)
+                .foregroundColor(active ? ZholdasTheme.textPrimary : ZholdasTheme.textSecondary)
         }
         .frame(maxWidth: .infinity)
     }
 
     private func stepLine(active: Bool) -> some View {
         Capsule()
-            .fill(active ? ZholdasTheme.accent : Color.white.opacity(0.12))
+            .fill(active ? ZholdasTheme.accent : ZholdasTheme.border)
             .frame(width: 18, height: 2)
     }
 
@@ -578,18 +578,18 @@ struct RegisterView: View {
 
             HStack {
                 Image(systemName: icon)
-                    .foregroundColor(focusedField == field ? ZholdasTheme.accent : .gray)
+                    .foregroundColor(focusedField == field ? ZholdasTheme.accent : ZholdasTheme.textSecondary)
                     .frame(width: 24)
 
                 TextField(placeholder, text: text)
                     .keyboardType(keyboardType)
                     .textInputAutocapitalization(autocapitalization)
                     .autocorrectionDisabled(field == .email || field == .emailCode)
-                    .foregroundColor(.white)
+                    .foregroundColor(ZholdasTheme.textPrimary)
                     .focused($focusedField, equals: field)
             }
             .padding()
-            .glassBackground(cornerRadius: 12, strokeColor: focusedField == field ? ZholdasTheme.accent : .white.opacity(0.1))
+            .glassBackground(cornerRadius: 12, strokeColor: focusedField == field ? ZholdasTheme.accent : ZholdasTheme.border)
             .animation(.easeOut(duration: 0.2), value: focusedField)
         }
     }
@@ -609,16 +609,16 @@ struct RegisterView: View {
 
             HStack {
                 Image(systemName: icon)
-                    .foregroundColor(focusedField == field ? ZholdasTheme.accent : .gray)
+                    .foregroundColor(focusedField == field ? ZholdasTheme.accent : ZholdasTheme.textSecondary)
                     .frame(width: 24)
 
                 if isVisible.wrappedValue {
                     TextField(placeholder, text: text)
-                        .foregroundColor(.white)
+                        .foregroundColor(ZholdasTheme.textPrimary)
                         .focused($focusedField, equals: field)
                 } else {
                     SecureField(placeholder, text: text)
-                        .foregroundColor(.white)
+                        .foregroundColor(ZholdasTheme.textPrimary)
                         .focused($focusedField, equals: field)
                 }
 
@@ -632,7 +632,7 @@ struct RegisterView: View {
                 }
             }
             .padding()
-            .glassBackground(cornerRadius: 12, strokeColor: focusedField == field ? ZholdasTheme.accent : .white.opacity(0.1))
+            .glassBackground(cornerRadius: 12, strokeColor: focusedField == field ? ZholdasTheme.accent : ZholdasTheme.border)
             .animation(.easeOut(duration: 0.2), value: focusedField)
         }
     }
@@ -658,13 +658,13 @@ struct RegisterView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
-            .background(selected ? Color.white.opacity(0.1) : Color.white.opacity(0.04))
+            .background(selected ? ZholdasTheme.accent.opacity(0.16) : ZholdasTheme.panel)
             .cornerRadius(12)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(selected ? ZholdasTheme.accent : Color.white.opacity(0.06), lineWidth: selected ? 2 : 1)
+                    .stroke(selected ? ZholdasTheme.accent : ZholdasTheme.border, lineWidth: selected ? 2 : 1)
             )
-            .foregroundColor(selected ? .white : .gray)
+            .foregroundColor(selected ? ZholdasTheme.selectedText : ZholdasTheme.textSecondary)
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -681,13 +681,13 @@ struct RegisterView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
             }
-            .foregroundColor(isSelected ? .white : .gray)
+            .foregroundColor(isSelected ? ZholdasTheme.selectedText : ZholdasTheme.textSecondary)
             .frame(maxWidth: .infinity, minHeight: 50)
-            .background(isSelected ? ZholdasTheme.accent.opacity(0.28) : Color.white.opacity(0.04))
+            .background(isSelected ? ZholdasTheme.accent.opacity(0.24) : ZholdasTheme.panel)
             .cornerRadius(14)
             .overlay(
                 RoundedRectangle(cornerRadius: 14)
-                    .stroke(isSelected ? ZholdasTheme.accent : Color.white.opacity(0.08), lineWidth: isSelected ? 1.5 : 1)
+                    .stroke(isSelected ? ZholdasTheme.accent : ZholdasTheme.border, lineWidth: isSelected ? 1.5 : 1)
             )
         }
         .buttonStyle(PlainButtonStyle())
@@ -699,7 +699,7 @@ private extension Text {
         self
             .font(.caption)
             .fontWeight(.bold)
-            .foregroundColor(.gray)
+            .foregroundColor(ZholdasTheme.textSecondary)
             .tracking(1.5)
     }
 }

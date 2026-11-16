@@ -162,7 +162,7 @@ struct ModeratorDashboardView: View {
                 Text(isAdmin ? "mod_role_admin".localized : "mod_role_moderator".localized)
                     .font(.title2)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(ZholdasTheme.textPrimary)
                 
                 Spacer()
                 
@@ -242,7 +242,7 @@ struct ModeratorDashboardView: View {
                     .foregroundColor(.green)
                 Text("mod_reports_empty_title".localized)
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(ZholdasTheme.textPrimary)
                 Text("mod_reports_empty_desc".localized)
                     .font(.subheadline)
                     .foregroundColor(ZholdasTheme.textSecondary)
@@ -761,8 +761,8 @@ struct ModeratorDashboardView: View {
                         .font(.system(size: 9, weight: .bold))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(ev.status == "active" ? Color.green.opacity(0.2) : Color.gray.opacity(0.2))
-                        .foregroundColor(ev.status == "active" ? .green : .gray)
+                        .background(ev.status == "active" ? Color.green.opacity(0.2) : ZholdasTheme.border)
+                        .foregroundColor(ev.status == "active" ? .green : ZholdasTheme.textSecondary)
                         .cornerRadius(6)
 
                     Image(systemName: "chevron.right")
@@ -815,7 +815,7 @@ struct ModeratorDashboardView: View {
                             .fontWeight(.bold)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 8)
-                            .background(Color.gray.opacity(0.2))
+                            .background(ZholdasTheme.panel)
                             .foregroundColor(ZholdasTheme.textPrimary)
                             .cornerRadius(8)
                     }
@@ -1058,7 +1058,7 @@ struct ModeratorDashboardView: View {
                 } label: {
                     HStack {
                         if actionLoading {
-                            ProgressView().tint(.white)
+                            ProgressView().tint(ZholdasTheme.textPrimary)
                         }
                         Text("mod_tools_settings_save".localized)
                             .font(.subheadline)

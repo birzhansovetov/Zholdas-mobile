@@ -110,12 +110,12 @@ struct ActivityView: View {
                     Text(tab.localized)
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(selectedTab == tab ? ZholdasTheme.accent : ZholdasTheme.textSecondary)
+                        .foregroundColor(selectedTab == tab ? ZholdasTheme.selectedText : ZholdasTheme.textSecondary)
                         .padding(.horizontal, 20)
                         .padding(.vertical, 8)
                         .background(
                             Capsule()
-                                .fill(selectedTab == tab ? ZholdasTheme.accent.opacity(0.14) : Color.clear)
+                                .fill(selectedTab == tab ? ZholdasTheme.accent.opacity(0.22) : Color.clear)
                         )
                 }
             }
