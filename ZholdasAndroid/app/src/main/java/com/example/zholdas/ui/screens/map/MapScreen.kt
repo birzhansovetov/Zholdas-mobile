@@ -319,7 +319,7 @@ fun MapTopFiltersSection(
                     .fillMaxWidth()
                     .border(
                         width = 1.dp,
-                        color = Color.White.copy(alpha = 0.1f),
+                        color = ZholdasBorder,
                         shape = RoundedCornerShape(16.dp)
                     )
                     .padding(14.dp),
@@ -440,7 +440,7 @@ fun MapTopFiltersSection(
                         .clickable { onCategorySelected(categoryKey) }
                         .border(
                             width = 1.dp,
-                            color = if (isSelected) Color.White.copy(alpha = 0.4f) else Color.White.copy(alpha = 0.12f),
+                            color = if (isSelected) Color.White.copy(alpha = 0.4f) else ZholdasBorder,
                             shape = RoundedCornerShape(20.dp)
                         )
                 ) {
@@ -547,7 +547,7 @@ fun SelectedEventBottomCard(
             modifier = Modifier
                 .border(
                     width = 1.dp,
-                    color = Color.White.copy(alpha = 0.12f),
+                    color = ZholdasBorder,
                     shape = RoundedCornerShape(20.dp)
                 )
                 .padding(18.dp),

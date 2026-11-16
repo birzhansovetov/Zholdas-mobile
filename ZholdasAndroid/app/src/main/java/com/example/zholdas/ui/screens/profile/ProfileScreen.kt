@@ -505,7 +505,7 @@ private fun AvatarView(profile: User) {
         } else {
             Text(
                 text = getInitials(profile.fullName),
-                color = Color.White,
+                color = ZholdasTextPrimary,
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -702,7 +702,7 @@ private fun SettingsSection(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(12.dp))
                 .background(ZholdasSurface)
-                .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(12.dp))
+                .border(1.dp, ZholdasBorder, RoundedCornerShape(12.dp))
         ) {
             // 1. Language Toggle
             Box(modifier = Modifier.fillMaxWidth()) {

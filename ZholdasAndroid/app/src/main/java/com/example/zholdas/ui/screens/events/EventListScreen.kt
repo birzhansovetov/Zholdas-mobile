@@ -332,7 +332,7 @@ fun EventListScreen(
                     ) {
                         Text(
                             text = cat.localized,
-                            color = if (isSelected) MaterialTheme.colorScheme.onPrimary else ZholdasTextSecondary,
+                            color = if (isSelected) ZholdasSelectedText else ZholdasTextSecondary,
                             fontSize = 13.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                         )
@@ -365,7 +365,7 @@ fun EventListScreen(
                             Icon(
                                 imageVector = Icons.Default.DirectionsRun,
                                 contentDescription = null,
-                                tint = Color.Gray,
+                                tint = ZholdasTextSecondary,
                                 modifier = Modifier.size(64.dp)
                             )
                             Text(

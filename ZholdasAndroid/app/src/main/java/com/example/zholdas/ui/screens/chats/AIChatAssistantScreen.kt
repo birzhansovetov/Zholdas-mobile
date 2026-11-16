@@ -107,7 +107,7 @@ fun AIChatAssistantScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "back",
-                            tint = Color.White
+                            tint = ZholdasTextPrimary
                         )
                     }
                 },
@@ -216,7 +216,7 @@ fun AIChatAssistantScreen(
                             focusedTextColor = ZholdasTextPrimary,
                             unfocusedTextColor = ZholdasTextPrimary,
                             focusedBorderColor = ZholdasAccent,
-                            unfocusedBorderColor = Color.White.copy(alpha = 0.12f),
+                            unfocusedBorderColor = ZholdasBorder,
                             focusedContainerColor = ZholdasElevatedSurface,
                             unfocusedContainerColor = ZholdasElevatedSurface
                         ),
