@@ -283,6 +283,51 @@ class EventsViewModel: ObservableObject {
             return false
         }
     }
+
+    func cancelEvent(id: Int32) async -> Bool {
+        self.isLoading = true
+        self.errorMessage = nil
+        
+        let path = "/events/\(id)/cancel"
+        
+        do {
+            let _: [String: String] = try await APIClient.shared.request(path, method: "POST", requiresAuth: true)
+            
+            // Local state update
+            if let index = self.events.firstIndex(where: { $0.id == id }) {
+                let oldEvent = self.events[index]
+                self.events[index] = Event(
+                    id: oldEvent.id,
+                    creatorID: oldEvent.creatorID,
+                    title: oldEvent.title,
+                    description: oldEvent.description,
+                    category: oldEvent.category,
+                    locationName: oldEvent.locationName,
+                    latitude: oldEvent.latitude,
+                    longitude: oldEvent.longitude,
+                    startTime: oldEvent.startTime,
+                    endTime: oldEvent.endTime,
+                    maxParticipants: oldEvent.maxParticipants,
+                    status: "cancelled",
+                    imageURL: oldEvent.imageURL,
+                    distanceMeters: oldEvent.distanceMeters,
+                    participantsCount: oldEvent.participantsCount,
+                    isJoined: oldEvent.isJoined,
+                    visibility: oldEvent.visibility,
+                    genderFilter: oldEvent.genderFilter,
+                    minAge: oldEvent.minAge,
+                    maxAge: oldEvent.maxAge
+                )
+            }
+            
+            self.isLoading = false
+            return true
+        } catch {
+            self.errorMessage = "ev_cancel_error".localized
+            self.isLoading = false
+            return false
+        }
+    }
     
     func fetchParticipants(id: Int32) async -> [Participant] {
         let path = "/events/\(id)/participants"

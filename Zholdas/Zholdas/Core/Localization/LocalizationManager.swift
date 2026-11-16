@@ -350,10 +350,35 @@ class LocalizationManager: ObservableObject {
             "kk": "Сіз",
             "en": "You"
         ],
-        "ev_restrictions": [
-            "ru": "Ограничения: Все · Возраст 18 – 30 лет",
-            "kk": "Шектеулер: Барлығы · Жас 18 – 30 жас",
-            "en": "Restrictions: All · Age 18 – 30 years"
+        "ev_restr_prefix": [
+            "ru": "Ограничения: ",
+            "kk": "Шектеулер: ",
+            "en": "Restrictions: "
+        ],
+        "ev_restr_men": [
+            "ru": "Только мужчины",
+            "kk": "Тек ер адамдар",
+            "en": "Men only"
+        ],
+        "ev_restr_women": [
+            "ru": "Только женщины",
+            "kk": "Тек әйелдер",
+            "en": "Women only"
+        ],
+        "ev_restr_age_range": [
+            "ru": "%1$d–%2$d лет",
+            "kk": "%1$d–%2$d жас",
+            "en": "Ages %1$d–%2$d"
+        ],
+        "ev_restr_age_from": [
+            "ru": "от %d лет",
+            "kk": "%d жастан бастап",
+            "en": "Ages %d+"
+        ],
+        "ev_restr_age_to": [
+            "ru": "до %d лет",
+            "kk": "%d жасқа дейін",
+            "en": "Up to age %d"
         ],
         "ev_location": [
             "ru": "Место проведения",
@@ -1058,6 +1083,31 @@ class LocalizationManager: ObservableObject {
             "ru": "Завершено",
             "kk": "Аяқталды",
             "en": "Finished"
+        ],
+        "ev_status_cancelled": [
+            "ru": "Отменено",
+            "kk": "Болдырылмады",
+            "en": "Cancelled"
+        ],
+        "ev_cancel_event_btn": [
+            "ru": "Отменить событие",
+            "kk": "Оқиғаны болдырмау",
+            "en": "Cancel event"
+        ],
+        "ev_cancel_confirm_title": [
+            "ru": "Отменить событие?",
+            "kk": "Оқиғаны болдырмау керек пе?",
+            "en": "Cancel this event?"
+        ],
+        "ev_cancel_confirm_desc": [
+            "ru": "Участники получат уведомление. Отменить это действие нельзя.",
+            "kk": "Қатысушыларға хабарлама жіберіледі. Бұл әрекетті қайтару мүмкін емес.",
+            "en": "Participants will be notified. This cannot be undone."
+        ],
+        "ev_cancel_error": [
+            "ru": "Не удалось отменить событие",
+            "kk": "Оқиғаны болдырмау мүмкін болмады",
+            "en": "Could not cancel the event"
         ],
         "ev_participants_empty": [
             "ru": "Список пуст",

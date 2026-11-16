@@ -388,9 +388,15 @@ struct EventRowCard: View {
                 Spacer()
                 
                 // Статус
-                Text(event.status == "active" ? "ev_active".localized : event.status.localized)
+                let isCancelled = event.status == "cancelled"
+                let isActive = event.status == "active"
+                let statusText = isActive ? "ev_status_active".localized : (isCancelled ? "ev_status_cancelled".localized : "ev_status_finished".localized)
+                let statusColor: Color = isActive ? ZholdasTheme.success : (isCancelled ? .red : ZholdasTheme.textSecondary)
+
+                Text(statusText)
                     .font(.caption2)
-                .foregroundColor(ZholdasTheme.success)
+                    .fontWeight(.medium)
+                    .foregroundColor(statusColor)
             }
             
             // Название
