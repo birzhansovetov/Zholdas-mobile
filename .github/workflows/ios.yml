@@ -24,7 +24,7 @@ concurrency:
 env:
   PROJECT: Zholdas/Zholdas.xcodeproj
   SCHEME: Zholdas
-  TEAM_ID: YFQ2H65ZA7
+  TEAM_ID: 47CM6M66UJ
 
 jobs:
   build-and-test:

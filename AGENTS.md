@@ -79,7 +79,7 @@ ADB="$ANDROID_HOME/platform-tools/adb.exe"
 *   **Любой push / PR с изменениями в `Zholdas/**`** → сборка под симулятор iPhone, unit- и UI-тесты, скриншот запуска. Результаты — в артефактах запуска: `ios-screenshots`, `ios-test-results` (лог `xcodebuild-test.log`). Ошибки компиляции Swift смотреть в этом логе.
 *   **Push в `main`** (или ручной запуск *Run workflow* с галочкой *testflight*) → архив, подпись и загрузка в **TestFlight**. Через 5–20 мин обработки сборка приходит на iPhone в приложение TestFlight.
 *   Схема Xcode: `Zholdas/Zholdas.xcodeproj/xcshareddata/xcschemes/Zholdas.xcscheme` (shared, нужна для CI).
-*   Подпись: команда Apple `YFQ2H65ZA7` (аккаунт Пользователя), автоматическая подпись через App Store Connect API key — сертификаты и профили создаёт Xcode сам (`-allowProvisioningUpdates`). Номер сборки = время UTC `yyMMddHHmm`, версия — `MARKETING_VERSION` в проекте.
+*   Подпись: команда Apple `47CM6M66UJ` (аккаунт Пользователя), автоматическая подпись через App Store Connect API key — сертификаты и профили создаёт Xcode сам (`-allowProvisioningUpdates`). Номер сборки = время UTC `yyMMddHHmm`, версия — `MARKETING_VERSION` в проекте.
 *   **GitHub-секреты** (Settings → Secrets and variables → Actions) — добавляет Пользователь сам: `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8` (полный текст файла `AuthKey_XXXX.p8`). Ключ создаётся в App Store Connect → Users and Access → Integrations → App Store Connect API, роль **Admin** (нужна для облачных сертификатов подписи).
 *   В App Store Connect должно существовать приложение с bundle id `app.zholdas.Zholdas`; Пользователь добавлен во внутренние тестеры TestFlight.
 *   В DEBUG на симуляторе iOS ходит на `http://localhost:8080`, на устройстве и в TestFlight — на Heroku.
