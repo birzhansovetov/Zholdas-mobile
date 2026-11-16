@@ -1,6 +1,7 @@
 package com.example.zholdas.ui.screens.profile
 
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -560,6 +561,7 @@ fun UserDetailScreen(
     }
 
     if (showReportDialog) {
+        BackHandler { showReportDialog = false }
         ReportScreen(
             reportedUserID = userID,
             authViewModel = authViewModel,

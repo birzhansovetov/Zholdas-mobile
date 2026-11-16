@@ -1,5 +1,6 @@
 package com.example.zholdas.ui.screens.profile
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -47,7 +48,8 @@ fun ProfileScreen(
     authViewModel: AuthViewModel,
     modifier: Modifier = Modifier,
     onEditProfileClick: (() -> Unit)? = null,
-    onFriendsClick: (() -> Unit)? = null
+    onFriendsClick: (() -> Unit)? = null,
+    onOpenActivity: () -> Unit = {}
 ) {
     val currentUserProfile by authViewModel.currentUserProfile.collectAsState()
     val isLoading by authViewModel.isLoading.collectAsState()
@@ -84,6 +86,7 @@ fun ProfileScreen(
     }
 
     if (isShowingEditProfile) {
+        BackHandler { isShowingEditProfile = false }
         EditProfileScreen(
             authViewModel = authViewModel,
             onDismiss = { isShowingEditProfile = false }
@@ -92,6 +95,7 @@ fun ProfileScreen(
     }
 
     if (isShowingFriendsList) {
+        BackHandler { isShowingFriendsList = false }
         FriendsListScreen(
             authViewModel = authViewModel,
             onBack = { isShowingFriendsList = false }
@@ -100,6 +104,7 @@ fun ProfileScreen(
     }
 
     if (isShowingModeratorDashboard) {
+        BackHandler { isShowingModeratorDashboard = false }
         ModeratorDashboardScreen(
             authViewModel = authViewModel,
             onBack = { isShowingModeratorDashboard = false }
@@ -264,6 +269,7 @@ fun ProfileScreen(
                         unreadNotificationsCount = unreadNotificationsCount,
                         pendingRequestsCount = pendingRequestsCount,
                         onFriendsClick = openFriendsList,
+                        onOpenActivity = onOpenActivity,
                         languageMenuExpanded = languageMenuExpanded,
                         onLanguageMenuExpandedChange = { languageMenuExpanded = it },
                         selectedTheme = selectedTheme,
@@ -668,6 +674,7 @@ private fun SettingsSection(
     unreadNotificationsCount: Int,
     pendingRequestsCount: Int,
     onFriendsClick: () -> Unit,
+    onOpenActivity: () -> Unit,
     languageMenuExpanded: Boolean,
     onLanguageMenuExpandedChange: (Boolean) -> Unit,
     selectedTheme: AppTheme,
@@ -813,7 +820,7 @@ private fun SettingsSection(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { }
+                    .clickable { onOpenActivity() }
                     .padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {

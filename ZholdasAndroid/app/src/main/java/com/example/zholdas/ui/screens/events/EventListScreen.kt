@@ -2,6 +2,7 @@ package com.example.zholdas.ui.screens.events
 
 import android.Manifest
 import android.content.pm.PackageManager
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -50,6 +51,7 @@ fun EventListScreen(
             (LocalContext.current.applicationContext as ZholdasApplication).container.apiClient
         )
     ),
+    currentUserId: String = "",
     onNavigateToDetail: ((Event) -> Unit)? = null,
     onNavigateToCreate: (() -> Unit)? = null
 ) {
@@ -95,6 +97,7 @@ fun EventListScreen(
     }
 
     if (showMyEvents) {
+        BackHandler { showMyEvents = false }
         MyEventsScreen(
             viewModel = viewModel,
             onBack = { showMyEvents = false },
@@ -106,6 +109,7 @@ fun EventListScreen(
     // If edit screen is open inside host
     val currentEdit = selectedEventForEdit
     if (currentEdit != null) {
+        BackHandler { selectedEventForEdit = null }
         val authVM: com.example.zholdas.ui.AuthViewModel = androidx.lifecycle.viewmodel.compose.viewModel(
             factory = com.example.zholdas.ui.AuthViewModel.Factory(app.container)
         )
@@ -124,9 +128,11 @@ fun EventListScreen(
     // If detail screen is open inside host
     val currentSelected = selectedEventForDetail
     if (currentSelected != null && onNavigateToDetail == null) {
+        BackHandler { selectedEventForDetail = null }
         EventDetailScreen(
             event = currentSelected,
             viewModel = viewModel,
+            currentUserId = currentUserId,
             onBack = { selectedEventForDetail = null },
             onEditClick = { eventToEdit ->
                 selectedEventForEdit = eventToEdit
@@ -137,6 +143,7 @@ fun EventListScreen(
 
     // If create screen is open inside host
     if (showCreateScreen && onNavigateToCreate == null) {
+        BackHandler { showCreateScreen = false }
         CreateEventScreen(
             viewModel = viewModel,
             onBack = { showCreateScreen = false },
@@ -445,9 +452,14 @@ fun EventRowCard(
                     )
                 }
 
+                val (statusText, statusColor) = when (event.status) {
+                    "active" -> "ev_active".localized to ZholdasSuccess
+                    "cancelled" -> "ev_status_cancelled".localized to ZholdasDanger
+                    else -> "ev_finished".localized to ZholdasTextSecondary
+                }
                 Text(
-                    text = if (event.status == "active") "ev_active".localized else event.status.localized,
-                    color = ZholdasSuccess,
+                    text = statusText,
+                    color = statusColor,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium
                 )

@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.zholdas.data.local.localized
+import com.example.zholdas.data.model.Event
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -90,5 +91,67 @@ object EventUtils {
             "restaurant" -> "cat_restaurant"
             else -> "cat_other"
         }
+    }
+
+    fun formatRestrictions(
+        genderFilter: String?,
+        minAge: Int?,
+        maxAge: Int?,
+        prefix: String,
+        menOnly: String,
+        womenOnly: String,
+        ageRangeFormat: String,
+        ageFromFormat: String,
+        ageToFormat: String
+    ): String? {
+        val normalizedGender = genderFilter?.trim()?.lowercase(Locale.ROOT)
+        val genderPart = when (normalizedGender) {
+            "male" -> menOnly
+            "female" -> womenOnly
+            else -> null
+        }
+
+        val validMin = minAge?.takeIf { it > 0 }
+        val validMax = maxAge?.takeIf { it > 0 }
+
+        val agePart = when {
+            validMin != null && validMax != null -> String.format(Locale.ROOT, ageRangeFormat, validMin, validMax)
+            validMin != null -> String.format(Locale.ROOT, ageFromFormat, validMin)
+            validMax != null -> String.format(Locale.ROOT, ageToFormat, validMax)
+            else -> null
+        }
+
+        val parts = listOfNotNull(genderPart, agePart)
+        if (parts.isEmpty()) {
+            return null
+        }
+
+        return prefix + parts.joinToString(" · ")
+    }
+
+    fun formatRestrictions(
+        genderFilter: String?,
+        minAge: Int?,
+        maxAge: Int?
+    ): String? {
+        return formatRestrictions(
+            genderFilter = genderFilter,
+            minAge = minAge,
+            maxAge = maxAge,
+            prefix = "ev_restr_prefix".localized,
+            menOnly = "ev_restr_men".localized,
+            womenOnly = "ev_restr_women".localized,
+            ageRangeFormat = "ev_restr_age_range".localized,
+            ageFromFormat = "ev_restr_age_from".localized,
+            ageToFormat = "ev_restr_age_to".localized
+        )
+    }
+
+    fun formatRestrictions(event: Event): String? {
+        return formatRestrictions(
+            genderFilter = event.genderFilter,
+            minAge = event.minAge,
+            maxAge = event.maxAge
+        )
     }
 }

@@ -59,6 +59,7 @@ fun EventDetailScreen(
     viewModel: EventsViewModel,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    currentUserId: String = "",
     onEditClick: ((Event) -> Unit)? = null
 ) {
     val context = LocalContext.current
@@ -66,6 +67,12 @@ fun EventDetailScreen(
     val scope = rememberCoroutineScope()
     val locationClient = remember(context) { LocationServices.getFusedLocationProviderClient(context) }
 
+    val vmUserId by viewModel.currentUserID.collectAsState()
+    val effectiveUserId = currentUserId.ifBlank { vmUserId }
+    val isCreator = remember(event.creatorID, effectiveUserId) {
+        effectiveUserId.isNotBlank() && event.creatorID == effectiveUserId
+    }
+    var currentStatus by remember(event.status) { mutableStateOf(event.status) }
     var isJoined by remember(event) { mutableStateOf(event.isJoined ?: false) }
     var participantsCount by remember(event) { mutableStateOf(event.participantsCount ?: 1) }
     var participantsList by remember { mutableStateOf<List<Participant>>(emptyList()) }
@@ -79,6 +86,8 @@ fun EventDetailScreen(
     var pendingLocationAction by remember { mutableStateOf<((Location) -> Unit)?>(null) }
     var pendingLiveShareRequest by remember { mutableStateOf(false) }
     var showLeaveConfirmDialog by remember { mutableStateOf(false) }
+    var showCancelConfirmDialog by remember { mutableStateOf(false) }
+    var isCancelling by remember { mutableStateOf(false) }
 
     val organizerProfile by viewModel.organizerProfile.collectAsState()
     val organizerName = remember(organizerProfile) {
@@ -174,6 +183,7 @@ fun EventDetailScreen(
     }
 
     LaunchedEffect(event.id) {
+        viewModel.loadCurrentUser()
         viewModel.loadOrganizer(event.creatorID)
         participantsList = viewModel.fetchParticipants(event.id)
         participantStatus = viewModel.fetchCurrentParticipantStatus(event.id, participantsList)
@@ -351,25 +361,27 @@ fun EventDetailScreen(
                         )
                     }
 
+                    val (statusBg, statusFg, statusTitle) = when (currentStatus) {
+                        "active" -> Triple(ZholdasSuccess.copy(alpha = 0.18f), ZholdasSuccess, "ev_status_active".localized)
+                        "cancelled" -> Triple(ZholdasDanger.copy(alpha = 0.18f), ZholdasDanger, "ev_status_cancelled".localized)
+                        else -> Triple(ZholdasTextPrimary.copy(alpha = 0.1f), Color.Gray, "ev_status_finished".localized)
+                    }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         modifier = Modifier
-                            .background(
-                                if (event.status == "active") ZholdasSuccess.copy(alpha = 0.18f) else ZholdasTextPrimary.copy(alpha = 0.1f),
-                                RoundedCornerShape(8.dp)
-                            )
+                            .background(statusBg, RoundedCornerShape(8.dp))
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
                         Box(
                             modifier = Modifier
                                 .size(6.dp)
                                 .clip(CircleShape)
-                                .background(if (event.status == "active") ZholdasSuccess else Color.Gray)
+                                .background(statusFg)
                         )
                         Text(
-                            text = if (event.status == "active") "ev_status_active".localized else "ev_status_finished".localized,
-                            color = if (event.status == "active") ZholdasSuccess else Color.Gray,
+                            text = statusTitle,
+                            color = statusFg,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -412,7 +424,11 @@ fun EventDetailScreen(
                         modifier = Modifier.weight(1f)
                     )
                     StatMiniCard(
-                        title = if (event.status == "active") "ev_active".localized else "ev_finished".localized,
+                        title = when (currentStatus) {
+                            "active" -> "ev_active".localized
+                            "cancelled" -> "ev_status_cancelled".localized
+                            else -> "ev_finished".localized
+                        },
                         label = "ev_status".localized,
                         modifier = Modifier.weight(1f)
                     )
@@ -641,29 +657,34 @@ fun EventDetailScreen(
             }
 
             // Restrictions Banner
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFFE2B93B).copy(alpha = 0.15f))
-                    .border(1.dp, Color(0xFFE2B93B).copy(alpha = 0.35f), RoundedCornerShape(12.dp))
-                    .padding(14.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+            val restrictionsText = remember(event.genderFilter, event.minAge, event.maxAge) {
+                EventUtils.formatRestrictions(event)
+            }
+            if (restrictionsText != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFE2B93B).copy(alpha = 0.15f))
+                        .border(1.dp, Color(0xFFE2B93B).copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                        .padding(14.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Warning,
-                        contentDescription = null,
-                        tint = Color(0xFFE2B93B)
-                    )
-                    Text(
-                        text = "ev_restrictions".localized,
-                        color = ZholdasTextPrimary,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = Color(0xFFE2B93B)
+                        )
+                        Text(
+                            text = restrictionsText,
+                            color = ZholdasTextPrimary,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
 
@@ -757,8 +778,8 @@ fun EventDetailScreen(
                 RuleRow(icon = Icons.Default.Star, text = "ev_how_it_runs_rule3".localized)
             }
 
-            // Join / Leave Button
-            if (isJoined) {
+            // Participant Details (for joined OR creator)
+            if (isJoined || isCreator) {
                 Button(
                     onClick = { showPreparation = true },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
@@ -855,7 +876,67 @@ fun EventDetailScreen(
                     }
                     actionError?.let { Text(it, color = ZholdasDanger, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp)) }
                 }
+            }
 
+            // Action Buttons: Organizer or Participant
+            if (isCreator) {
+                // Organizer banner
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(ZholdasAccent.copy(alpha = 0.12f))
+                        .border(1.dp, ZholdasAccent.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = null,
+                        tint = ZholdasAccent,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "ev_you_are_organizer".localized,
+                        color = ZholdasAccent,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp
+                    )
+                }
+
+                if (currentStatus == "active") {
+                    Button(
+                        onClick = { showCancelConfirmDialog = true },
+                        enabled = !isCancelling,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = ZholdasDanger,
+                            contentColor = Color.White,
+                            disabledContainerColor = ZholdasDanger.copy(alpha = 0.5f),
+                            disabledContentColor = Color.White.copy(alpha = 0.7f)
+                        )
+                    ) {
+                        if (isCancelling) {
+                            CircularProgressIndicator(
+                                color = Color.White,
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        } else {
+                            Text(
+                                text = "ev_cancel_event_btn".localized,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            } else if (isJoined) {
                 Button(
                     onClick = {
                         showLeaveConfirmDialog = true
@@ -1109,6 +1190,79 @@ fun EventDetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showLeaveConfirmDialog = false }) {
+                    Text(
+                        text = "btn_cancel".localized,
+                        color = ZholdasTextSecondary
+                    )
+                }
+            },
+            containerColor = ZholdasSurface,
+            titleContentColor = ZholdasTextPrimary,
+            textContentColor = ZholdasTextSecondary
+        )
+    }
+
+    if (showCancelConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!isCancelling) showCancelConfirmDialog = false
+            },
+            title = {
+                Text(
+                    text = "ev_cancel_confirm_title".localized,
+                    color = ZholdasTextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "ev_cancel_confirm_desc".localized,
+                    color = ZholdasTextSecondary
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        isCancelling = true
+                        viewModel.cancelEvent(event.id) { success ->
+                            isCancelling = false
+                            if (success) {
+                                currentStatus = "cancelled"
+                                showCancelConfirmDialog = false
+                            } else {
+                                val errorMsg = "ev_cancel_error".localized
+                                actionError = errorMsg
+                                Toast.makeText(context, errorMsg, Toast.LENGTH_SHORT).show()
+                                showCancelConfirmDialog = false
+                            }
+                        }
+                    },
+                    enabled = !isCancelling,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ZholdasDanger,
+                        contentColor = Color.White
+                    )
+                ) {
+                    if (isCancelling) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    } else {
+                        Text(
+                            text = "ev_cancel_event_btn".localized,
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showCancelConfirmDialog = false },
+                    enabled = !isCancelling
+                ) {
                     Text(
                         text = "btn_cancel".localized,
                         color = ZholdasTextSecondary

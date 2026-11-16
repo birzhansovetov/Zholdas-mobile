@@ -252,6 +252,29 @@ class EventsViewModel(
         }
     }
 
+    fun cancelEvent(eventId: Int, onResult: ((Boolean) -> Unit)? = null) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value = null
+            try {
+                apiClient.apiService.cancelEvent(eventId)
+                _events.value = _events.value.map { event ->
+                    if (event.id == eventId) event.copy(status = "cancelled") else event
+                }
+                if (_deepLinkEvent.value?.id == eventId) {
+                    _deepLinkEvent.value = _deepLinkEvent.value?.copy(status = "cancelled")
+                }
+                onResult?.invoke(true)
+            } catch (e: Exception) {
+                Log.w(TAG, "cancelEvent API error: ${e.message}")
+                _errorMessage.value = e.toUserMessage()
+                onResult?.invoke(false)
+            } finally {
+                _isLoading.value = false
+            }
+        }
+    }
+
     suspend fun fetchParticipants(eventId: Int): List<Participant> {
         return try {
             apiClient.apiService.getEventParticipants(eventId)

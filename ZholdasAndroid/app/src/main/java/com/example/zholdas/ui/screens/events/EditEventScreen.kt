@@ -2,6 +2,7 @@ package com.example.zholdas.ui.screens.events
 
 import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -582,6 +583,7 @@ fun EditEventScreen(
     }
 
     if (showLocationPicker) {
+        BackHandler { showLocationPicker = false }
         val currentLat = latitude.toDoubleOrNull() ?: event.latitude
         val currentLon = longitude.toDoubleOrNull() ?: event.longitude
         EventLocationPickerDialog(
