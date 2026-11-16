@@ -1,5 +1,6 @@
 package com.example.zholdas.ui.screens.chats
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -72,6 +73,7 @@ fun ChatListScreen(
 
     // Internal navigation when embedded directly in host
     if (selectedAIChat && onAIChatClick == null) {
+        BackHandler { selectedAIChat = false }
         AIChatAssistantScreen(
             viewModel = viewModel,
             onBackClick = { selectedAIChat = false }
@@ -80,6 +82,7 @@ fun ChatListScreen(
     }
 
     if (selectedRoomSession != null && onChatClick == null) {
+        BackHandler { selectedRoomSession = null }
         ChatRoomScreen(
             session = selectedRoomSession!!,
             viewModel = viewModel,

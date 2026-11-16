@@ -1,5 +1,6 @@
 package com.example.zholdas.ui.screens.chats
 
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -410,6 +411,7 @@ fun ChatRoomScreen(
     }
 
     if (fullScreenImageUrl != null) {
+        BackHandler { fullScreenImageUrl = null }
         Dialog(
             onDismissRequest = { fullScreenImageUrl = null },
             properties = DialogProperties(usePlatformDefaultWidth = false)

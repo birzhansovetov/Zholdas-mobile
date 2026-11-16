@@ -316,6 +316,7 @@ private class FakeZholdasApiService : ZholdasApiService {
     ): List<Event> = emptyList()
     override suspend fun joinEvent(id: Int): GenericMessageResponse = GenericMessageResponse("ok")
     override suspend fun leaveEvent(id: Int): GenericMessageResponse = GenericMessageResponse("ok")
+    override suspend fun cancelEvent(id: Int): GenericMessageResponse = GenericMessageResponse("ok")
     override suspend fun getEventParticipants(id: Int): List<Participant> = emptyList()
     override suspend fun updateParticipantStatus(
         id: Int,

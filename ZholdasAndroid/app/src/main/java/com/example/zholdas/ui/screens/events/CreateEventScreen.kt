@@ -1,6 +1,7 @@
 package com.example.zholdas.ui.screens.events
 
 import android.net.Uri
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -597,6 +598,7 @@ fun CreateEventScreen(
     }
 
     if (showLocationPickerDialog) {
+        BackHandler { showLocationPickerDialog = false }
         EventLocationPickerDialog(
             initialLatitude = latitude,
             initialLongitude = longitude,

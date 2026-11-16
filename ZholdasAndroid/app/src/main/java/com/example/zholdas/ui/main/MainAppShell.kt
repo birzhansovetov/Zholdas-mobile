@@ -1,5 +1,6 @@
 package com.example.zholdas.ui.main
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -68,6 +69,10 @@ fun MainAppShell(
     val selectedTab = tabs.getOrElse(selectedTabIndex) { TabItem.Map }
     val unreadNotificationsCount by authViewModel.unreadNotificationsCount.collectAsState()
     val currentUserProfile by authViewModel.currentUserProfile.collectAsState()
+
+    BackHandler(enabled = selectedTabIndex != 0) {
+        selectedTabIndex = 0
+    }
 
     LaunchedEffect(pendingEventId) {
         val id = pendingEventId ?: return@LaunchedEffect
@@ -140,10 +145,16 @@ fun MainAppShell(
         ) {
             when (selectedTab) {
                 TabItem.Map -> MapScreen()
-                TabItem.Events -> EventListScreen(viewModel = eventsViewModel)
+                TabItem.Events -> EventListScreen(
+                    viewModel = eventsViewModel,
+                    currentUserId = currentUserProfile?.id.orEmpty()
+                )
                 TabItem.Chats -> ChatListScreen(currentUserId = currentUserProfile?.id.orEmpty())
                 TabItem.Activity -> ActivityScreen(authViewModel)
-                TabItem.Profile -> ProfileScreen(authViewModel)
+                TabItem.Profile -> ProfileScreen(
+                    authViewModel = authViewModel,
+                    onOpenActivity = { selectedTabIndex = tabs.indexOf(TabItem.Activity) }
+                )
             }
         }
     }

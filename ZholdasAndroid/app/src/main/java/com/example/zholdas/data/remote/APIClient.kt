@@ -182,6 +182,9 @@ interface ZholdasApiService {
     @POST("/events/{id}/leave")
     suspend fun leaveEvent(@Path("id") id: Int): GenericMessageResponse
 
+    @POST("/events/{id}/cancel")
+    suspend fun cancelEvent(@Path("id") id: Int): GenericMessageResponse
+
     @GET("/events/{id}/participants")
     suspend fun getEventParticipants(@Path("id") id: Int): List<Participant>
 
