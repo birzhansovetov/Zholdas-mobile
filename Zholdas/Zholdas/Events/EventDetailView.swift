@@ -112,6 +112,15 @@ struct EventDetailView: View {
     @State private var isShowingLeaveAlert = false
     @State private var actionErrorMessage: String?
     @State private var isShowingActionErrorAlert = false
+    @State private var localStatus: String
+    @State private var isShowingCancelAlert = false
+    @State private var isCancelLoading = false
+
+    init(event: Event, eventsViewModel: EventsViewModel) {
+        self.event = event
+        self.eventsViewModel = eventsViewModel
+        _localStatus = State(initialValue: event.status)
+    }
 
     private let liveLocationTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
     
@@ -125,7 +134,7 @@ struct EventDetailView: View {
                     lastMessage: "",
                     lastMessageSender: "",
                     lastMessageTime: event.startTime,
-                    isCompleted: event.status != "active",
+                    isCompleted: localStatus != "active",
                     categoryIcon: "sparkles",
                     categoryColorHex: "#7C5CFF",
                     messages: []
@@ -165,7 +174,7 @@ struct EventDetailView: View {
 
     private var isLiveLocationAvailable: Bool {
         (isJoined || isCreator)
-            && event.status == "active"
+            && localStatus == "active"
             && Date() >= event.startTime.addingTimeInterval(-3600)
             && Date() <= event.endTime.addingTimeInterval(900)
     }
@@ -260,7 +269,7 @@ struct EventDetailView: View {
                         HStack(spacing: 12) {
                             statCard(title: "\(max(0, Int(event.maxParticipants) - participantsCount))", label: "ev_remaining_seats".localized)
                             statCard(title: "\(participantsCount)/\(event.maxParticipants)", label: "ev_participants".localized)
-                            statCard(title: event.status == "active" ? "ev_active".localized : "ev_finished".localized, label: "ev_status".localized, isStatus: true)
+                            statCard(title: localStatus == "active" ? "ev_status_active".localized : (localStatus == "cancelled" ? "ev_status_cancelled".localized : "ev_status_finished".localized), label: "ev_status".localized, isStatus: true)
                         }
                     }
                     .padding(20)
@@ -344,19 +353,26 @@ struct EventDetailView: View {
                     }
                     
                     // 4. Restrictions Banner
-                    HStack(spacing: 8) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundColor(.yellow)
-                        Text("ev_restrictions".localized)
-                            .font(.footnote)
-                            .fontWeight(.bold)
-                            .foregroundColor(ZholdasTheme.textPrimary)
+                    if let restrictionsText = eventRestrictionsText(
+                        genderFilter: event.genderFilter,
+                        minAge: event.minAge.map { Int($0) },
+                        maxAge: event.maxAge.map { Int($0) },
+                        templates: .localized
+                    ) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.yellow)
+                            Text(restrictionsText)
+                                .font(.footnote)
+                                .fontWeight(.bold)
+                                .foregroundColor(ZholdasTheme.textPrimary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding()
+                        .background(Color.yellow.opacity(0.15))
+                        .cornerRadius(12)
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.yellow.opacity(0.3), lineWidth: 1))
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding()
-                    .background(Color.yellow.opacity(0.15))
-                    .cornerRadius(12)
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.yellow.opacity(0.3), lineWidth: 1))
                     
                     // 5. Description Card
                     VStack(alignment: .leading, spacing: 8) {
@@ -509,6 +525,7 @@ struct EventDetailView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .task {
+            localStatus = event.status
             isJoined = event.isJoined ?? false
             participantsCount = Int(event.participantsCount ?? 0)
             liveLocationManager.requestLocation()
@@ -524,7 +541,7 @@ struct EventDetailView: View {
                 lastMessage: "",
                 lastMessageSender: "",
                 lastMessageTime: event.startTime,
-                isCompleted: event.status != "active",
+                isCompleted: localStatus != "active",
                 categoryIcon: icon,
                 categoryColorHex: color,
                 messages: []
@@ -610,6 +627,14 @@ struct EventDetailView: View {
         } message: {
             Text("ev_leave_confirm_message".localized)
         }
+        .alert("ev_cancel_confirm_title".localized, isPresented: $isShowingCancelAlert) {
+            Button("ev_cancel_event_btn".localized, role: .destructive) {
+                handleCancelEvent()
+            }
+            Button("btn_cancel".localized, role: .cancel) {}
+        } message: {
+            Text("ev_cancel_confirm_desc".localized)
+        }
         .alert("alert_error_title".localized, isPresented: $isShowingActionErrorAlert) {
             Button("btn_ok".localized, role: .cancel) {}
         } message: {
@@ -693,18 +718,24 @@ struct EventDetailView: View {
     }
     
     private var statusBadge: some View {
-        HStack(spacing: 4) {
+        let isActive = localStatus == "active"
+        let isCancelled = localStatus == "cancelled"
+        let text = isActive ? "ev_status_active".localized : (isCancelled ? "ev_status_cancelled".localized : "ev_status_finished".localized)
+        let color: Color = isActive ? .green : (isCancelled ? .red : .gray)
+        let bgColor: Color = isActive ? Color.green.opacity(0.15) : (isCancelled ? Color.red.opacity(0.15) : ZholdasTheme.surface.opacity(0.7))
+
+        return HStack(spacing: 4) {
             Circle()
-                .fill(event.status == "active" ? Color.green : Color.gray)
+                .fill(color)
                 .frame(width: 6, height: 6)
-            Text(event.status == "active" ? "ev_status_active".localized : "ev_status_finished".localized)
+            Text(text)
                 .font(.caption)
                 .fontWeight(.bold)
-                .foregroundColor(event.status == "active" ? .green : .gray)
+                .foregroundColor(color)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(event.status == "active" ? Color.green.opacity(0.15) : ZholdasTheme.surface.opacity(0.7))
+        .background(bgColor)
         .cornerRadius(8)
     }
 
@@ -897,7 +928,7 @@ struct EventDetailView: View {
             Text(title)
                 .font(.headline)
                 .fontWeight(.bold)
-                .foregroundColor(isStatus ? (event.status == "active" ? .green : ZholdasTheme.textSecondary) : ZholdasTheme.textPrimary)
+                .foregroundColor(isStatus ? (localStatus == "active" ? .green : (localStatus == "cancelled" ? .red : ZholdasTheme.textSecondary)) : ZholdasTheme.textPrimary)
             
             Text(label)
                 .font(.caption2)
@@ -937,7 +968,7 @@ struct EventDetailView: View {
                 .buttonStyle(SpringButtonStyle())
             }
             
-            if (isJoined || isCreator) && event.status == "active" && Date() <= event.endTime {
+            if (isJoined || isCreator) && localStatus == "active" && Date() <= event.endTime {
                 arrivalActionButton
                 if let arrivalError {
                     Text(arrivalError)
@@ -970,21 +1001,23 @@ struct EventDetailView: View {
                 }
                 .buttonStyle(SpringButtonStyle())
             } else if isCreator {
-                Button {
-                    isShowingEditSheet = true
-                } label: {
-                    HStack {
-                        Image(systemName: "pencil")
-                        Text("ev_edit_event_btn".localized)
-                            .fontWeight(.bold)
+                if localStatus == "active" {
+                    Button {
+                        isShowingEditSheet = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "pencil")
+                            Text("ev_edit_event_btn".localized)
+                                .fontWeight(.bold)
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(ZholdasTheme.accentGradient)
+                        .cornerRadius(12)
                     }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(ZholdasTheme.accentGradient)
-                    .cornerRadius(12)
+                    .buttonStyle(SpringButtonStyle())
                 }
-                .buttonStyle(SpringButtonStyle())
 
                 // Organizer notification
                 HStack {
@@ -1003,6 +1036,30 @@ struct EventDetailView: View {
                     RoundedRectangle(cornerRadius: 12)
                         .stroke(ZholdasTheme.accent.opacity(0.3), lineWidth: 1)
                 )
+
+                if localStatus == "active" {
+                    Button {
+                        isShowingCancelAlert = true
+                    } label: {
+                        HStack {
+                            if isCancelLoading {
+                                ProgressView()
+                                    .tint(.white)
+                                    .padding(.trailing, 8)
+                            }
+                            Text("ev_cancel_event_btn".localized)
+                                .font(.headline)
+                                .fontWeight(.bold)
+                        }
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.red)
+                        .cornerRadius(12)
+                    }
+                    .buttonStyle(SpringButtonStyle())
+                    .disabled(isCancelLoading)
+                }
             } else {
                 Button {
                     if isJoined {
@@ -1339,6 +1396,24 @@ struct EventDetailView: View {
             
             await MainActor.run {
                 self.isActionLoading = false
+            }
+        }
+    }
+
+    private func handleCancelEvent() {
+        guard !isCancelLoading else { return }
+        isCancelLoading = true
+
+        Task {
+            let success = await eventsViewModel.cancelEvent(id: event.id)
+            await MainActor.run {
+                if success {
+                    self.localStatus = "cancelled"
+                } else {
+                    self.actionErrorMessage = "ev_cancel_error".localized
+                    self.isShowingActionErrorAlert = true
+                }
+                self.isCancelLoading = false
             }
         }
     }

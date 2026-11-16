@@ -72,4 +72,43 @@ struct ZholdasTests {
         #expect(EventDeepLink.eventID(from: localURL, backendBaseURL: localBackend) == 42)
     }
 
+    @Test func eventRestrictions() {
+        let templates = EventRestrictionTemplates(
+            prefix: "Restrictions: ",
+            men: "Men only",
+            women: "Women only",
+            ageRange: "Ages %1$d–%2$d",
+            ageFrom: "Ages %d+",
+            ageTo: "Up to age %d"
+        )
+
+        // Без ограничений → nil
+        #expect(eventRestrictionsText(genderFilter: nil, minAge: nil, maxAge: nil, templates: templates) == nil)
+        #expect(eventRestrictionsText(genderFilter: "all", minAge: nil, maxAge: nil, templates: templates) == nil)
+        #expect(eventRestrictionsText(genderFilter: "", minAge: nil, maxAge: nil, templates: templates) == nil)
+
+        // Только пол
+        #expect(eventRestrictionsText(genderFilter: "male", minAge: nil, maxAge: nil, templates: templates) == "Restrictions: Men only")
+        #expect(eventRestrictionsText(genderFilter: "female", minAge: nil, maxAge: nil, templates: templates) == "Restrictions: Women only")
+
+        // Только min
+        #expect(eventRestrictionsText(genderFilter: nil, minAge: 18, maxAge: nil, templates: templates) == "Restrictions: Ages 18+")
+
+        // Только max
+        #expect(eventRestrictionsText(genderFilter: nil, minAge: nil, maxAge: 30, templates: templates) == "Restrictions: Up to age 30")
+
+        // Оба (min и max)
+        #expect(eventRestrictionsText(genderFilter: nil, minAge: 18, maxAge: 30, templates: templates) == "Restrictions: Ages 18–30")
+
+        // Пол + возраст
+        #expect(eventRestrictionsText(genderFilter: "male", minAge: 18, maxAge: 30, templates: templates) == "Restrictions: Men only · Ages 18–30")
+        #expect(eventRestrictionsText(genderFilter: "female", minAge: 21, maxAge: nil, templates: templates) == "Restrictions: Women only · Ages 21+")
+
+        // 0 = не задано
+        #expect(eventRestrictionsText(genderFilter: nil, minAge: 0, maxAge: 0, templates: templates) == nil)
+        #expect(eventRestrictionsText(genderFilter: "all", minAge: 0, maxAge: nil, templates: templates) == nil)
+        #expect(eventRestrictionsText(genderFilter: "female", minAge: 0, maxAge: 25, templates: templates) == "Restrictions: Women only · Up to age 25")
+        #expect(eventRestrictionsText(genderFilter: "male", minAge: 18, maxAge: 0, templates: templates) == "Restrictions: Men only · Ages 18+")
+    }
+
 }
