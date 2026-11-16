@@ -262,7 +262,19 @@ func (h *EventHandler) CreateEvent(c *gin.Context) {
 		visibilityVal = dto.Visibility
 	}
 
-	err = h.pool.QueryRow(ctx, `
+	if h.pool == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database unavailable"})
+		return
+	}
+
+	tx, err := h.pool.Begin(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction: " + err.Error()})
+		return
+	}
+	defer tx.Rollback(ctx)
+
+	err = tx.QueryRow(ctx, `
 		INSERT INTO events (creator_id, title, description, category, location_name, location, start_time, end_time, max_participants, status, image_url, visibility, gender_filter, min_age, max_age)
 		VALUES ($1, $2, $3, $4, $5, ST_SetSRID(ST_MakePoint($6::float8, $7::float8), 4326)::geography, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 		RETURNING id, creator_id::text, title, description, category, location_name, 
@@ -292,6 +304,20 @@ func (h *EventHandler) CreateEvent(c *gin.Context) {
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create event: " + err.Error()})
+		return
+	}
+
+	_, err = tx.Exec(ctx, `
+		INSERT INTO event_participants (event_id, user_id, participant_status)
+		VALUES ($1, $2, 'going')
+	`, createdEvent.ID, createdEvent.CreatorID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to add creator as participant: " + err.Error()})
+		return
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction: " + err.Error()})
 		return
 	}
 
@@ -924,7 +950,7 @@ func (h *EventHandler) GetEventDetails(c *gin.Context) {
 		        WHERE (b.blocker_id = e.creator_id AND b.blocked_id = NULLIF($2, '')::uuid)
 		           OR (b.blocker_id = NULLIF($2, '')::uuid AND b.blocked_id = e.creator_id)
 		      )
-		      AND (e.status = 'active' OR (e.status = 'finished' AND EXISTS(SELECT 1 FROM event_participants ep WHERE ep.event_id = e.id AND ep.user_id = NULLIF($2, '')::uuid)))
+		      AND (e.status = 'active' OR (e.status IN ('finished', 'cancelled') AND EXISTS(SELECT 1 FROM event_participants ep WHERE ep.event_id = e.id AND ep.user_id = NULLIF($2, '')::uuid)))
 		      AND (
 		        EXISTS(SELECT 1 FROM event_participants ep WHERE ep.event_id = e.id AND ep.user_id = NULLIF($2, '')::uuid)
 		        OR (
@@ -1260,6 +1286,11 @@ func (h *EventHandler) LeaveEvent(c *gin.Context) {
 		return
 	}
 
+	if userID == creatorID {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Organizer cannot leave the event; cancel it instead"})
+		return
+	}
+
 	var actorName string
 	err = tx.QueryRow(ctx, "SELECT full_name FROM profiles WHERE user_id = $1", userID).Scan(&actorName)
 	if err != nil {
@@ -1296,6 +1327,120 @@ func (h *EventHandler) LeaveEvent(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Successfully left the event"})
+}
+
+// CancelEvent allows the event creator to cancel an active event.
+func (h *EventHandler) CancelEvent(c *gin.Context) {
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	userID, ok := userIDVal.(string)
+	if !ok || userID == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+
+	eventID, err := parseEventID(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid event ID"})
+		return
+	}
+
+	if h.pool == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database unavailable"})
+		return
+	}
+
+	ctx := c.Request.Context()
+	tx, err := h.pool.Begin(ctx)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to start transaction: " + err.Error()})
+		return
+	}
+	defer tx.Rollback(ctx)
+
+	var (
+		title     string
+		creatorID string
+		status    string
+	)
+	err = tx.QueryRow(ctx, "SELECT title, creator_id::text, status FROM events WHERE id=$1 FOR UPDATE", eventID).Scan(&title, &creatorID, &status)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) || err == pgx.ErrNoRows {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Event not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query event: " + err.Error()})
+		return
+	}
+
+	if creatorID != userID {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Only the organizer can cancel the event"})
+		return
+	}
+
+	if status != "active" {
+		c.JSON(http.StatusConflict, gin.H{"error": "Only active events can be cancelled"})
+		return
+	}
+
+	_, err = tx.Exec(ctx, "UPDATE events SET status='cancelled' WHERE id=$1", eventID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cancel event: " + err.Error()})
+		return
+	}
+
+	notificationText := fmt.Sprintf("Событие «%s» отменено организатором", title)
+
+	rows, err := tx.Query(ctx, `
+		SELECT ep.user_id::text
+		FROM event_participants ep
+		WHERE ep.event_id = $1 AND ep.user_id <> $2::uuid
+	`, eventID, creatorID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to query participants: " + err.Error()})
+		return
+	}
+
+	var participantIDs []string
+	for rows.Next() {
+		var pid string
+		if scanErr := rows.Scan(&pid); scanErr == nil {
+			participantIDs = append(participantIDs, pid)
+		}
+	}
+	rows.Close()
+
+	for _, pid := range participantIDs {
+		_, err = tx.Exec(ctx, `
+			INSERT INTO notifications (user_id, actor_id, event_id, notification_type, text)
+			VALUES ($1, $2, $3, 'event_cancelled', $4)
+		`, pid, creatorID, eventID, notificationText)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create notification: " + err.Error()})
+			return
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to commit transaction: " + err.Error()})
+		return
+	}
+
+	if h.notificationService != nil && len(participantIDs) > 0 {
+		go func(targets []string, message string) {
+			for _, targetID := range targets {
+				h.notificationService.SendPush(targetID, message)
+			}
+		}(participantIDs, notificationText)
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Event cancelled",
+		"status":  "cancelled",
+	})
 }
 
 // UpdateParticipantStatus lets a participant quickly say if they are going, late, arrived, or cannot come.
@@ -1908,7 +2053,7 @@ func (h *EventHandler) GetChatSessions(c *gin.Context) {
 			COALESCE(m.text, 'Будьте первыми! Напишите в чат') AS last_message,
 			CASE WHEN m.sender_deleted THEN 'Удалённый пользователь' ELSE COALESCE(p.full_name, '') END AS last_message_sender,
 			COALESCE(m.created_at, e.created_at) AS last_message_time,
-			(e.end_time < CURRENT_TIMESTAMP) AS is_completed
+			(e.end_time < CURRENT_TIMESTAMP OR e.status IN ('finished', 'cancelled')) AS is_completed
 		FROM events e
 		LEFT JOIN LATERAL (
 			SELECT em.text, em.created_at, em.sender_id, em.sender_deleted AS sender_deleted

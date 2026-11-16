@@ -199,6 +199,7 @@ func main() {
 		protectedRoutes.GET("/events/nearby", eventHandler.GetNearbyEvents)
 		protectedRoutes.POST("/events/:id/join", eventHandler.JoinEvent)
 		protectedRoutes.POST("/events/:id/leave", eventHandler.LeaveEvent)
+		protectedRoutes.POST("/events/:id/cancel", eventHandler.CancelEvent)
 		protectedRoutes.POST("/events/:id/participant-status", eventHandler.UpdateParticipantStatus)
 		protectedRoutes.POST("/events/:id/arrive", eventHandler.MarkArrived)
 		protectedRoutes.GET("/events/:id/details", eventHandler.GetEventDetails)
