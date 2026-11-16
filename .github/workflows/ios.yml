@@ -24,7 +24,7 @@ concurrency:
 env:
   PROJECT: Zholdas/Zholdas.xcodeproj
   SCHEME: Zholdas
-  TEAM_ID: YFQ2H65ZA7
+  TEAM_ID: 47CM6M66UJ
 
 jobs:
   build-and-test:
@@ -132,13 +132,30 @@ jobs:
             echo "::error::Add ASC_KEY_P8, ASC_KEY_ID and ASC_ISSUER_ID secrets (see AGENTS.md)"; exit 1
           fi
           mkdir -p "$RUNNER_TEMP/asc"
-          printf '%s' "$ASC_KEY_P8" > "$RUNNER_TEMP/asc/AuthKey.p8"
-          echo "ASC_KEY_PATH=$RUNNER_TEMP/asc/AuthKey.p8" >> "$GITHUB_ENV"
+          KEY_FILE="$RUNNER_TEMP/asc/AuthKey.p8"
+          # Normalize the key: secrets pasted from a phone often lose line breaks
+          # or the BEGIN/END lines. Also accept a base64-encoded .p8 file.
+          strip_pem() { sed -e 's/-----BEGIN PRIVATE KEY-----//g' -e 's/-----END PRIVATE KEY-----//g' | tr -d ' \t\r\n"'; }
+          RAW=$(printf '%s' "$ASC_KEY_P8" | tr -d '\r')
+          if ! printf '%s' "$RAW" | grep -q "BEGIN PRIVATE KEY"; then
+            DECODED=$(printf '%s' "$RAW" | tr -d ' \t\n' | base64 -D 2>/dev/null || true)
+            if printf '%s' "$DECODED" | grep -q "BEGIN PRIVATE KEY"; then RAW="$DECODED"; fi
+          fi
+          BODY=$(printf '%s' "$RAW" | strip_pem)
+          { echo "-----BEGIN PRIVATE KEY-----"; printf '%s' "$BODY" | fold -w 64; echo; echo "-----END PRIVATE KEY-----"; } > "$KEY_FILE"
+          if ! openssl pkey -in "$KEY_FILE" -noout 2>/dev/null; then
+            echo "::error::ASC_KEY_P8 is not a valid .p8 key (key body is ${#BODY} chars, expected ~200). Paste the full text of AuthKey_XXXX.p8 again."
+            exit 1
+          fi
+          KEY_ID_TRIM=$(printf '%s' "$ASC_KEY_ID" | tr -d ' \t\r\n')
+          ISSUER_TRIM=$(printf '%s' "$ASC_ISSUER_ID" | tr -d ' \t\r\n')
+          [ ${#KEY_ID_TRIM} -eq 10 ] || echo "::warning::ASC_KEY_ID should be 10 characters, got ${#KEY_ID_TRIM}"
+          [ ${#ISSUER_TRIM} -eq 36 ] || echo "::warning::ASC_ISSUER_ID should be a 36-character UUID, got ${#ISSUER_TRIM}"
+          echo "ASC_KEY_PATH=$KEY_FILE" >> "$GITHUB_ENV"
+          echo "ASC_KEY_ID_CLEAN=$KEY_ID_TRIM" >> "$GITHUB_ENV"
+          echo "ASC_ISSUER_ID_CLEAN=$ISSUER_TRIM" >> "$GITHUB_ENV"
 
       - name: Archive (signed via App Store Connect API key)
-        env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
           BUILD_NUMBER=$(date -u +%y%m%d%H%M)
           echo "Build number: $BUILD_NUMBER"
@@ -150,8 +167,8 @@ jobs:
             -archivePath build/Zholdas.xcarchive \
             -allowProvisioningUpdates \
             -authenticationKeyPath "$ASC_KEY_PATH" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            -authenticationKeyID "$ASC_KEY_ID_CLEAN" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID_CLEAN" \
             DEVELOPMENT_TEAM="$TEAM_ID" \
             CODE_SIGN_STYLE=Automatic \
             CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
@@ -185,8 +202,8 @@ jobs:
             -exportPath build/export \
             -allowProvisioningUpdates \
             -authenticationKeyPath "$ASC_KEY_PATH" \
-            -authenticationKeyID "$ASC_KEY_ID" \
-            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+            -authenticationKeyID "$ASC_KEY_ID_CLEAN" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID_CLEAN"
           echo "Uploaded. The build appears in TestFlight after Apple finishes processing (usually 5–20 min)."
 
       - name: Upload archive log
