@@ -101,7 +101,7 @@ struct FriendsListView: View {
                             .padding(.vertical, 2)
                             .background(index == 1 && count > 0 ? Color.red : (selectedTab == index ? ZholdasTheme.accentDeep : ZholdasTheme.elevatedSurface))
                             .clipShape(Capsule())
-                            .foregroundColor(.white)
+                            .foregroundColor(index == 1 && count > 0 || selectedTab == index ? .white : ZholdasTheme.textSecondary)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)

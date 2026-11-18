@@ -107,18 +107,18 @@ struct CreateEventView: View {
                                 Text("create_ev_cover".localized)
                                     .font(.caption)
                                     .fontWeight(.bold)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(ZholdasTheme.textSecondary)
                                     .tracking(1.0)
                                 
                                 PhotosPicker(selection: $selectedCoverItem, matching: .images) {
                                     ZStack {
                                         RoundedRectangle(cornerRadius: 12)
-                                            .fill(Color.white.opacity(0.05))
+                                            .fill(ZholdasTheme.panel)
                                             .frame(height: 140)
                                             .frame(maxWidth: .infinity)
                                             .overlay(
                                                 RoundedRectangle(cornerRadius: 12)
-                                                    .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                                                    .stroke(ZholdasTheme.border, lineWidth: 1)
                                             )
                                         
                                         if !imageURL.isEmpty, let url = URL(string: imageURL) {
@@ -130,7 +130,7 @@ struct CreateEventView: View {
                                                     .frame(height: 140)
                                                     .clipShape(RoundedRectangle(cornerRadius: 12))
                                             } placeholder: {
-                                                ProgressView().tint(.white)
+                                                ProgressView().tint(ZholdasTheme.accent)
                                             }
                                         } else {
                                             VStack(spacing: 8) {
@@ -139,7 +139,7 @@ struct CreateEventView: View {
                                                     .foregroundColor(ZholdasTheme.accent)
                                                 Text("create_ev_select_photo".localized)
                                                     .font(.footnote)
-                                                    .foregroundColor(.gray)
+                                                    .foregroundColor(ZholdasTheme.textSecondary)
                                             }
                                         }
                                         
@@ -186,11 +186,11 @@ struct CreateEventView: View {
                                 Text("create_ev_title_label".localized)
                                     .font(.caption)
                                     .fontWeight(.bold)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(ZholdasTheme.textSecondary)
                                     .tracking(1.0)
                                 
                                 TextField("create_ev_title_placeholder".localized, text: $title)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(ZholdasTheme.textPrimary)
                                     .focused($focusedField, equals: .title)
                                     .modernFieldSurface(isFocused: focusedField == .title)
                                     .animation(.easeOut(duration: 0.2), value: focusedField)
@@ -201,7 +201,7 @@ struct CreateEventView: View {
                                 Text("create_ev_category".localized)
                                     .font(.caption)
                                     .fontWeight(.bold)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(ZholdasTheme.textSecondary)
                                     .tracking(1.0)
                                 
                                 Picker("create_ev_category".localized, selection: $category) {
@@ -210,7 +210,7 @@ struct CreateEventView: View {
                                     }
                                 }
                                 .pickerStyle(.menu)
-                                .foregroundColor(.white)
+                                .foregroundColor(ZholdasTheme.textPrimary)
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 13)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -227,11 +227,11 @@ struct CreateEventView: View {
                                 Text("create_ev_desc".localized)
                                     .font(.caption)
                                     .fontWeight(.bold)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(ZholdasTheme.textSecondary)
                                     .tracking(1.0)
                                 
                                 TextEditor(text: $description)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(ZholdasTheme.textPrimary)
                                     .frame(minHeight: 100)
                                     .frame(maxWidth: .infinity)
                                     .padding(8)
@@ -246,11 +246,11 @@ struct CreateEventView: View {
                                 Text("create_ev_location_label".localized)
                                     .font(.caption)
                                     .fontWeight(.bold)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(ZholdasTheme.textSecondary)
                                     .tracking(1.0)
                                 
                                 TextField("create_ev_location_placeholder".localized, text: $locationName)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(ZholdasTheme.textPrimary)
                                     .focused($focusedField, equals: .locationName)
                                     .modernFieldSurface(isFocused: focusedField == .locationName)
                                     .animation(.easeOut(duration: 0.2), value: focusedField)
@@ -272,17 +272,17 @@ struct CreateEventView: View {
                                                 Text(selectedCoordinate == nil ? "create_ev_pick_location".localized : "create_ev_location_selected".localized)
                                                     .font(.subheadline)
                                                     .fontWeight(.semibold)
-                                                    .foregroundColor(.white)
+                                                    .foregroundColor(ZholdasTheme.textPrimary)
                                                 
                                                 if let coordinate = selectedCoordinate {
                                                     Text(locationName.isEmpty ? String(format: "%.5f, %.5f", coordinate.latitude, coordinate.longitude) : locationName)
                                                         .font(.caption)
-                                                        .foregroundColor(.gray)
+                                                        .foregroundColor(ZholdasTheme.textSecondary)
                                                         .lineLimit(1)
                                                 } else {
                                                     Text("create_ev_pick_location_hint".localized)
                                                         .font(.caption)
-                                                        .foregroundColor(.gray)
+                                                        .foregroundColor(ZholdasTheme.textSecondary)
                                                 }
                                             }
                                             
@@ -290,7 +290,7 @@ struct CreateEventView: View {
                                             
                                             Image(systemName: "chevron.right")
                                                 .font(.caption.weight(.bold))
-                                                .foregroundColor(.gray)
+                                                .foregroundColor(ZholdasTheme.textSecondary)
                                         }
                                         
                                         if let coordinate = selectedCoordinate {
@@ -298,11 +298,11 @@ struct CreateEventView: View {
                                         }
                                     }
                                     .padding()
-                                    .background(Color.white.opacity(0.05))
+                                    .background(ZholdasTheme.panel)
                                     .cornerRadius(12)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 12)
-                                            .stroke(selectedCoordinate == nil ? Color.white.opacity(0.1) : ZholdasTheme.accent.opacity(0.55), lineWidth: 1)
+                                            .stroke(selectedCoordinate == nil ? ZholdasTheme.border : ZholdasTheme.accent.opacity(0.55), lineWidth: 1)
                                     )
                                 }
                                 .buttonStyle(.plain)
@@ -313,17 +313,17 @@ struct CreateEventView: View {
                                 Text("create_ev_participants_label".localized)
                                     .font(.caption)
                                     .fontWeight(.bold)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(ZholdasTheme.textSecondary)
                                     .tracking(1.0)
                                 
                                 Stepper("\(maxParticipants) " + "create_ev_people_count".localized, value: $maxParticipants, in: 2...100)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(ZholdasTheme.textPrimary)
                                     .padding()
-                                    .background(Color.white.opacity(0.05))
+                                    .background(ZholdasTheme.panel)
                                     .cornerRadius(12)
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 12)
-                                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                                            .stroke(ZholdasTheme.border, lineWidth: 1)
                                     )
                             }
                             
@@ -332,7 +332,7 @@ struct CreateEventView: View {
                                 Text("create_ev_date".localized)
                                     .font(.caption)
                                     .fontWeight(.bold)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(ZholdasTheme.textSecondary)
                                     .tracking(1.0)
 
                                 DatePicker(
@@ -379,7 +379,7 @@ struct CreateEventView: View {
                                 Text("create_ev_visibility_header".localized)
                                     .font(.caption2)
                                     .fontWeight(.bold)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(ZholdasTheme.textSecondary)
                                     .tracking(1.0)
                                 
                                     HStack(spacing: 12) {
@@ -394,12 +394,12 @@ struct CreateEventView: View {
                                             }
                                             .frame(maxWidth: .infinity)
                                             .padding()
-                                            .background(visibility == "public" ? ZholdasTheme.accent.opacity(0.2) : Color.white.opacity(0.04))
-                                            .foregroundColor(visibility == "public" ? .white : .gray)
+                                            .background(visibility == "public" ? ZholdasTheme.accent.opacity(0.2) : ZholdasTheme.panel)
+                                            .foregroundColor(visibility == "public" ? ZholdasTheme.selectedText : ZholdasTheme.textSecondary)
                                             .cornerRadius(12)
                                             .overlay(
                                                 RoundedRectangle(cornerRadius: 12)
-                                                    .stroke(visibility == "public" ? ZholdasTheme.accent : Color.white.opacity(0.08), lineWidth: 1)
+                                                    .stroke(visibility == "public" ? ZholdasTheme.accent : ZholdasTheme.border, lineWidth: 1)
                                             )
                                         }
                                         .buttonStyle(.plain)
@@ -415,12 +415,12 @@ struct CreateEventView: View {
                                             }
                                             .frame(maxWidth: .infinity)
                                             .padding()
-                                            .background(visibility == "friends" ? ZholdasTheme.accent.opacity(0.2) : Color.white.opacity(0.04))
-                                            .foregroundColor(visibility == "friends" ? .white : .gray)
+                                            .background(visibility == "friends" ? ZholdasTheme.accent.opacity(0.2) : ZholdasTheme.panel)
+                                            .foregroundColor(visibility == "friends" ? ZholdasTheme.selectedText : ZholdasTheme.textSecondary)
                                             .cornerRadius(12)
                                             .overlay(
                                                 RoundedRectangle(cornerRadius: 12)
-                                                    .stroke(visibility == "friends" ? ZholdasTheme.accent : Color.white.opacity(0.08), lineWidth: 1)
+                                                    .stroke(visibility == "friends" ? ZholdasTheme.accent : ZholdasTheme.border, lineWidth: 1)
                                             )
                                         }
                                         .buttonStyle(.plain)
@@ -432,12 +432,12 @@ struct CreateEventView: View {
                                 Text("create_ev_audience_header".localized)
                                     .font(.caption2)
                                     .fontWeight(.bold)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(ZholdasTheme.textSecondary)
                                     .tracking(1.0)
                                 
                                 Text("create_ev_gender_label".localized)
                                     .font(.caption)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(ZholdasTheme.textSecondary)
                                 
                                 HStack(spacing: 8) {
                                     genderFilterButton(title: "create_ev_gender_all".localized, assetName: "gender_other", value: "all")
@@ -447,7 +447,7 @@ struct CreateEventView: View {
                                 
                                 Text("create_ev_age_range_label".localized)
                                     .font(.caption)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(ZholdasTheme.textSecondary)
                                     .padding(.top, 4)
                                 
                                 HStack(spacing: 12) {
@@ -456,31 +456,31 @@ struct CreateEventView: View {
                                         .multilineTextAlignment(.center)
                                         .frame(maxWidth: .infinity)
                                         .padding()
-                                        .background(Color.white.opacity(0.05))
+                                        .background(ZholdasTheme.panel)
                                         .cornerRadius(12)
                                         .focused($focusedField, equals: .minAge)
-                                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(focusedField == .minAge ? ZholdasTheme.accent : Color.white.opacity(0.1), lineWidth: 1))
-                                        .foregroundColor(.white)
+                                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(focusedField == .minAge ? ZholdasTheme.accent : ZholdasTheme.border, lineWidth: 1))
+                                        .foregroundColor(ZholdasTheme.textPrimary)
                                         .animation(.easeOut(duration: 0.2), value: focusedField)
                                     
                                     Text("—")
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(ZholdasTheme.textSecondary)
                                     
                                     TextField("create_ev_age_to".localized, text: $maxAge)
                                         .keyboardType(.numberPad)
                                         .multilineTextAlignment(.center)
                                         .frame(maxWidth: .infinity)
                                         .padding()
-                                        .background(Color.white.opacity(0.05))
+                                        .background(ZholdasTheme.panel)
                                         .cornerRadius(12)
                                         .focused($focusedField, equals: .maxAge)
-                                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(focusedField == .maxAge ? ZholdasTheme.accent : Color.white.opacity(0.1), lineWidth: 1))
-                                        .foregroundColor(.white)
+                                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(focusedField == .maxAge ? ZholdasTheme.accent : ZholdasTheme.border, lineWidth: 1))
+                                        .foregroundColor(ZholdasTheme.textPrimary)
                                         .animation(.easeOut(duration: 0.2), value: focusedField)
                                     
                                     Text("create_ev_years".localized)
                                         .font(.footnote)
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(ZholdasTheme.textSecondary)
                                 }
                             }
                         }
@@ -587,7 +587,7 @@ struct CreateEventView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                        .stroke(ZholdasTheme.border, lineWidth: 1)
                 )
 
             HStack(spacing: 8) {
@@ -599,17 +599,17 @@ struct CreateEventView: View {
                     Text(locationName.isEmpty ? "create_ev_selected_point_name".localized : locationName)
                         .font(.caption)
                         .fontWeight(.semibold)
-                        .foregroundColor(.white)
+                        .foregroundColor(ZholdasTheme.textPrimary)
                         .lineLimit(1)
                     Text(String(format: "%.5f, %.5f", coordinate.latitude, coordinate.longitude))
                         .font(.caption2)
-                        .foregroundColor(.gray)
+                        .foregroundColor(ZholdasTheme.textSecondary)
                 }
 
                 Spacer()
             }
             .padding(10)
-            .background(Color.black.opacity(0.18))
+            .background(ZholdasTheme.panel)
             .cornerRadius(10)
         }
     }
@@ -669,7 +669,7 @@ struct CreateEventView: View {
     private func optionIcon(systemName: String, isSelected: Bool) -> some View {
         Image(systemName: systemName)
             .font(.system(size: 17, weight: .semibold))
-            .foregroundColor(isSelected ? ZholdasTheme.accent : .gray)
+            .foregroundColor(isSelected ? ZholdasTheme.accent : ZholdasTheme.textSecondary)
             .frame(width: 24, height: 24)
     }
     
@@ -682,7 +682,7 @@ struct CreateEventView: View {
             .clipShape(Circle())
             .overlay(
                 Circle()
-                    .stroke(isSelected ? ZholdasTheme.accent : Color.white.opacity(0.12), lineWidth: 1)
+                    .stroke(isSelected ? ZholdasTheme.accent : ZholdasTheme.border, lineWidth: 1)
             )
     }
     
@@ -698,12 +698,12 @@ struct CreateEventView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
-            .background(genderFilter == value ? ZholdasTheme.accent.opacity(0.2) : Color.white.opacity(0.04))
-            .foregroundColor(genderFilter == value ? .white : .gray)
+            .background(genderFilter == value ? ZholdasTheme.accent.opacity(0.2) : ZholdasTheme.panel)
+            .foregroundColor(genderFilter == value ? ZholdasTheme.selectedText : ZholdasTheme.textSecondary)
             .cornerRadius(12)
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(genderFilter == value ? ZholdasTheme.accent : Color.white.opacity(0.08), lineWidth: 1)
+                    .stroke(genderFilter == value ? ZholdasTheme.accent : ZholdasTheme.border, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -780,10 +780,10 @@ struct EventLocationPickerView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("create_ev_pick_location".localized)
                                     .font(.headline)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(ZholdasTheme.textPrimary)
                                 Text("create_ev_map_tap_hint".localized)
                                     .font(.subheadline)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(ZholdasTheme.textSecondary)
                             }
                         }
                         
@@ -796,11 +796,11 @@ struct EventLocationPickerView: View {
                                 Text(draftLocationName.isEmpty ? "create_ev_selected_point_name".localized : draftLocationName)
                                     .font(.caption)
                                     .fontWeight(.semibold)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(ZholdasTheme.textPrimary)
                                     .lineLimit(1)
                                 Text(String(format: "%.5f, %.5f", draftCoordinate.latitude, draftCoordinate.longitude))
                                     .font(.caption2)
-                                    .foregroundColor(.gray)
+                                    .foregroundColor(ZholdasTheme.textSecondary)
                             }
 
                             Spacer()
@@ -827,7 +827,7 @@ struct EventLocationPickerView: View {
                     .modernCard()
                     .overlay(
                         RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                            .stroke(ZholdasTheme.border, lineWidth: 1)
                     )
                     .padding()
                 }

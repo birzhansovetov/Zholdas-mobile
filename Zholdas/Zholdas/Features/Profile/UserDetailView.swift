@@ -31,7 +31,7 @@ struct UserDetailView: View {
                     } label: {
                         Image(systemName: "xmark.circle.fill")
                             .font(.system(size: 28))
-                            .foregroundColor(.white.opacity(0.3))
+                            .foregroundColor(ZholdasTheme.textTertiary)
                             .padding(.top, 16)
                             .padding(.trailing, 20)
                     }
@@ -43,7 +43,7 @@ struct UserDetailView: View {
                         .tint(ZholdasTheme.accent)
                         .scaleEffect(1.5)
                     Text("prof_loading".localized)
-                        .foregroundColor(.gray)
+                        .foregroundColor(ZholdasTheme.textSecondary)
                         .font(.subheadline)
                         .padding(.top, 8)
                     Spacer()
@@ -59,7 +59,7 @@ struct UserDetailView: View {
                                 Text(user.fullName)
                                     .font(.title2)
                                     .fontWeight(.bold)
-                                    .foregroundColor(.white)
+                                    .foregroundColor(ZholdasTheme.textPrimary)
                                 
                                 Text("@\(user.username)")
                                     .font(.headline)
@@ -68,10 +68,10 @@ struct UserDetailView: View {
                                 if let city = user.city, !city.isEmpty {
                                     HStack(spacing: 4) {
                                         Image(systemName: "mappin.circle.fill")
-                                            .foregroundColor(.gray)
+                                            .foregroundColor(ZholdasTheme.textSecondary)
                                         Text(city)
                                             .font(.subheadline)
-                                            .foregroundColor(.gray)
+                                            .foregroundColor(ZholdasTheme.textSecondary)
                                     }
                                     .padding(.top, 2)
                                 }
@@ -135,7 +135,7 @@ struct UserDetailView: View {
                 } else {
                     Spacer()
                     Text("user_detail_load_error".localized)
-                        .foregroundColor(.gray)
+                        .foregroundColor(ZholdasTheme.textSecondary)
                     Spacer()
                 }
             }
@@ -271,14 +271,14 @@ struct UserDetailView: View {
                 Text("\(user.eventsCount ?? 0)")
                     .font(.title3)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(ZholdasTheme.textPrimary)
                 Text("prof_events_count".localized)
                     .font(.caption2)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ZholdasTheme.textSecondary)
             }
             .frame(maxWidth: .infinity)
             .padding()
-            .background(Color.white.opacity(0.03))
+            .background(ZholdasTheme.panel)
             .cornerRadius(12)
             
             VStack(spacing: 4) {
@@ -286,14 +286,14 @@ struct UserDetailView: View {
                 Text("—")
                     .font(.title3)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(ZholdasTheme.textPrimary)
                 Text("prof_friends_count".localized)
                     .font(.caption2)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ZholdasTheme.textSecondary)
             }
             .frame(maxWidth: .infinity)
             .padding()
-            .background(Color.white.opacity(0.03))
+            .background(ZholdasTheme.panel)
             .cornerRadius(12)
             
             VStack(spacing: 4) {
@@ -304,11 +304,11 @@ struct UserDetailView: View {
                     .foregroundColor(ZholdasTheme.accent)
                 Text("prof_rating_count".localized)
                     .font(.caption2)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ZholdasTheme.textSecondary)
             }
             .frame(maxWidth: .infinity)
             .padding()
-            .background(Color.white.opacity(0.03))
+            .background(ZholdasTheme.panel)
             .cornerRadius(12)
         }
     }
@@ -323,8 +323,8 @@ struct UserDetailView: View {
             }
             .frame(maxWidth: .infinity)
             .padding()
-            .background(Color.white.opacity(0.1))
-            .foregroundColor(.white)
+            .background(ZholdasTheme.panel)
+            .foregroundColor(ZholdasTheme.textPrimary)
             .cornerRadius(14)
         } else {
             if actionLoading {
@@ -366,7 +366,7 @@ struct UserDetailView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color.white.opacity(0.1))
+                        .background(ZholdasTheme.panel)
                         .foregroundColor(ZholdasTheme.accent)
                         .cornerRadius(14)
                         .overlay(
@@ -379,7 +379,7 @@ struct UserDetailView: View {
                     VStack(spacing: 12) {
                         Text("user_detail_sent_request".localized)
                             .font(.footnote)
-                            .foregroundColor(.gray)
+                            .foregroundColor(ZholdasTheme.textSecondary)
                         
                         HStack(spacing: 16) {
                             Button {
@@ -421,7 +421,7 @@ struct UserDetailView: View {
                             .foregroundColor(ZholdasTheme.accent)
                             Text("user_detail_friends_status".localized)
                                 .fontWeight(.bold)
-                                .foregroundColor(.white)
+                                .foregroundColor(ZholdasTheme.textPrimary)
                         }
                         
                         Button {
@@ -630,13 +630,13 @@ struct UserDetailView: View {
                 Text("user_detail_reviews_title".localized)
                     .font(.headline)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(ZholdasTheme.textPrimary)
                 
                 Spacer()
                 
                 Text("\(reviews.count)")
                     .font(.subheadline)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ZholdasTheme.textSecondary)
             }
             .padding(.top, 8)
             
@@ -647,7 +647,7 @@ struct UserDetailView: View {
                             Text(r.evaluatorName)
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
-                                .foregroundColor(.white)
+                                .foregroundColor(ZholdasTheme.textPrimary)
                             
                             Spacer()
                             
@@ -655,7 +655,7 @@ struct UserDetailView: View {
                                 ForEach(1...5, id: \.self) { star in
                                     Image(systemName: star <= r.rating ? "star.fill" : "star")
                                         .font(.caption2)
-                                        .foregroundColor(star <= r.rating ? Color(red: 1.0, green: 0.8, blue: 0.0) : .gray)
+                                        .foregroundColor(star <= r.rating ? Color(red: 1.0, green: 0.8, blue: 0.0) : ZholdasTheme.textSecondary)
                                 }
                             }
                         }
@@ -663,20 +663,20 @@ struct UserDetailView: View {
                         if let comment = r.comment, !comment.isEmpty {
                             Text(comment)
                                 .font(.footnote)
-                                .foregroundColor(.white.opacity(0.8))
+                                .foregroundColor(ZholdasTheme.textPrimary)
                                 .lineLimit(3)
                         }
                         
                         Text(formatReviewDate(r.createdAt))
                             .font(.system(size: 10))
-                            .foregroundColor(.gray)
+                            .foregroundColor(ZholdasTheme.textSecondary)
                     }
                     .padding()
-                    .background(Color.white.opacity(0.03))
+                    .background(ZholdasTheme.panel)
                     .cornerRadius(12)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(Color.white.opacity(0.05), lineWidth: 1)
+                            .stroke(ZholdasTheme.border, lineWidth: 1)
                     )
                 }
             }

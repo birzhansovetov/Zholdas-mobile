@@ -126,7 +126,7 @@ struct EventsListView: View {
                                     Text(cat.localized)
                                         .font(.subheadline)
                                         .fontWeight(.semibold)
-                                        .foregroundColor(selectedCategory == cat ? .white : ZholdasTheme.textSecondary)
+                                        .foregroundColor(selectedCategory == cat ? ZholdasTheme.selectedText : ZholdasTheme.textSecondary)
                                         .padding(.horizontal, 16)
                                         .padding(.vertical, 8)
                                         .background(

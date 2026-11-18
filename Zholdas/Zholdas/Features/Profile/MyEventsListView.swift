@@ -37,9 +37,9 @@ struct MyEventsListView: View {
                         VStack(spacing: 12) {
                             Image(systemName: "calendar.badge.exclamationmark")
                                 .font(.largeTitle)
-                                .foregroundColor(.gray)
+                                .foregroundColor(ZholdasTheme.textSecondary)
                             Text("my_events_empty".localized)
-                                .foregroundColor(.gray)
+                                .foregroundColor(ZholdasTheme.textSecondary)
                         }
                         Spacer()
                     } else {
@@ -52,7 +52,7 @@ struct MyEventsListView: View {
                                     HStack {
                                         Text(event.title)
                                             .font(.headline)
-                                            .foregroundColor(.white)
+                                            .foregroundColor(ZholdasTheme.textPrimary)
                                         Spacer()
                                         Text(categoryTitle(for: event.category))
                                             .font(.caption)
@@ -65,11 +65,11 @@ struct MyEventsListView: View {
                                     
                                     Text(event.locationName)
                                         .font(.subheadline)
-                                        .foregroundColor(.gray)
+                                        .foregroundColor(ZholdasTheme.textSecondary)
                                 }
                                 .padding(.vertical, 4)
                             }
-                            .listRowBackground(Color.white.opacity(0.02))
+                            .listRowBackground(ZholdasTheme.panel)
                         }
                         .scrollContentBackground(.hidden)
                         .refreshable {

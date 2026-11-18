@@ -26,7 +26,7 @@ struct RateParticipantsView: View {
                 VStack(spacing: 16) {
                     Text("rate_subtitle".localized)
                         .font(.subheadline)
-                        .foregroundColor(.gray)
+                        .foregroundColor(ZholdasTheme.textSecondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 24)
                         .padding(.top, 10)
@@ -38,13 +38,13 @@ struct RateParticipantsView: View {
                         VStack(spacing: 16) {
                             Image(systemName: "person.3.fill")
                                 .font(.system(size: 60))
-                                .foregroundColor(.gray.opacity(0.5))
+                                .foregroundColor(ZholdasTheme.textSecondary.opacity(0.5))
                             Text("rate_no_participants_title".localized)
                                 .font(.headline)
-                                .foregroundColor(.white)
+                                .foregroundColor(ZholdasTheme.textPrimary)
                             Text("rate_no_participants_desc".localized)
                                 .font(.subheadline)
-                                .foregroundColor(.gray)
+                                .foregroundColor(ZholdasTheme.textSecondary)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 40)
                         }
@@ -94,11 +94,11 @@ struct RateParticipantsView: View {
                 Text(participant.fullName)
                     .font(.body)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(ZholdasTheme.textPrimary)
                 
                 Text("@\(participant.username)")
                     .font(.footnote)
-                    .foregroundColor(.gray)
+                    .foregroundColor(ZholdasTheme.textSecondary)
             }
             
             Spacer()
@@ -141,11 +141,11 @@ struct RateParticipantsView: View {
             }
         }
         .padding()
-        .background(Color.white.opacity(0.03))
+        .background(ZholdasTheme.panel)
         .cornerRadius(16)
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.white.opacity(0.05), lineWidth: 1)
+                .stroke(ZholdasTheme.border, lineWidth: 1)
         )
     }
     
@@ -198,7 +198,7 @@ struct RateParticipantsView: View {
                     Text("rate_sheet_title".localized)
                         .font(.title3)
                         .fontWeight(.bold)
-                        .foregroundColor(.white)
+                        .foregroundColor(ZholdasTheme.textPrimary)
                         .padding(.top, 24)
                     
                     Text(participant.fullName)
@@ -207,7 +207,7 @@ struct RateParticipantsView: View {
                     
                     Text("@\(participant.username)")
                         .font(.subheadline)
-                        .foregroundColor(.gray)
+                        .foregroundColor(ZholdasTheme.textSecondary)
                 }
                 
                 // Star Selector
@@ -220,7 +220,7 @@ struct RateParticipantsView: View {
                         } label: {
                             Image(systemName: star <= selectedRating ? "star.fill" : "star")
                                 .font(.system(size: 36))
-                                .foregroundColor(star <= selectedRating ? Color(red: 1.0, green: 0.8, blue: 0.0) : .gray)
+                                .foregroundColor(star <= selectedRating ? Color(red: 1.0, green: 0.8, blue: 0.0) : ZholdasTheme.textSecondary)
                                 .scaleEffect(star == selectedRating ? 1.25 : 1.0)
                         }
                     }
@@ -241,18 +241,18 @@ struct RateParticipantsView: View {
                     Text("rate_comment_label".localized)
                         .font(.caption)
                         .fontWeight(.bold)
-                        .foregroundColor(.gray)
+                        .foregroundColor(ZholdasTheme.textSecondary)
                         .tracking(1.0)
                     
                     TextField("rate_comment_placeholder".localized, text: $reviewComment, axis: .vertical)
                         .lineLimit(3...6)
                         .padding()
-                        .background(Color.white.opacity(0.04))
-                        .foregroundColor(.white)
+                        .background(ZholdasTheme.panel)
+                        .foregroundColor(ZholdasTheme.textPrimary)
                         .cornerRadius(12)
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                                .stroke(ZholdasTheme.border, lineWidth: 1)
                         )
                 }
                 .padding(.horizontal, 24)

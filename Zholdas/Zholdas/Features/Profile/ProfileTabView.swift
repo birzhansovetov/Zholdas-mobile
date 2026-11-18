@@ -25,7 +25,7 @@ struct ProfileTabView: View {
                             .tint(ZholdasTheme.accent)
                             .scaleEffect(1.5)
                         Text("prof_loading".localized)
-                            .foregroundColor(.gray)
+                            .foregroundColor(ZholdasTheme.textSecondary)
                             .font(.subheadline)
                         Spacer()
                     } else if let profile = authViewModel.currentUserProfile {
