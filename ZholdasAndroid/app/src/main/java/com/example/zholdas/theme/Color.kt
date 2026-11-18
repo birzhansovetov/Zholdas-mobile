@@ -3,6 +3,7 @@ package com.example.zholdas.theme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 
 val ZholdasBackground: Color @Composable get() = MaterialTheme.colorScheme.background
 val ZholdasBackgroundDeep: Color @Composable get() = MaterialTheme.colorScheme.background
@@ -21,6 +22,8 @@ val ZholdasDanger = Color(0xFFFF4257)
 val ZholdasTextPrimary: Color @Composable get() = MaterialTheme.colorScheme.onBackground
 val ZholdasTextSecondary: Color @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant
 val ZholdasTextTertiary: Color @Composable get() = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+
+val ZholdasSelectedText: Color @Composable get() = if (MaterialTheme.colorScheme.background.luminance() < 0.5f) Color.White else ZholdasAccentDeep
 
 // Backwards compatibility/Template colors
 val Purple80 = Color(0xFFD0BCFF)

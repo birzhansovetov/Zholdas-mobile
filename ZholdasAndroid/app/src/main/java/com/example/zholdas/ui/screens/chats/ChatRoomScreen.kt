@@ -529,7 +529,7 @@ fun EventMessageBubble(
                                 .width(200.dp)
                                 .height(150.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Color.White.copy(alpha = 0.08f)),
+                                .background(if (isUser) Color.White.copy(alpha = 0.12f) else ZholdasPanel),
                             contentAlignment = Alignment.Center
                         ) {
                             Column(
@@ -571,7 +571,7 @@ fun EventMessageBubble(
                                     modifier = Modifier
                                         .width(200.dp)
                                         .height(150.dp)
-                                        .background(Color.White.copy(alpha = 0.05f)),
+                                        .background(if (isUser) Color.White.copy(alpha = 0.08f) else ZholdasPanel),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     CircularProgressIndicator(
@@ -586,7 +586,7 @@ fun EventMessageBubble(
                                     modifier = Modifier
                                         .width(200.dp)
                                         .height(110.dp)
-                                        .background(Color.White.copy(alpha = 0.05f)),
+                                        .background(if (isUser) Color.White.copy(alpha = 0.08f) else ZholdasPanel),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Column(

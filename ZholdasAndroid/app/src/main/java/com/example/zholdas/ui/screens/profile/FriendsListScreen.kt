@@ -264,7 +264,7 @@ private fun PickerView(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(Color.Black.copy(alpha = 0.25f))
+            .background(ZholdasPanel)
             .border(1.dp, ZholdasBorder, RoundedCornerShape(12.dp))
             .padding(4.dp)
     ) {
@@ -310,7 +310,7 @@ private fun PickerView(
                 ) {
                     Text(
                         text = count.toString(),
-                        color = Color.White,
+                        color = if (isSelected || (index == 1 && count > 0)) Color.White else ZholdasTextSecondary,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -465,7 +465,7 @@ private fun RequestRow(
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.1f))
+                    .background(ZholdasPanel)
             ) {
                 Icon(
                     imageVector = Icons.Default.Close,

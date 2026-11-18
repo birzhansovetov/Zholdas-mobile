@@ -364,7 +364,7 @@ fun EventDetailScreen(
                     val (statusBg, statusFg, statusTitle) = when (currentStatus) {
                         "active" -> Triple(ZholdasSuccess.copy(alpha = 0.18f), ZholdasSuccess, "ev_status_active".localized)
                         "cancelled" -> Triple(ZholdasDanger.copy(alpha = 0.18f), ZholdasDanger, "ev_status_cancelled".localized)
-                        else -> Triple(ZholdasTextPrimary.copy(alpha = 0.1f), Color.Gray, "ev_status_finished".localized)
+                        else -> Triple(ZholdasTextPrimary.copy(alpha = 0.1f), ZholdasTextSecondary, "ev_status_finished".localized)
                     }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -831,7 +831,7 @@ fun EventDetailScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) { Text(if (participantStatus == "arrived") "ev_you_are_here".localized else "ev_i_am_here".localized) }
 
-                    HorizontalDivider(Modifier.padding(vertical = 12.dp), color = Color.White.copy(alpha = .1f))
+                    HorizontalDivider(Modifier.padding(vertical = 12.dp), color = ZholdasBorder)
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text("ev_live_location_title".localized, color = ZholdasTextPrimary, fontWeight = FontWeight.SemiBold)

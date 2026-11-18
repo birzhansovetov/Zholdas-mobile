@@ -256,7 +256,7 @@ fun UserDetailScreen(
                             modifier = Modifier
                                 .width(1.dp)
                                 .height(36.dp)
-                                .background(Color.White.copy(alpha = 0.1f))
+                                .background(ZholdasBorder)
                         )
                         StatCell(
                             count = (user?.friendsCount ?: 0).toString(),
@@ -266,7 +266,7 @@ fun UserDetailScreen(
                             modifier = Modifier
                                 .width(1.dp)
                                 .height(36.dp)
-                                .background(Color.White.copy(alpha = 0.1f))
+                                .background(ZholdasBorder)
                         )
                         StatCell(
                             count = String.format("%.1f ?", user?.rating ?: 5.0),

@@ -19,12 +19,15 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.zholdas.theme.ZholdasTheme
 import com.example.zholdas.ui.AuthViewModel
@@ -67,6 +70,13 @@ class MainActivity : ComponentActivity() {
                 ActivityResultContracts.RequestPermission()
             ) { }
             val context = LocalContext.current
+            val view = LocalView.current
+
+            SideEffect {
+                val insetsController = WindowCompat.getInsetsController(window, view)
+                insetsController.isAppearanceLightStatusBars = !useDarkTheme
+                insetsController.isAppearanceLightNavigationBars = !useDarkTheme
+            }
 
             LaunchedEffect(language) { Localization.language = language }
             LaunchedEffect(isAuthenticated) {
