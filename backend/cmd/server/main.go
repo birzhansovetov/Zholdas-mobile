@@ -144,6 +144,10 @@ func main() {
 	router.GET("/privacy", handler.GetPrivacyPage)
 	router.GET("/terms", handler.GetTermsPage)
 
+	// Landing page waitlist (public, limited per IP: burst of 5, then 1 every 10 minutes)
+	waitlistHandler := handler.NewWaitlistHandler(pool)
+	router.POST("/waitlist", middleware.IPRateLimitMiddleware(middleware.NewUserRateLimiter(rate.Every(10*time.Minute), 5)), waitlistHandler.JoinWaitlist)
+
 	// WebSocket Route (JWT validation is handled inside query parameters)
 	router.GET("/events/:id/ws", eventHandler.WebSocketChatUpgrader)
 

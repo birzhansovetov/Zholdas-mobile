@@ -94,3 +94,15 @@ func RateLimitMiddleware(limiter *AIRateLimiter) gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// IPRateLimitMiddleware limits public (unauthenticated) endpoints by client IP.
+func IPRateLimitMiddleware(limiter *AIRateLimiter) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if !limiter.GetLimiter(c.ClientIP()).Allow() {
+			c.JSON(http.StatusTooManyRequests, gin.H{"error": "Rate limit exceeded. Please try again later."})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
