@@ -293,6 +293,17 @@ func ensureOperationalSchema(ctx context.Context, pool *pgxpool.Pool) error {
 		`CREATE INDEX IF NOT EXISTS idx_event_participants_arrived ON event_participants(event_id, arrived_at)`,
 		`CREATE INDEX IF NOT EXISTS idx_event_participants_status ON event_participants(event_id, participant_status)`,
 		`CREATE INDEX IF NOT EXISTS idx_event_reminders_event_user ON event_reminders(event_id, user_id)`,
+		// Landing page waitlist. Production runs with RUN_MIGRATIONS=false, so the table is created here too.
+		`CREATE TABLE IF NOT EXISTS waitlist (
+			id SERIAL PRIMARY KEY,
+			email VARCHAR(254) NOT NULL UNIQUE,
+			lang VARCHAR(5) NOT NULL DEFAULT 'ru',
+			platform VARCHAR(10) NOT NULL DEFAULT 'any',
+			source VARCHAR(50) NOT NULL DEFAULT 'landing',
+			created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+		)`,
+		// Emails must not be readable through the Supabase anon key; the backend connects as the table owner.
+		`ALTER TABLE waitlist ENABLE ROW LEVEL SECURITY`,
 	}
 
 	for _, statement := range statements {
