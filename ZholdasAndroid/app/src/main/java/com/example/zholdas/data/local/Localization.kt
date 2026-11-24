@@ -121,6 +121,9 @@ object Localization {
         "map_ai_empty_query" to "Опишите, какое событие вы ищете",
         "map_ai_error" to "Не удалось получить рекомендации. Проверьте подключение.",
         "list_events_nearby" to "Всего %d активностей рядом",
+        "list_events_nearby_one" to "Рядом %d событие",
+        "list_events_nearby_few" to "Рядом %d события",
+        "list_events_nearby_many" to "Рядом %d событий",
         "list_no_events_found" to "Событий не найдено",
         "list_no_events_hint" to "Попробуйте сменить категорию или создать новое событие на карте!",
 
@@ -193,7 +196,7 @@ object Localization {
         "ev_status_finished" to "Завершено",
         "ev_participants_empty" to "Список пуст",
         "ev_how_it_runs_rule1" to "Приходите за 10-15 минут до начала, чтобы спокойно найти группу.",
-        "ev_how_it_runs_rule2" to "Все детали и изменения лучше уточнять в общем чате ивента.",
+        "ev_how_it_runs_rule2" to "Все детали и изменения лучше уточнять в общем чате события.",
         "ev_how_it_runs_rule3" to "После завершения участники смогут оставить отзывы друг другу.",
         "ev_share_prefix" to "Присоединяйся к событию",
         "ev_share_at" to "в",
@@ -246,7 +249,7 @@ object Localization {
         "create_ev_date" to "Дата",
         "create_ev_start" to "Начало",
         "create_ev_end" to "Окончание",
-        "create_ev_visibility_header" to "КТО МОЖЕТ ВИДЕТЬ ИВЕНТ",
+        "create_ev_visibility_header" to "КТО МОЖЕТ ВИДЕТЬ СОБЫТИЕ",
         "create_ev_audience_header" to "АУДИТОРИЯ",
         "create_ev_gender_label" to "Для кого",
         "create_ev_gender_men" to "Мужчины",
@@ -275,6 +278,11 @@ object Localization {
         "create_ev_age_to" to "до",
         "create_ev_address" to "Адрес проведения",
         "create_ev_btn" to "Опубликовать событие",
+        "create_ev_missing_prefix" to "Заполните:",
+        "create_ev_missing_title" to "название",
+        "create_ev_missing_description" to "описание",
+        "create_ev_missing_location" to "место",
+        "create_ev_check_datetime" to "Проверьте дату и время",
 
         // Chats
         "chat_assistant_title" to "ИИ Помощник Жорик",
@@ -301,19 +309,21 @@ object Localization {
         "chat_ai_response_error" to "Не удалось получить ответ. Проверьте подключение и повторите попытку.",
         "chat_ai_active" to "Активен",
         "ai_chip_weekend" to "Куда сходить в выходные?",
-        "ai_chip_sports" to "Спортивные ивенты рядом",
+        "ai_chip_sports" to "Спортивные события рядом",
         "ai_chip_boardgames" to "Настольные игры в Алматы",
         "ai_chip_zholdas" to "Как работает Жолдас?",
         "ai_typing" to "Жорик думает...",
 
         // Activity & Notifications
+        "act_today" to "сегодня",
+        "act_yesterday" to "вчера",
         "act_all_community" to "Все сообщество",
         "act_tab_all" to "Все",
         "act_tab_friends" to "Друзья",
         "act_no_friends" to "Нет активности друзей",
         "act_no_notifications" to "Нет новых событий",
         "act_no_friends_hint" to "У вас пока нет друзей в приложении, или они пока не проявляли активность.",
-        "act_no_notifications_hint" to "Пока тихо. Самое время создать новый ивент или найти компанию!",
+        "act_no_notifications_hint" to "Пока тихо. Самое время создать новое событие или найти компанию!",
 
         // Profile & Edit Profile & Friends
         "prof_title" to "Профиль пользователя",
@@ -327,7 +337,7 @@ object Localization {
         "prof_signout" to "Выйти из аккаунта",
         "prof_about_me" to "О СЕБЕ",
         "prof_loading" to "Загрузка профиля...",
-        "prof_events_count" to "Ивентов",
+        "prof_events_count" to "Событий",
         "prof_friends_count" to "Друзей",
         "prof_rating_count" to "Рейтинг",
         "prof_moderator_panel" to "Панель модератора",
@@ -379,11 +389,11 @@ object Localization {
         "mod_role_admin" to "Администратор",
         "mod_announcement" to "Администратор",
         "mod_moderation" to "Модерация",
-        "mod_subtitle" to "Управление пользователями, чатами, ивентами, модерацией, настройками и аналитикой.",
+        "mod_subtitle" to "Управление пользователями, чатами, событиями, модерацией, настройками и аналитикой.",
         "mod_tab_moderation" to "Модерация",
         "mod_tab_stats" to "Статистика",
         "mod_tab_users" to "Юзеры",
-        "mod_tab_events" to "Ивенты",
+        "mod_tab_events" to "События",
         "mod_tab_tools" to "Инструменты",
         "mod_reports_empty_title" to "Жалоб нет",
         "mod_reports_empty_desc" to "Все чисто! Участники ведут себя вежливо.",
@@ -400,8 +410,8 @@ object Localization {
         "mod_users_search_placeholder" to "Поиск по имени, email или id",
         "mod_user_banned_label" to "ЗАБАНЕН",
         "mod_user_roles_label" to "Роли:",
-        "mod_events_title" to "Управление ивентами",
-        "mod_events_search_placeholder" to "Поиск ивента",
+        "mod_events_title" to "Управление событиями",
+        "mod_events_search_placeholder" to "Поиск события",
         "mod_events_filter_all" to "Все",
         "mod_events_filter_active" to "Активные",
         "mod_events_filter_closed" to "Закрытые",
@@ -430,7 +440,7 @@ object Localization {
         "mod_btn_cancel" to "Отменить",
         "mod_btn_delete" to "Удалить",
         "mod_stats_users" to "Пользователи",
-        "mod_stats_events" to "Ивенты",
+        "mod_stats_events" to "События",
         "mod_stats_active" to "Активные",
         "mod_stats_messages" to "Сообщения",
         "mod_stats_reports" to "Жалобы",
@@ -438,8 +448,8 @@ object Localization {
         "mod_anal_reg_today" to "Регистрации сегодня",
         "mod_anal_reg_7d" to "Регистрации за 7 дней",
         "mod_anal_reg_30d" to "Регистрации за 30 дней",
-        "mod_anal_ev_7d" to "Ивенты за 7 дней",
-        "mod_anal_ev_30d" to "Ивенты за 30 дней",
+        "mod_anal_ev_7d" to "События за 7 дней",
+        "mod_anal_ev_30d" to "События за 30 дней",
         "mod_anal_joins_7d" to "Участия за 7 дней",
         "cat_walks" to "Прогулки",
         "cat_games" to "Игры",
@@ -585,7 +595,7 @@ object Localization {
         "map_ai_recs_header" to "Рекомендации Жорика",
         "common_close" to "Закрыть",
         "map_no_matching_events" to "Подходящих событий на карте пока нет",
-        "map_event_detail_btn" to "Подробнее об ивенте",
+        "map_event_detail_btn" to "Подробнее о событии",
         "profile_load_error" to "Не удалось загрузить профиль",
         "profile_theme" to "Тема",
         "theme_system" to "Системная",
@@ -723,6 +733,9 @@ object Localization {
         "map_ai_empty_query" to "Қандай іс-шара іздеп жатқаныңызды сипаттаңыз",
         "map_ai_error" to "Ұсыныстарды алу мүмкін болмады. Байланысты тексеріңіз.",
         "list_events_nearby" to "Маңайда барлығы %d оқиға бар",
+        "list_events_nearby_one" to "Жақын жерде барлығы %d іс-шара",
+        "list_events_nearby_few" to "Жақын жерде барлығы %d іс-шара",
+        "list_events_nearby_many" to "Жақын жерде барлығы %d іс-шара",
         "list_no_events_found" to "Оқиғалар табылмады",
         "list_no_events_hint" to "Санатты өзгертіп көріңіз немесе картада жаңа оқиға жасаңыз!",
 
@@ -877,6 +890,11 @@ object Localization {
         "create_ev_age_to" to "дейін",
         "create_ev_address" to "Өтетін мекен-жайы",
         "create_ev_btn" to "Оқиғаны жариялау",
+        "create_ev_missing_prefix" to "Толтырыңыз:",
+        "create_ev_missing_title" to "атауы",
+        "create_ev_missing_description" to "сипаттамасы",
+        "create_ev_missing_location" to "орны",
+        "create_ev_check_datetime" to "Күні мен уақытын тексеріңіз",
 
         // Chats
         "chat_assistant_title" to "Жорик ИИ Көмекшісі",
@@ -909,6 +927,8 @@ object Localization {
         "ai_typing" to "Жорик ойлануда...",
 
         // Activity & Notifications
+        "act_today" to "бүгін",
+        "act_yesterday" to "кеше",
         "act_all_community" to "Барлық қоғамдастық",
         "act_tab_all" to "Барлығы",
         "act_tab_friends" to "Достар",
@@ -1325,6 +1345,9 @@ object Localization {
         "map_ai_empty_query" to "Describe what event you are looking for",
         "map_ai_error" to "Could not get recommendations. Check your connection.",
         "list_events_nearby" to "Total %d events nearby",
+        "list_events_nearby_one" to "%d event nearby",
+        "list_events_nearby_few" to "%d events nearby",
+        "list_events_nearby_many" to "%d events nearby",
         "list_no_events_found" to "No events found",
         "list_no_events_hint" to "Try changing the category or create a new event on the map!",
 
@@ -1479,6 +1502,11 @@ object Localization {
         "create_ev_age_to" to "to",
         "create_ev_address" to "Address",
         "create_ev_btn" to "Publish Event",
+        "create_ev_missing_prefix" to "Fill in:",
+        "create_ev_missing_title" to "title",
+        "create_ev_missing_description" to "description",
+        "create_ev_missing_location" to "location",
+        "create_ev_check_datetime" to "Check the date and time",
 
         // Chats
         "chat_assistant_title" to "AI Assistant Zhorik",
@@ -1511,6 +1539,8 @@ object Localization {
         "ai_typing" to "Zhorik is thinking...",
 
         // Activity & Notifications
+        "act_today" to "today",
+        "act_yesterday" to "yesterday",
         "act_all_community" to "All Community",
         "act_tab_all" to "All",
         "act_tab_friends" to "Friends",
@@ -1813,6 +1843,28 @@ object Localization {
         "common_cancel" to "Cancel"
     )
 
+
+    fun eventsNearby(count: Int): String {
+        val key = when (language) {
+            "ru" -> {
+                val absCount = kotlin.math.abs(count)
+                val mod100 = absCount % 100
+                val mod10 = absCount % 10
+                if (mod100 in 11..14) {
+                    "list_events_nearby_many"
+                } else when (mod10) {
+                    1 -> "list_events_nearby_one"
+                    in 2..4 -> "list_events_nearby_few"
+                    else -> "list_events_nearby_many"
+                }
+            }
+            "en" -> {
+                if (kotlin.math.abs(count) == 1) "list_events_nearby_one" else "list_events_nearby_many"
+            }
+            else -> "list_events_nearby_many"
+        }
+        return String.format(java.util.Locale.getDefault(), get(key), count)
+    }
 
     fun get(key: String): String {
         val dict = when(language) {

@@ -30,6 +30,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.zholdas.data.local.localized
@@ -505,11 +506,12 @@ fun CreateEventScreen(
                     TextField(
                         value = minAge,
                         onValueChange = { minAge = it.filter { ch -> ch.isDigit() }.take(2) },
-                        placeholder = { Text("18", color = ZholdasTextTertiary) },
+                        textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center),
+                        placeholder = { Text("18", color = ZholdasTextTertiary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier
-                            .width(70.dp)
-                            .height(48.dp)
+                            .width(76.dp)
+                            .heightIn(min = 56.dp)
                             .clip(RoundedCornerShape(10.dp))
                             .background(ZholdasTextPrimary.copy(alpha = 0.05f)),
                         colors = TextFieldDefaults.colors(
@@ -525,11 +527,12 @@ fun CreateEventScreen(
                     TextField(
                         value = maxAge,
                         onValueChange = { maxAge = it.filter { ch -> ch.isDigit() }.take(2) },
-                        placeholder = { Text("45", color = ZholdasTextTertiary) },
+                        textStyle = LocalTextStyle.current.copy(textAlign = TextAlign.Center),
+                        placeholder = { Text("45", color = ZholdasTextTertiary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier
-                            .width(70.dp)
-                            .height(48.dp)
+                            .width(76.dp)
+                            .heightIn(min = 56.dp)
                             .clip(RoundedCornerShape(10.dp))
                             .background(ZholdasTextPrimary.copy(alpha = 0.05f)),
                         colors = TextFieldDefaults.colors(
@@ -552,6 +555,28 @@ fun CreateEventScreen(
             val isEndAfterStart = endDateTime.isAfter(startDateTime)
             val isDateTimeValid = isStartInFuture && isEndAfterStart
             val isFormValid = title.isNotBlank() && description.isNotBlank() && locationName.isNotBlank() && isDateTimeValid
+
+            val missingFields = buildList {
+                if (title.isBlank()) add("create_ev_missing_title".localized)
+                if (description.isBlank()) add("create_ev_missing_description".localized)
+                if (locationName.isBlank()) add("create_ev_missing_location".localized)
+            }
+            val formHint = when {
+                missingFields.isNotEmpty() -> "${"create_ev_missing_prefix".localized} ${missingFields.joinToString(", ")}"
+                !isDateTimeValid -> "create_ev_check_datetime".localized
+                else -> null
+            }
+
+            if (!isFormValid && formHint != null) {
+                Text(
+                    text = formHint,
+                    color = ZholdasTextSecondary,
+                    fontSize = 12.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
             PrimaryButton(
                 text = "create_ev_btn".localized,
                 onClick = {

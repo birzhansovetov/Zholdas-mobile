@@ -33,6 +33,13 @@ import com.example.zholdas.theme.*
 import com.example.zholdas.ui.AuthViewModel
 import com.example.zholdas.ui.components.ModernCard
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalDateTime
+import java.time.OffsetDateTime
+import java.time.ZoneId
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -351,8 +358,33 @@ private fun getNotificationIconConfig(type: String): Pair<androidx.compose.ui.gr
 private fun formatNotificationDate(rawDate: String): String {
     if (rawDate.isBlank()) return ""
     return try {
-        rawDate.take(16).replace("T", " ")
-    } catch (e: Exception) {
-        rawDate
+        val zdt = try {
+            OffsetDateTime.parse(rawDate).atZoneSameInstant(ZoneId.systemDefault())
+        } catch (_: Exception) {
+            try {
+                Instant.parse(rawDate).atZone(ZoneId.systemDefault())
+            } catch (_: Exception) {
+                LocalDateTime.parse(rawDate).atZone(ZoneId.systemDefault())
+            }
+        }
+        val today = ZonedDateTime.now(ZoneId.systemDefault()).toLocalDate()
+        val yesterday = today.minusDays(1)
+        val eventDate = zdt.toLocalDate()
+        val timeStr = zdt.format(DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault()))
+
+        when (eventDate) {
+            today -> "${"act_today".localized}, $timeStr"
+            yesterday -> "${"act_yesterday".localized}, $timeStr"
+            else -> {
+                val dateStr = zdt.format(DateTimeFormatter.ofPattern("dd.MM.yyyy", Locale.getDefault()))
+                "$dateStr, $timeStr"
+            }
+        }
+    } catch (_: Exception) {
+        try {
+            rawDate.take(16).replace("T", " ")
+        } catch (_: Exception) {
+            rawDate
+        }
     }
 }
