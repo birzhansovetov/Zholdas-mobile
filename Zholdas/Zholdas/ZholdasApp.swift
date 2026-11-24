@@ -29,6 +29,14 @@ struct ZholdasApp: App {
     private var preferredColorScheme: ColorScheme? {
         ThemePreference(rawValue: themePreferenceRaw)?.colorScheme
     }
+
+    private func handleIncomingURL(_ url: URL) {
+        if let eventID = EventDeepLink.eventID(from: url) {
+            authViewModel.pendingEventID = eventID
+        } else {
+            authViewModel.handlePasswordResetURL(url)
+        }
+    }
     
     var body: some Scene {
         WindowGroup {
@@ -46,10 +54,11 @@ struct ZholdasApp: App {
             .environmentObject(langManager)
             .preferredColorScheme(preferredColorScheme)
             .onOpenURL { url in
-                if let eventID = EventDeepLink.eventID(from: url) {
-                    authViewModel.pendingEventID = eventID
-                } else {
-                    authViewModel.handlePasswordResetURL(url)
+                handleIncomingURL(url)
+            }
+            .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
+                if let url = activity.webpageURL {
+                    handleIncomingURL(url)
                 }
             }
             .sheet(isPresented: $authViewModel.isShowingPasswordReset) {

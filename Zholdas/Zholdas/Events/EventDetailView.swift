@@ -647,13 +647,14 @@ struct EventDetailView: View {
     }
 
     private var publicEventURL: URL {
-        AppConfig.publicBackendBaseURL.appendingPathComponent("events/\(event.id)")
+        EventDeepLink.webURL(for: event.id)
     }
 
     private var eventShareMessage: String {
         """
         \("ev_share_prefix".localized): \(event.title)
         \("ev_share_at".localized) \(event.locationName)
+        \(publicEventURL.absoluteString)
         """
     }
 
