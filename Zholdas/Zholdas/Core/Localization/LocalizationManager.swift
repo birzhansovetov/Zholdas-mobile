@@ -214,7 +214,7 @@ class LocalizationManager: ObservableObject {
             "en": "Loading profile..."
         ],
         "prof_events_count": [
-            "ru": "Ивентов",
+            "ru": "Событий",
             "kk": "Оқиғалар",
             "en": "Events"
         ],
@@ -523,7 +523,7 @@ class LocalizationManager: ObservableObject {
             "en": "End Time"
         ],
         "create_ev_visibility_header": [
-            "ru": "КТО МОЖЕТ ВИДЕТЬ ИВЕНТ",
+            "ru": "КТО МОЖЕТ ВИДЕТЬ СОБЫТИЕ",
             "kk": "ОҚИҒАНЫ КІМ КӨРЕ АЛАДЫ",
             "en": "WHO CAN SEE THE EVENT"
         ],
@@ -652,6 +652,26 @@ class LocalizationManager: ObservableObject {
             "kk": "Оқиғаны жариялау",
             "en": "Publish Event"
         ],
+        "create_ev_missing_prefix": [
+            "ru": "Заполните:",
+            "kk": "Толтырыңыз:",
+            "en": "Fill in:"
+        ],
+        "create_ev_missing_title": [
+            "ru": "название",
+            "kk": "атауы",
+            "en": "title"
+        ],
+        "create_ev_missing_description": [
+            "ru": "описание",
+            "kk": "сипаттамасы",
+            "en": "description"
+        ],
+        "create_ev_missing_location": [
+            "ru": "место",
+            "kk": "орны",
+            "en": "location"
+        ],
         
         // Chats
         "chat_assistant_title": [
@@ -721,10 +741,20 @@ class LocalizationManager: ObservableObject {
             "kk": "Әдепкі Алматы",
             "en": "Default Almaty location"
         ],
-        "list_events_nearby": [
-            "ru": "Всего %d активностей рядом",
-            "kk": "Маңайда барлығы %d оқиға бар",
-            "en": "Total %d events nearby"
+        "list_events_nearby_one": [
+            "ru": "Рядом %d событие",
+            "kk": "Жақын жерде барлығы %d іс-шара",
+            "en": "%d event nearby"
+        ],
+        "list_events_nearby_few": [
+            "ru": "Рядом %d события",
+            "kk": "Жақын жерде барлығы %d іс-шара",
+            "en": "%d events nearby"
+        ],
+        "list_events_nearby_many": [
+            "ru": "Рядом %d событий",
+            "kk": "Жақын жерде барлығы %d іс-шара",
+            "en": "%d events nearby"
         ],
         "list_no_events_found": [
             "ru": "Событий не найдено",
@@ -853,9 +883,19 @@ class LocalizationManager: ObservableObject {
             "en": "You don't have friends in the app yet, or they haven't been active yet."
         ],
         "act_no_notifications_hint": [
-            "ru": "Пока тихо. Самое время создать новый ивент или найти компанию!",
+            "ru": "Пока тихо. Самое время создать новое событие или найти компанию!",
             "kk": "Әзірге тыныш. Жаңа оқиға жасау немесе серік табудың дәл уақыты!",
             "en": "Quiet for now. High time to create a new event or find company!"
+        ],
+        "act_today": [
+            "ru": "сегодня",
+            "kk": "бүгін",
+            "en": "today"
+        ],
+        "act_yesterday": [
+            "ru": "вчера",
+            "kk": "кеше",
+            "en": "yesterday"
         ],
         
         // Profile & Settings
@@ -1120,7 +1160,7 @@ class LocalizationManager: ObservableObject {
             "en": "Arrive 10-15 minutes early to easily find the group."
         ],
         "ev_how_it_runs_rule2": [
-            "ru": "Все детали и изменения лучше уточнять в общем чате ивента.",
+            "ru": "Все детали и изменения лучше уточнять в общем чате события.",
             "kk": "Барлық мәліметтер мен өзгерістерді оқиғаның жалпы чатында нақтылаған дұрыс.",
             "en": "It's best to check all details and changes in the event's general chat."
         ],
@@ -1167,7 +1207,7 @@ class LocalizationManager: ObservableObject {
             "en": "Moderation"
         ],
         "mod_subtitle": [
-            "ru": "Управление пользователями, чатами, ивентами, модерацией, настройками и аналитикой.",
+            "ru": "Управление пользователями, чатами, событиями, модерацией, настройками и аналитикой.",
             "kk": "Пайдаланушыларды, чаттарды, оқиғаларды, модерацияны, баптауларды және аналитиканы басқару.",
             "en": "Manage users, chats, events, moderation, settings, and analytics."
         ],
@@ -1187,7 +1227,7 @@ class LocalizationManager: ObservableObject {
             "en": "Users"
         ],
         "mod_tab_events": [
-            "ru": "Ивенты",
+            "ru": "События",
             "kk": "Оқиғалар",
             "en": "Events"
         ],
@@ -1267,7 +1307,7 @@ class LocalizationManager: ObservableObject {
             "en": "Users"
         ],
         "mod_stats_events": [
-            "ru": "Ивенты",
+            "ru": "События",
             "kk": "Оқиғалар",
             "en": "Events"
         ],
@@ -1312,12 +1352,12 @@ class LocalizationManager: ObservableObject {
             "en": "Registrations 30d"
         ],
         "mod_anal_ev_7d": [
-            "ru": "Ивенты за 7 дней",
+            "ru": "События за 7 дней",
             "kk": "7 күндегі оқиғалар",
             "en": "Events 7d"
         ],
         "mod_anal_ev_30d": [
-            "ru": "Ивенты за 30 дней",
+            "ru": "События за 30 дней",
             "kk": "30 күндегі оқиғалар",
             "en": "Events 30d"
         ],
@@ -1347,12 +1387,12 @@ class LocalizationManager: ObservableObject {
             "en": "Roles:"
         ],
         "mod_events_title": [
-            "ru": "Управление ивентами",
+            "ru": "Управление событиями",
             "kk": "Оқиғаларды басқару",
             "en": "Event Management"
         ],
         "mod_events_search_placeholder": [
-            "ru": "Поиск ивента",
+            "ru": "Поиск события",
             "kk": "Оқиғаны іздеу",
             "en": "Search event"
         ],
@@ -2646,7 +2686,7 @@ class LocalizationManager: ObservableObject {
             "en": "Report closed"
         ],
         "mod_audit_action_delete_event": [
-            "ru": "Ивент удален",
+            "ru": "Событие удалено",
             "kk": "Оқиға жойылды",
             "en": "Event deleted"
         ],
@@ -2656,7 +2696,7 @@ class LocalizationManager: ObservableObject {
             "en": "Profile deleted"
         ],
         "mod_audit_action_update_event_status": [
-            "ru": "Статус ивента изменен",
+            "ru": "Статус события изменён",
             "kk": "Оқиға мәртебесі өзгертілді",
             "en": "Event status updated"
         ],

@@ -600,18 +600,26 @@ struct EventsMapView: View {
     // MARK: - Helpers
     
     private func getEventsWord(for count: Int) -> String {
-        let mod10 = count % 10
-        let mod100 = count % 100
-        if mod100 >= 11 && mod100 <= 19 {
-            return "ивентов"
+        let lang = langManager.currentLanguage
+        switch lang {
+        case "kk":
+            return "іс-шара"
+        case "en":
+            return count == 1 ? "event" : "events"
+        default:
+            let mod10 = count % 10
+            let mod100 = count % 100
+            if mod100 >= 11 && mod100 <= 19 {
+                return "событий"
+            }
+            if mod10 == 1 {
+                return "событие"
+            }
+            if mod10 >= 2 && mod10 <= 4 {
+                return "события"
+            }
+            return "событий"
         }
-        if mod10 == 1 {
-            return "ивент"
-        }
-        if mod10 >= 2 && mod10 <= 4 {
-            return "ивента"
-        }
-        return "ивентов"
     }
 }
 
