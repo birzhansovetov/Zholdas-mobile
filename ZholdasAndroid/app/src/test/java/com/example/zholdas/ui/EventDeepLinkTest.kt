@@ -41,10 +41,29 @@ class EventDeepLinkTest {
     }
 
     @Test
+    fun `parses public app links with e and events paths`() {
+        assertEquals(123, EventDeepLink.parse("https://www.zholdas.app/e/123"))
+        assertEquals(456, EventDeepLink.parse("https://zholdas.app/e/456"))
+        assertEquals(789, EventDeepLink.parse("http://www.zholdas.app/events/789"))
+        assertEquals(101, EventDeepLink.parse("https://zholdas.app/events/101"))
+        assertEquals(55, EventDeepLink.parse("https://www.zholdas.app/e/55/"))
+        assertEquals(99, EventDeepLink.parse("https://www.zholdas.app/e/99?source=share"))
+    }
+
+    @Test
+    fun `generates public event url`() {
+        assertEquals("https://www.zholdas.app/e/123", EventDeepLink.eventUrl(123))
+        assertEquals("https://www.zholdas.app/e/123", EventDeepLink.buildEventUrl(123))
+    }
+
+    @Test
     fun `returns null for unrelated schemes hosts or paths`() {
         assertNull(EventDeepLink.parse("zholdas://reset-password"))
         assertNull(EventDeepLink.parse("https://google.com/events/123"))
         assertNull(EventDeepLink.parse("https://zholdas-api-de89a64e4196.herokuapp.com/users/123"))
+        assertNull(EventDeepLink.parse("https://www.zholdas.app/profile/123"))
+        assertNull(EventDeepLink.parse("https://www.zholdas.app/e/not-a-number"))
+        assertNull(EventDeepLink.parse("https://www.zholdas.app/e/"))
         assertNull(EventDeepLink.parse(null))
         assertNull(EventDeepLink.parse(""))
         assertNull(EventDeepLink.parse("   "))
