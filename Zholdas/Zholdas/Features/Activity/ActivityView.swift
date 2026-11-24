@@ -367,8 +367,18 @@ struct ActivityView: View {
     }
     
     private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "dd.MM.yyyy HH:mm"
-        return formatter.string(from: date)
+        let timeFormatter = DateFormatter()
+        timeFormatter.dateFormat = "HH:mm"
+        let timeString = timeFormatter.string(from: date)
+        
+        if Calendar.current.isDateInToday(date) {
+            return "\("act_today".localized), \(timeString)"
+        } else if Calendar.current.isDateInYesterday(date) {
+            return "\("act_yesterday".localized), \(timeString)"
+        } else {
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "dd.MM.yyyy"
+            return "\(dateFormatter.string(from: date)), \(timeString)"
+        }
     }
 }

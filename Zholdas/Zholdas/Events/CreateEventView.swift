@@ -456,6 +456,7 @@ struct CreateEventView: View {
                                         .multilineTextAlignment(.center)
                                         .frame(maxWidth: .infinity)
                                         .padding()
+                                        .frame(minHeight: 48)
                                         .background(ZholdasTheme.panel)
                                         .cornerRadius(12)
                                         .focused($focusedField, equals: .minAge)
@@ -471,6 +472,7 @@ struct CreateEventView: View {
                                         .multilineTextAlignment(.center)
                                         .frame(maxWidth: .infinity)
                                         .padding()
+                                        .frame(minHeight: 48)
                                         .background(ZholdasTheme.panel)
                                         .cornerRadius(12)
                                         .focused($focusedField, equals: .maxAge)
@@ -493,6 +495,13 @@ struct CreateEventView: View {
                                 .foregroundColor(.red)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal)
+                        }
+                        
+                        if let missingText = missingFieldsText {
+                            Text(missingText)
+                                .font(.caption)
+                                .foregroundColor(ZholdasTheme.textSecondary)
+                                .frame(maxWidth: .infinity, alignment: .center)
                         }
                         
                         // Кнопка создания
@@ -547,6 +556,22 @@ struct CreateEventView: View {
         }
     }
     
+    private var missingFieldsText: String? {
+        guard !eventsViewModel.isLoading else { return nil }
+        var missing: [String] = []
+        if title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            missing.append("create_ev_missing_title".localized)
+        }
+        if description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            missing.append("create_ev_missing_description".localized)
+        }
+        if locationName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || selectedCoordinate == nil {
+            missing.append("create_ev_missing_location".localized)
+        }
+        guard !missing.isEmpty else { return nil }
+        return "\("create_ev_missing_prefix".localized) \(missing.joined(separator: ", "))"
+    }
+
     private func createEvent() {
         guard let coordinate = selectedCoordinate else { return }
         let latitude = coordinate.latitude
