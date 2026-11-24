@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.zholdas.ZholdasApplication
+import com.example.zholdas.data.local.Localization
 import com.example.zholdas.data.local.localized
 import com.example.zholdas.data.model.Event
 import com.example.zholdas.theme.*
@@ -191,7 +192,7 @@ fun EventListScreen(
                             fontSize = 28.sp,
                             fontWeight = FontWeight.Bold
                         )
-                        val countText = String.format(Locale.getDefault(), "list_events_nearby".localized, filteredEvents.size)
+                        val countText = Localization.eventsNearby(filteredEvents.size)
                         Text(
                             text = countText,
                             color = ZholdasTextSecondary,

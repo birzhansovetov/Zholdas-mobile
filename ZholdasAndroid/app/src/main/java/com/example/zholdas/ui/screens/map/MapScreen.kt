@@ -720,6 +720,7 @@ fun getCategoryTitle(cat: String): String {
 fun getCategoryColor(category: String): Color {
     val key = EventCategories.getFilterKey(category)
     return when (key) {
+        "cat_all" -> ZholdasAccent
         "cat_mountains" -> ZholdasSuccess
         "cat_sports" -> ZholdasAccent
         "cat_theater" -> Color(0xFFB042FF)
