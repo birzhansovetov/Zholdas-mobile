@@ -39,6 +39,38 @@
           "value": "public, max-age=604800"
         }
       ]
+    },
+    {
+      "source": "/.well-known/apple-app-site-association",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
+      ]
+    },
+    {
+      "source": "/.well-known/assetlinks.json",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/e/:id",
+      "destination": "https://zholdas-api-de89a64e4196.herokuapp.com/events/:id"
     }
   ]
 }

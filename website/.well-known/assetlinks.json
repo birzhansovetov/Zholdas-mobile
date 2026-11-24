@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.example.zholdas",
+      "sha256_cert_fingerprints": [
+        "67:50:10:9C:1B:8F:31:60:65:03:A4:AA:BC:29:EB:28:D6:89:91:1F:94:B2:3B:54:E2:DF:E6:85:BE:E7:95:97"
+      ]
+    }
+  }
+]

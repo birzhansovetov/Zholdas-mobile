@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"html"
 	"log"
 	"net/http"
 	"strconv"
@@ -655,14 +654,22 @@ type NearbyEventResponse struct {
 
 // GetPublicEventPage renders a lightweight public page for shared event links.
 func (h *EventHandler) GetPublicEventPage(c *gin.Context) {
+	lang := resolveLanguage(c)
+
 	eventID, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		c.String(http.StatusBadRequest, "Invalid event id")
+	if err != nil || eventID <= 0 {
+		renderPublicEventError(c, http.StatusNotFound, lang, 0, false)
+		return
+	}
+
+	if h.pool == nil {
+		renderPublicEventError(c, http.StatusInternalServerError, lang, eventID, true)
 		return
 	}
 
 	ctx := c.Request.Context()
 	var (
+		id              int32
 		title           string
 		description     string
 		category        string
@@ -673,19 +680,26 @@ func (h *EventHandler) GetPublicEventPage(c *gin.Context) {
 		endTime         time.Time
 		maxParticipants int32
 		status          string
-		organizerName   string
+		visibility      string
+		participantsCnt int32
+		fullName        string
+		username        string
 	)
 
 	err = h.pool.QueryRow(ctx, `
-		SELECT e.title, e.description, e.category, e.location_name,
+		SELECT e.id, e.title, e.description, e.category, e.location_name,
 		       (ST_Y(e.location::geometry))::float8 AS latitude,
 		       (ST_X(e.location::geometry))::float8 AS longitude,
 		       e.start_time, e.end_time, e.max_participants, e.status,
-		       COALESCE(NULLIF(p.full_name, ''), NULLIF(p.username, ''), 'Организатор') AS organizer_name
+		       COALESCE(e.visibility, 'public') AS visibility,
+		       (SELECT COUNT(*) FROM event_participants ep WHERE ep.event_id = e.id)::int AS participants_count,
+		       COALESCE(p.full_name, '') AS full_name,
+		       COALESCE(p.username, '') AS username
 		FROM events e
 		LEFT JOIN profiles p ON p.user_id = e.creator_id
 		WHERE e.id = $1
 	`, eventID).Scan(
+		&id,
 		&title,
 		&description,
 		&category,
@@ -696,71 +710,85 @@ func (h *EventHandler) GetPublicEventPage(c *gin.Context) {
 		&endTime,
 		&maxParticipants,
 		&status,
-		&organizerName,
+		&visibility,
+		&participantsCnt,
+		&fullName,
+		&username,
 	)
 	if err != nil {
-		c.String(http.StatusNotFound, "Event not found")
+		if err == pgx.ErrNoRows {
+			renderPublicEventError(c, http.StatusNotFound, lang, eventID, false)
+			return
+		}
+		log.Printf("[PublicEvent] DB query error for event_id=%d: %v", eventID, err)
+		renderPublicEventError(c, http.StatusInternalServerError, lang, eventID, true)
 		return
 	}
 
-	routeURL := fmt.Sprintf("https://2gis.kz/geo/%f,%f", longitude, latitude)
-	appURL := fmt.Sprintf("zholdas://event/%d", eventID)
-	page := fmt.Sprintf(`<!doctype html>
-<html lang="ru">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>%s | Zholdas</title>
-  <style>
-    :root { color-scheme: dark; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: radial-gradient(circle at top, #4c1d95, #080414 58%%); color: white; }
-    main { width: min(92vw, 560px); padding: 32px; border: 1px solid rgba(255,255,255,.12); border-radius: 28px; background: rgba(17, 10, 34, .78); box-shadow: 0 24px 80px rgba(0,0,0,.42); }
-    .pill { display: inline-flex; gap: 8px; align-items: center; padding: 8px 12px; border-radius: 999px; background: rgba(139, 92, 246, .18); color: #c4b5fd; font-weight: 700; font-size: 14px; }
-    h1 { margin: 22px 0 10px; font-size: clamp(32px, 8vw, 52px); line-height: 1; }
-    p { color: rgba(255,255,255,.72); line-height: 1.55; }
-    .grid { display: grid; gap: 12px; margin: 24px 0; }
-    .row { padding: 16px; border-radius: 18px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.08); }
-    .label { color: rgba(255,255,255,.48); font-size: 13px; letter-spacing: .06em; text-transform: uppercase; }
-    .value { margin-top: 4px; font-weight: 750; }
-    .actions { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
-    a { text-decoration: none; text-align: center; color: white; font-weight: 800; padding: 15px 18px; border-radius: 18px; background: linear-gradient(135deg, #a78bfa, #6d28d9); }
-    a.secondary { background: rgba(255,255,255,.09); }
-    @media (max-width: 520px) { main { padding: 24px; } .actions { grid-template-columns: 1fr; } }
-  </style>
-</head>
-<body>
-  <main>
-    <div class="pill">Жолдас · %s · %s</div>
-    <h1>%s</h1>
-    <p>%s</p>
-    <div class="grid">
-      <div class="row"><div class="label">Организатор</div><div class="value">%s</div></div>
-      <div class="row"><div class="label">Место</div><div class="value">%s</div></div>
-      <div class="row"><div class="label">Дата и время</div><div class="value">%s - %s</div></div>
-      <div class="row"><div class="label">Участников</div><div class="value">До %d человек</div></div>
-    </div>
-    <div class="actions">
-      <a href="%s">Открыть в приложении</a>
-      <a class="secondary" href="%s">Маршрут в 2GIS</a>
-    </div>
-  </main>
-</body>
-</html>`,
-		html.EscapeString(title),
-		html.EscapeString(category),
-		html.EscapeString(status),
-		html.EscapeString(title),
-		html.EscapeString(description),
-		html.EscapeString(organizerName),
-		html.EscapeString(locationName),
-		html.EscapeString(startTime.Format("02.01.2006 15:04")),
-		html.EscapeString(endTime.Format("15:04")),
-		maxParticipants,
-		html.EscapeString(appURL),
-		html.EscapeString(routeURL),
-	)
+	texts := getPageTexts(lang)
+	appURL := makeAppURL(eventID)
+	canonicalURL := fmt.Sprintf("https://www.zholdas.app/e/%d", eventID)
 
-	c.Data(http.StatusOK, "text/html; charset=utf-8", []byte(page))
+	if strings.ToLower(strings.TrimSpace(visibility)) != "public" {
+		renderPublicEvent(c, http.StatusOK, PublicEventPageData{
+			Lang:            lang,
+			ID:              eventID,
+			CanonicalURL:    canonicalURL,
+			MetaTitle:       texts.PrivacyTitle + " | " + texts.Brand,
+			MetaDescription: texts.PrivacyBody,
+			Brand:           texts.Brand,
+			SiteName:        texts.Brand,
+			IsPrivate:       true,
+			AppURL:          appURL,
+			Texts:           texts,
+		})
+		return
+	}
+
+	statusName, statusClass := translateStatus(status, lang)
+	categoryName := translateCategory(category, lang)
+	formattedDate := formatEventDateTime(startTime, endTime, lang)
+	organizerName := formatOrganizerName(fullName, username, texts.DefaultOrganizerName)
+	formattedParticipants := formatParticipants(participantsCnt, maxParticipants, lang)
+
+	var routeURL string
+	if latitude != 0 || longitude != 0 {
+		routeURL = fmt.Sprintf("https://2gis.kz/geo/%f,%f", longitude, latitude)
+	}
+
+	// Truncate description to 600 runes
+	descRunes := []rune(description)
+	truncatedDesc := description
+	if len(descRunes) > 600 {
+		truncatedDesc = string(descRunes[:600]) + "…"
+	}
+
+	metaDesc := formattedDate
+	if locationName != "" {
+		metaDesc += " · " + locationName
+	}
+
+	renderPublicEvent(c, http.StatusOK, PublicEventPageData{
+		Lang:                  lang,
+		ID:                    eventID,
+		CanonicalURL:          canonicalURL,
+		MetaTitle:             title + " | " + texts.Brand,
+		MetaDescription:       metaDesc,
+		Brand:                 texts.Brand,
+		SiteName:              texts.Brand,
+		Title:                 title,
+		CategoryName:          categoryName,
+		StatusName:            statusName,
+		StatusClass:           statusClass,
+		FormattedDate:         formattedDate,
+		LocationName:          locationName,
+		RouteURL:              routeURL,
+		OrganizerName:         organizerName,
+		FormattedParticipants: formattedParticipants,
+		Description:           truncatedDesc,
+		AppURL:                appURL,
+		Texts:                 texts,
+	})
 }
 
 // GetNearbyEvents queries PostgreSQL + PostGIS for close-by events
