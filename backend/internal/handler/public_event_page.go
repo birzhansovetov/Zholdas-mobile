@@ -136,13 +136,13 @@ func translateCategory(category string, lang string) string {
 
 	var catKey string
 	switch lower {
-	case "mountains", "mountain", "горы", "гора", "тау":
+	case "mountains", "mountain", "hiking", "hike", "горы", "гора", "поход", "тау":
 		catKey = "mountains"
 	case "sports", "sport", "спорт":
 		catKey = "sports"
 	case "walks", "walk", "прогулки", "прогулка", "серуен":
 		catKey = "walks"
-	case "games", "game", "игры", "игра", "настолки", "ойындар", "ойын":
+	case "games", "game", "board_games", "boardgames", "board games", "игры", "игра", "настолки", "ойындар", "ойын":
 		catKey = "games"
 	case "theater", "theatre", "театр":
 		catKey = "theater"
