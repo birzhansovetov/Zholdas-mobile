@@ -1,0 +1,12 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["47CM6M66UJ.app.zholdas.Zholdas"],
+        "components": [
+          { "/": "/e/*", "comment": "Event links open in the app" }
+        ]
+      }
+    ]
+  }
+}
