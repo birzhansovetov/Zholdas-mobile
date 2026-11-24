@@ -44,6 +44,7 @@ import com.example.zholdas.data.model.Event
 import com.example.zholdas.data.model.EventLiveLocation
 import com.example.zholdas.data.model.Participant
 import com.example.zholdas.theme.*
+import com.example.zholdas.ui.EventDeepLink
 import com.example.zholdas.ui.components.ModernCard
 import com.example.zholdas.ui.components.PrimaryButton
 import kotlin.coroutines.resume
@@ -979,12 +980,10 @@ fun EventDetailScreen(
             ) {
                 Button(
                     onClick = {
+                        val shareText = "${"ev_share_prefix".localized}: ${event.title} ${"ev_share_at".localized} ${event.locationName}!\n${EventDeepLink.eventUrl(event.id)}"
                         val shareIntent = Intent(Intent.ACTION_SEND).apply {
                             type = "text/plain"
-                            putExtra(
-                                Intent.EXTRA_TEXT,
-                                "${"ev_share_prefix".localized}: ${event.title} ${"ev_share_at".localized} ${event.locationName}!"
-                            )
+                            putExtra(Intent.EXTRA_TEXT, shareText)
                         }
                         context.startActivity(Intent.createChooser(shareIntent, "ev_share_btn".localized))
                     },

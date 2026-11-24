@@ -320,6 +320,12 @@ object LegalLinks {
 }
 
 object EventDeepLink {
+    private val publicHosts = setOf("zholdas.app", "www.zholdas.app")
+
+    fun eventUrl(eventId: Int): String = "https://www.zholdas.app/e/$eventId"
+
+    fun buildEventUrl(eventId: Int): String = eventUrl(eventId)
+
     fun parse(uri: String?, backendBaseUrl: String = BuildConfig.BACKEND_BASE_URL): Int? {
         if (uri.isNullOrBlank()) return null
         val parsedUri = runCatching { URI(uri.trim()) }.getOrNull() ?: return null
@@ -340,6 +346,14 @@ object EventDeepLink {
         }
 
         if (scheme.equals("https", ignoreCase = true) || scheme.equals("http", ignoreCase = true)) {
+            val host = parsedUri.host?.lowercase()
+            if (host != null && host in publicHosts) {
+                val segments = parsedUri.path.orEmpty().split('/').filter { it.isNotEmpty() }
+                if (segments.size == 2 && segments[0].lowercase() in setOf("e", "event", "events")) {
+                    return segments[1].toIntOrNull()?.takeIf { it > 0 }
+                }
+                return null
+            }
             val parsedBase = runCatching { URI(backendBaseUrl.trim().trimEnd('/')) }.getOrNull() ?: return null
             if (!parsedUri.host.equals(parsedBase.host, ignoreCase = true)) {
                 return null
