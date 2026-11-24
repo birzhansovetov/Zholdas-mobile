@@ -178,7 +178,7 @@ struct ActivityView: View {
                     
                     VStack(alignment: .leading, spacing: 4) {
                         HStack(alignment: .top) {
-                            Text(item.text)
+                            Text(localizedText(for: item))
                                 .font(.subheadline)
                                 .foregroundColor(ZholdasTheme.textPrimary)
                                 .lineLimit(2)
@@ -336,6 +336,42 @@ struct ActivityView: View {
             if success {
                 notifications.removeAll { $0.id == item.id }
             }
+        }
+    }
+
+    private func localizedText(for item: NotificationItem) -> String {
+        let actor = item.actorName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let title = item.eventTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        switch item.notificationType {
+        case "join":
+            guard !actor.isEmpty && !title.isEmpty else { return item.text }
+            return String(format: "act_notif_join".localized, actor, title)
+        case "leave":
+            guard !actor.isEmpty && !title.isEmpty else { return item.text }
+            return String(format: "act_notif_leave".localized, actor, title)
+        case "friend_request":
+            guard !actor.isEmpty else { return item.text }
+            return String(format: "act_notif_friend_request".localized, actor)
+        case "friend_accept":
+            guard !actor.isEmpty else { return item.text }
+            return String(format: "act_notif_friend_accept".localized, actor)
+        case "event_cancelled":
+            guard !title.isEmpty else { return item.text }
+            return String(format: "act_notif_event_cancelled".localized, title)
+        case "event_reminder":
+            guard !title.isEmpty else { return item.text }
+            if item.text.localizedCaseInsensitiveContains("15 минут") {
+                return String(format: "act_notif_event_reminder_15m".localized, title)
+            } else if item.text.localizedCaseInsensitiveContains("1 час") {
+                return String(format: "act_notif_event_reminder_1h".localized, title)
+            } else {
+                return item.text
+            }
+        case "unban":
+            return "act_notif_unban".localized
+        default:
+            return item.text
         }
     }
     

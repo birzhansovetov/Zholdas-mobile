@@ -328,6 +328,10 @@ struct EventDetailView: View {
                                     Text("\("ev_distance".localized): \(String(format: "ev_distance_km_format".localized, dist / 1000.0))")
                                         .font(.caption)
                                         .foregroundColor(ZholdasTheme.textSecondary)
+                                } else if liveLocationManager.authorizationStatus == .denied || liveLocationManager.authorizationStatus == .restricted || liveLocationManager.errorMessage != nil || (!liveLocationManager.isAuthorized && liveLocationManager.authorizationStatus != .notDetermined) {
+                                    Text("ev_distance_unavailable".localized)
+                                        .font(.caption)
+                                        .foregroundColor(ZholdasTheme.textSecondary)
                                 } else {
                                     Text("ev_distance_calculating".localized)
                                         .font(.caption)
@@ -717,26 +721,28 @@ struct EventDetailView: View {
         .cornerRadius(8)
     }
     
+    @ViewBuilder
     private var statusBadge: some View {
-        let isActive = localStatus == "active"
-        let isCancelled = localStatus == "cancelled"
-        let text = isActive ? "ev_status_active".localized : (isCancelled ? "ev_status_cancelled".localized : "ev_status_finished".localized)
-        let color: Color = isActive ? .green : (isCancelled ? .red : .gray)
-        let bgColor: Color = isActive ? Color.green.opacity(0.15) : (isCancelled ? Color.red.opacity(0.15) : ZholdasTheme.surface.opacity(0.7))
+        if localStatus != "active" {
+            let isCancelled = localStatus == "cancelled"
+            let text = isCancelled ? "ev_status_cancelled".localized : "ev_status_finished".localized
+            let color: Color = isCancelled ? .red : .gray
+            let bgColor: Color = isCancelled ? Color.red.opacity(0.15) : ZholdasTheme.surface.opacity(0.7)
 
-        return HStack(spacing: 4) {
-            Circle()
-                .fill(color)
-                .frame(width: 6, height: 6)
-            Text(text)
-                .font(.caption)
-                .fontWeight(.bold)
-                .foregroundColor(color)
+            HStack(spacing: 4) {
+                Circle()
+                    .fill(color)
+                    .frame(width: 6, height: 6)
+                Text(text)
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(color)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(bgColor)
+            .cornerRadius(8)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(bgColor)
-        .cornerRadius(8)
     }
 
     private var organizerCard: some View {

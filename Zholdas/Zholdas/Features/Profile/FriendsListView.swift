@@ -1,5 +1,27 @@
 import SwiftUI
 
+struct UserSearchResult: Identifiable, Codable, Hashable {
+    let id: String
+    let username: String
+    let fullName: String
+    let avatarURL: String?
+    let city: String?
+    var friendshipStatus: String
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case username
+        case fullName = "full_name"
+        case avatarURL = "avatar_url"
+        case city
+        case friendshipStatus = "friendship_status"
+    }
+}
+
+private struct FriendDetailSheetItem: Identifiable {
+    let id: String
+}
+
 struct FriendsListView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
     @EnvironmentObject var langManager: LocalizationManager
@@ -8,12 +30,23 @@ struct FriendsListView: View {
     @State private var requests: [User] = []
     @State private var selectedTab = 0 // 0: Friends, 1: Requests
     @State private var isLoadingData = false
-    @State private var selectedUser: User?
+    @State private var selectedProfileForSheet: FriendDetailSheetItem? = nil
     @State private var friendToRemove: User? = nil
     @State private var isShowingDeleteConfirmation = false
     @State private var errorMessage: String? = nil
     @State private var isShowingErrorAlert = false
     @Namespace private var pickerNamespace
+    
+    // Search state
+    @State private var searchText = ""
+    @State private var searchResults: [UserSearchResult] = []
+    @State private var isSearching = false
+    @State private var searchError: String? = nil
+    @State private var searchTask: Task<Void, Never>? = nil
+    
+    private var isSearchActive: Bool {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines).count >= 2
+    }
     
     var body: some View {
         ZStack {
@@ -22,25 +55,66 @@ struct FriendsListView: View {
             .ignoresSafeArea()
             
             VStack(spacing: 16) {
-                // Tab Selection
-                pickerView
-                    .padding(.horizontal, 20)
+                // Search Bar at the top
+                searchBarView
                     .padding(.top, 10)
                 
-                if isLoadingData {
-                    Spacer()
-                    ProgressView()
-                        .tint(ZholdasTheme.accent)
-                        .scaleEffect(1.3)
-                    Text("prof_loading".localized)
-                        .foregroundColor(ZholdasTheme.textSecondary)
-                        .font(.subheadline)
-                    Spacer()
-                } else {
-                    if selectedTab == 0 {
-                        friendsList
+                if isSearchActive {
+                    // Search Content
+                    if isSearching && searchResults.isEmpty {
+                        Spacer()
+                        ProgressView()
+                            .tint(ZholdasTheme.accent)
+                            .scaleEffect(1.3)
+                        Spacer()
+                    } else if let error = searchError, !error.isEmpty {
+                        VStack(spacing: 8) {
+                            Text("⚠️ \(error)")
+                                .font(.subheadline)
+                                .foregroundColor(ZholdasTheme.danger)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 24)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 32)
+                        Spacer()
+                    } else if searchResults.isEmpty {
+                        emptyStateView(
+                            systemImage: "magnifyingglass",
+                            title: "friends_search_empty".localized,
+                            subtitle: ""
+                        )
                     } else {
-                        requestsList
+                        ScrollView {
+                            LazyVStack(spacing: 12) {
+                                ForEach(searchResults) { result in
+                                    searchResultRow(for: result)
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.top, 8)
+                        }
+                    }
+                } else {
+                    // Tab Selection
+                    pickerView
+                        .padding(.horizontal, 20)
+                    
+                    if isLoadingData {
+                        Spacer()
+                        ProgressView()
+                            .tint(ZholdasTheme.accent)
+                            .scaleEffect(1.3)
+                        Text("prof_loading".localized)
+                            .foregroundColor(ZholdasTheme.textSecondary)
+                            .font(.subheadline)
+                        Spacer()
+                    } else {
+                        if selectedTab == 0 {
+                            friendsList
+                        } else {
+                            requestsList
+                        }
                     }
                 }
             }
@@ -51,10 +125,29 @@ struct FriendsListView: View {
             await loadData()
         }
         .refreshable {
-            await loadData()
+            if !isSearchActive {
+                await loadData()
+            }
         }
-        .sheet(item: $selectedUser) { user in
-            UserDetailView(userID: user.id)
+        .onChange(of: searchText) { newText in
+            searchTask?.cancel()
+            let query = newText.trimmingCharacters(in: .whitespacesAndNewlines)
+            if query.count < 2 {
+                searchResults = []
+                searchError = nil
+                isSearching = false
+                return
+            }
+            isSearching = true
+            searchError = nil
+            searchTask = Task {
+                try? await Task.sleep(nanoseconds: 400_000_000)
+                guard !Task.isCancelled else { return }
+                await performSearch(query: query)
+            }
+        }
+        .sheet(item: $selectedProfileForSheet) { item in
+            UserDetailView(userID: item.id)
                 .environmentObject(authViewModel)
                 .environmentObject(langManager)
         }
@@ -76,6 +169,158 @@ struct FriendsListView: View {
             Button("btn_ok".localized, role: .cancel) {}
         } message: {
             Text(errorMessage ?? "error_generic".localized)
+        }
+    }
+    
+    // MARK: - Search Bar View
+    
+    @ViewBuilder
+    private var searchBarView: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(ZholdasTheme.textSecondary)
+            TextField("friends_search_placeholder".localized, text: $searchText)
+                .foregroundColor(ZholdasTheme.textPrimary)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                    searchTask?.cancel()
+                    searchResults = []
+                    searchError = nil
+                    isSearching = false
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(ZholdasTheme.textSecondary)
+                }
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(ZholdasTheme.surface.opacity(0.76))
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(ZholdasTheme.border, lineWidth: 1)
+        )
+        .padding(.horizontal, 20)
+    }
+    
+    // MARK: - Search Result Row
+    
+    @ViewBuilder
+    private func searchResultRow(for result: UserSearchResult) -> some View {
+        HStack(spacing: 14) {
+            Button {
+                selectedProfileForSheet = FriendDetailSheetItem(id: result.id)
+            } label: {
+                HStack(spacing: 14) {
+                    userAvatarView(avatarURL: result.avatarURL, fullName: result.fullName, username: result.username)
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(result.fullName)
+                            .font(.body)
+                            .fontWeight(.bold)
+                            .foregroundColor(ZholdasTheme.textPrimary)
+                            .lineLimit(1)
+
+                        Text("@\(result.username)")
+                            .font(.footnote)
+                            .foregroundColor(ZholdasTheme.textSecondary)
+                            .lineLimit(1)
+                    }
+
+                    Spacer()
+                }
+            }
+            .buttonStyle(PlainButtonStyle())
+
+            // Action button or status on right
+            searchResultActionView(for: result)
+        }
+        .padding()
+        .background(ZholdasTheme.surface.opacity(0.76))
+        .cornerRadius(16)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(ZholdasTheme.border, lineWidth: 1)
+        )
+    }
+    
+    @ViewBuilder
+    private func searchResultActionView(for result: UserSearchResult) -> some View {
+        switch result.friendshipStatus {
+        case "none":
+            Button {
+                Task {
+                    let success = await authViewModel.sendFriendRequest(to: result.id)
+                    if success {
+                        await MainActor.run {
+                            if let idx = searchResults.firstIndex(where: { $0.id == result.id }) {
+                                searchResults[idx].friendshipStatus = "pending_sent"
+                            }
+                        }
+                    }
+                }
+            } label: {
+                Text("friends_add".localized)
+                    .font(.caption.weight(.bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(
+                        LinearGradient(
+                            colors: [ZholdasTheme.accent, ZholdasTheme.accentDeep],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .clipShape(Capsule())
+            }
+            .buttonStyle(PlainButtonStyle())
+        case "pending_sent":
+            Text("friends_request_sent".localized)
+                .font(.caption.weight(.medium))
+                .foregroundColor(ZholdasTheme.textSecondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+        case "pending_received":
+            Button {
+                Task {
+                    let success = await authViewModel.acceptFriendRequest(from: result.id)
+                    if success {
+                        await MainActor.run {
+                            if let idx = searchResults.firstIndex(where: { $0.id == result.id }) {
+                                searchResults[idx].friendshipStatus = "accepted"
+                            }
+                        }
+                    }
+                }
+            } label: {
+                Text("user_detail_accept".localized)
+                    .font(.caption.weight(.bold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(
+                        LinearGradient(
+                            colors: [ZholdasTheme.accent, ZholdasTheme.accentDeep],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .clipShape(Capsule())
+            }
+            .buttonStyle(PlainButtonStyle())
+        case "accepted":
+            Text("friends_already".localized)
+                .font(.caption.weight(.medium))
+                .foregroundColor(ZholdasTheme.accent)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+        default:
+            EmptyView()
         }
     }
     
@@ -158,10 +403,10 @@ struct FriendsListView: View {
     private func friendRow(for friend: User) -> some View {
         HStack(spacing: 16) {
             Button {
-                selectedUser = friend
+                selectedProfileForSheet = FriendDetailSheetItem(id: friend.id)
             } label: {
                 HStack(spacing: 16) {
-                    avatarView(for: friend)
+                    userAvatarView(avatarURL: friend.avatarURL, fullName: friend.fullName, username: friend.username)
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(friend.fullName)
@@ -234,10 +479,10 @@ struct FriendsListView: View {
     private func requestRow(for request: User) -> some View {
         HStack(spacing: 16) {
             Button {
-                selectedUser = request
+                selectedProfileForSheet = FriendDetailSheetItem(id: request.id)
             } label: {
                 HStack(spacing: 16) {
-                    avatarView(for: request)
+                    userAvatarView(avatarURL: request.avatarURL, fullName: request.fullName, username: request.username)
 
                     VStack(alignment: .leading, spacing: 4) {
                         Text(request.fullName)
@@ -315,33 +560,31 @@ struct FriendsListView: View {
     // MARK: - Shared Views
     
     @ViewBuilder
-    private func avatarView(for user: User) -> some View {
-        ZStack {
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [Color(red: 0.25, green: 0.15, blue: 0.45), Color(red: 0.15, green: 0.08, blue: 0.25)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(width: 50, height: 50)
-            
-            if let avatarURL = user.avatarURL, !avatarURL.isEmpty, let url = URL(string: avatarURL) {
-                AsyncImage(url: url) { image in
-                    image
-                        .resizable()
-                        .scaledToFill()
-                        .clipShape(Circle())
+    private func userAvatarView(avatarURL: String?, fullName: String, username: String) -> some View {
+        if let avatarURL = avatarURL, !avatarURL.isEmpty, let url = URL(string: avatarURL) {
+            AsyncImage(url: url) { image in
+                image
+                    .resizable()
+                    .scaledToFill()
+                    .clipShape(Circle())
+                    .frame(width: 50, height: 50)
+            } placeholder: {
+                ZStack {
+                    Circle()
+                        .fill(ZholdasTheme.accent.opacity(0.2))
                         .frame(width: 50, height: 50)
-                } placeholder: {
                     ProgressView()
-                        .tint(.white)
+                        .tint(ZholdasTheme.accentDeep)
                 }
-            } else {
-                Text(getInitials(from: user.fullName))
+            }
+        } else {
+            ZStack {
+                Circle()
+                    .fill(ZholdasTheme.accent.opacity(0.2))
+                    .frame(width: 50, height: 50)
+                Text(getInitials(fullName: fullName, username: username))
                     .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
+                    .foregroundColor(ZholdasTheme.accentDeep)
             }
         }
     }
@@ -359,11 +602,13 @@ struct FriendsListView: View {
                 .fontWeight(.bold)
                 .foregroundColor(ZholdasTheme.textPrimary)
             
-            Text(subtitle)
-                .font(.subheadline)
-                .foregroundColor(ZholdasTheme.textSecondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
+            if !subtitle.isEmpty {
+                Text(subtitle)
+                    .font(.subheadline)
+                    .foregroundColor(ZholdasTheme.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+            }
         }
         .padding(.bottom, 60)
         Spacer()
@@ -398,12 +643,45 @@ struct FriendsListView: View {
         isLoadingData = false
     }
     
-    private func getInitials(from name: String) -> String {
-        let parts = name.split(separator: " ")
+    private func performSearch(query: String) async {
+        guard let encoded = query.addingPercentEncoding(withAllowedCharacters: .alphanumerics) else {
+            await MainActor.run {
+                searchError = "error_generic".localized
+                isSearching = false
+            }
+            return
+        }
+        do {
+            let results: [UserSearchResult] = try await APIClient.shared.request(
+                "/friends/search?q=\(encoded)",
+                method: "GET",
+                requiresAuth: true
+            )
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                searchResults = results
+                searchError = nil
+                isSearching = false
+            }
+        } catch {
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                searchError = error.localizedDescription
+                searchResults = []
+                isSearching = false
+            }
+        }
+    }
+    
+    private func getInitials(fullName: String, username: String) -> String {
+        let parts = fullName.split(separator: " ").filter { !$0.isEmpty }
         if parts.count >= 2 {
             return "\(parts[0].prefix(1))\(parts[1].prefix(1))".uppercased()
-        } else if let first = parts.first {
-            return String(first.prefix(2)).uppercased()
+        } else if let first = parts.first, !first.isEmpty {
+            let str = String(first)
+            return String(str.prefix(min(2, str.count))).uppercased()
+        } else if !username.isEmpty {
+            return String(username.prefix(1)).uppercased()
         }
         return "👤"
     }

@@ -350,8 +350,13 @@ struct ProfileTabView: View {
             .buttonStyle(PlainButtonStyle())
             
             VStack(spacing: 4) {
-                let ratingVal = authViewModel.currentUserProfile?.rating ?? 5.0
-                Text(String(format: "%.1f", ratingVal))
+                let ratingsCount = profile.ratingsCount ?? authViewModel.currentUserProfile?.ratingsCount
+                let rating = profile.rating ?? authViewModel.currentUserProfile?.rating
+                let ratingText: String = {
+                    guard let rating, rating > 0, ratingsCount != 0 else { return "—" }
+                    return String(format: "%.1f", rating)
+                }()
+                Text(ratingText)
                     .font(.title2)
                     .fontWeight(.bold)
                     .foregroundColor(ZholdasTheme.accent)
