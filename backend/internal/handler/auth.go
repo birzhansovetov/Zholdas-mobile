@@ -162,13 +162,15 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 
 	// Fetch dynamic rating
 	var rating float64
+	var ratingsCount int
 	err = h.pool.QueryRow(ctx, `
-		SELECT COALESCE(AVG(rating)::float, 5.0)
+		SELECT COALESCE(AVG(rating)::float, 5.0), COUNT(*)
 		FROM user_reviews
 		WHERE ratee_id = $1
-	`, userID).Scan(&rating)
+	`, userID).Scan(&rating, &ratingsCount)
 	if err != nil {
 		rating = 5.0
+		ratingsCount = 0
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -184,6 +186,7 @@ func (h *AuthHandler) GetProfile(c *gin.Context) {
 		"age":             ageFromBirthYear(user.BirthYear),
 		"events_count":    eventsCount,
 		"rating":          rating,
+		"ratings_count": ratingsCount,
 		"role":            user.Role,
 		"is_banned":       user.IsBanned,
 		"email_confirmed": user.EmailConfirmedAt != nil,
@@ -314,13 +317,15 @@ func (h *AuthHandler) GetUserProfileByID(c *gin.Context) {
 
 	// Fetch dynamic rating
 	var rating float64
+	var ratingsCount int
 	err = h.pool.QueryRow(ctx, `
-		SELECT COALESCE(AVG(rating)::float, 5.0)
+		SELECT COALESCE(AVG(rating)::float, 5.0), COUNT(*)
 		FROM user_reviews
 		WHERE ratee_id = $1
-	`, targetUserID).Scan(&rating)
+	`, targetUserID).Scan(&rating, &ratingsCount)
 	if err != nil {
 		rating = 5.0
+		ratingsCount = 0
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -336,6 +341,7 @@ func (h *AuthHandler) GetUserProfileByID(c *gin.Context) {
 		"age":             ageFromBirthYear(user.BirthYear),
 		"events_count":    eventsCount,
 		"rating":          rating,
+		"ratings_count": ratingsCount,
 		"role":            user.Role,
 		"is_banned":       user.IsBanned,
 		"email_confirmed": user.EmailConfirmedAt != nil,

@@ -228,6 +228,7 @@ func main() {
 		protectedRoutes.POST("/friends/accept/:id", authHandler.AcceptFriendRequest)
 		protectedRoutes.POST("/friends/reject/:id", authHandler.RejectFriendRequest)
 		protectedRoutes.GET("/friends", authHandler.GetFriends)
+		protectedRoutes.GET("/friends/search", authHandler.SearchUsers)
 		protectedRoutes.GET("/friends/requests", authHandler.GetFriendRequests)
 		protectedRoutes.GET("/friends/status/:id", authHandler.GetFriendshipStatus)
 
