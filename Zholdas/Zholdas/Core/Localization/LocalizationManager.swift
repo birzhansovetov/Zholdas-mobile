@@ -676,7 +676,7 @@ class LocalizationManager: ObservableObject {
         // Chats
         "chat_assistant_title": [
             "ru": "ИИ Помощник Жорик",
-            "kk": "Жорик ИИ Көмекшісі",
+            "kk": "Жорик ЖИ көмекшісі",
             "en": "AI Assistant Zhorik"
         ],
         "chat_placeholder": [
@@ -698,12 +698,12 @@ class LocalizationManager: ObservableObject {
         ],
         "map_search_placeholder": [
             "ru": "Чем хочешь заняться? (ИИ-поиск)",
-            "kk": "Немен айналысқыңыз келеді? (ИИ-іздеу)",
+            "kk": "Немен айналысқыңыз келеді? (ЖИ-іздеу)",
             "en": "What do you want to do? (AI-Search)"
         ],
         "map_ai_recs_title": [
             "ru": "Жолдас AI Рекомендации",
-            "kk": "Жолик AI Ұсыныстары",
+            "kk": "Жорик ЖИ ұсыныстары",
             "en": "Zholdas AI Recommendations"
         ],
         "map_ai_markers_hint": [
@@ -827,12 +827,12 @@ class LocalizationManager: ObservableObject {
         ],
         "chat_ai_assistant_name": [
             "ru": "Жорик (ИИ-помощник)",
-            "kk": "Жолик (ИИ-көмекші)",
+            "kk": "Жорик (ЖИ-көмекші)",
             "en": "Zhorik (AI-Assistant)"
         ],
         "chat_ai_assistant_welcome": [
             "ru": "Привет! Я Жорик, твой ИИ-помощник. Задавай мне любые вопросы про Алматы!",
-            "kk": "Сәлем! Мен Жоликпін, сенің ИИ-көмекшіңмін. Алматы туралы кез келген сұрақ қой!",
+            "kk": "Сәлем! Мен Жорикпін, сенің ЖИ-көмекшіңмін. Алматы туралы кез келген сұрақ қой!",
             "en": "Hello! I am Zhorik, your AI-Assistant. Ask me any questions about Almaty!"
         ],
         "chats_count": [
@@ -897,6 +897,46 @@ class LocalizationManager: ObservableObject {
             "kk": "кеше",
             "en": "yesterday"
         ],
+        "act_notif_join": [
+            "ru": "%@ присоединился к вашему событию «%@»",
+            "kk": "%@ сіздің «%@» іс-шараңызға қосылды",
+            "en": "%@ joined your event “%@”"
+        ],
+        "act_notif_leave": [
+            "ru": "%@ покинул ваше событие «%@»",
+            "kk": "%@ сіздің «%@» іс-шараңыздан шықты",
+            "en": "%@ left your event “%@”"
+        ],
+        "act_notif_friend_request": [
+            "ru": "%@ отправил вам запрос в друзья",
+            "kk": "%@ сізге достық сұрауын жіберді",
+            "en": "%@ sent you a friend request"
+        ],
+        "act_notif_friend_accept": [
+            "ru": "%@ принял ваш запрос в друзья",
+            "kk": "%@ достық сұрауыңызды қабылдады",
+            "en": "%@ accepted your friend request"
+        ],
+        "act_notif_event_cancelled": [
+            "ru": "Событие «%@» отменено",
+            "kk": "«%@» іс-шарасы тоқтатылды",
+            "en": "Event “%@” was cancelled"
+        ],
+        "act_notif_event_reminder_15m": [
+            "ru": "Событие «%@» начнётся через 15 минут",
+            "kk": "«%@» іс-шарасы 15 минуттан кейін басталады",
+            "en": "“%@” starts in 15 minutes"
+        ],
+        "act_notif_event_reminder_1h": [
+            "ru": "Событие «%@» начнётся через 1 час",
+            "kk": "«%@» іс-шарасы 1 сағаттан кейін басталады",
+            "en": "“%@” starts in 1 hour"
+        ],
+        "act_notif_unban": [
+            "ru": "Ваш профиль разблокирован",
+            "kk": "Профиліңіз бұғаттан шығарылды",
+            "en": "Your profile has been unblocked"
+        ],
         
         // Profile & Settings
         "prof_default_bio": [
@@ -959,9 +999,9 @@ class LocalizationManager: ObservableObject {
         
         // Friends
         "friends_title": [
-            "ru": "Контакты",
-            "kk": "Контактілер",
-            "en": "Contacts"
+            "ru": "Список друзей",
+            "kk": "Достар тізімі",
+            "en": "Friends List"
         ],
         "friends_my_friends": [
             "ru": "Мои друзья",
@@ -992,6 +1032,31 @@ class LocalizationManager: ObservableObject {
             "ru": "Когда кто-то отправит вам запрос в друзья, он появится здесь.",
             "kk": "Біреу сізге дос болуға сұрау жібергенде, ол осында пайда болады.",
             "en": "When someone sends you a friend request, it will appear here."
+        ],
+        "friends_search_placeholder": [
+            "ru": "Найти по имени или нику",
+            "kk": "Аты немесе никнейм бойынша іздеу",
+            "en": "Search by name or username"
+        ],
+        "friends_add": [
+            "ru": "Добавить",
+            "kk": "Қосу",
+            "en": "Add"
+        ],
+        "friends_request_sent": [
+            "ru": "Запрос отправлен",
+            "kk": "Сұрау жіберілді",
+            "en": "Request sent"
+        ],
+        "friends_already": [
+            "ru": "В друзьях",
+            "kk": "Достарда",
+            "en": "Friends"
+        ],
+        "friends_search_empty": [
+            "ru": "Никого не найдено",
+            "kk": "Ешкім табылмады",
+            "en": "No one found"
         ],
         
         // Reports
@@ -1113,6 +1178,11 @@ class LocalizationManager: ObservableObject {
             "ru": "Расстояние: рассчитывается...",
             "kk": "Қашықтық: есептелуде...",
             "en": "Distance: calculating..."
+        ],
+        "ev_distance_unavailable": [
+            "ru": "Расстояние неизвестно: включите геолокацию",
+            "kk": "Қашықтық белгісіз: геолокацияны қосыңыз",
+            "en": "Distance unknown: turn on location"
         ],
         "ev_status_active": [
             "ru": "Активный",
@@ -1881,7 +1951,7 @@ class LocalizationManager: ObservableObject {
         ],
         "chat_ask_joryk_placeholder": [
             "ru": "Спросите Жорика...",
-            "kk": "Жоликтен сұраңыз...",
+            "kk": "Жориктен сұраңыз...",
             "en": "Ask Zhorik..."
         ],
         "chat_suggestion_active": [
@@ -2001,7 +2071,7 @@ class LocalizationManager: ObservableObject {
         ],
         "chat_joryk_answer": [
             "ru": "Ответ Жорика",
-            "kk": "Жоликтің жауабы",
+            "kk": "Жориктің жауабы",
             "en": "Zhorik's answer"
         ],
         "chat_joryk_details": [
@@ -2078,7 +2148,7 @@ class LocalizationManager: ObservableObject {
         ],
         "map_ai_recommendations_error": [
             "ru": "Ошибка ИИ-рекомендаций: %@",
-            "kk": "ИИ-ұсыныстар қатесі: %@",
+            "kk": "ЖИ-ұсыныстар қатесі: %@",
             "en": "AI recommendations error: %@"
         ],
         "ev_list_filters_prefix": [

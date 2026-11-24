@@ -69,6 +69,7 @@ struct User: Codable, Identifiable, Hashable {
     let age: Int?
     let eventsCount: Int?
     let rating: Double?
+    var ratingsCount: Int? = nil
     let role: String?
     let isBanned: Bool?
     let emailConfirmed: Bool?
@@ -86,6 +87,7 @@ struct User: Codable, Identifiable, Hashable {
         case age
         case eventsCount = "events_count"
         case rating
+        case ratingsCount = "ratings_count"
         case role
         case isBanned = "is_banned"
         case emailConfirmed = "email_confirmed"
