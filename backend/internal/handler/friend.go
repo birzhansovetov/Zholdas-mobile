@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
 )
@@ -447,4 +449,93 @@ func (h *AuthHandler) GetFriendRequests(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, requests)
+}
+
+// UserSearchResult represents a user profile returned by user search
+type UserSearchResult struct {
+	ID               string `json:"id"`
+	Username         string `json:"username"`
+	FullName         string `json:"full_name"`
+	AvatarURL        string `json:"avatar_url"`
+	City             string `json:"city"`
+	FriendshipStatus string `json:"friendship_status"`
+}
+
+// SearchUsers searches users to add as friends
+func (h *AuthHandler) SearchUsers(c *gin.Context) {
+	userIDVal, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	currentUserID := userIDVal.(string)
+
+	q := strings.TrimSpace(c.Query("q"))
+	if utf8.RuneCountInString(q) < 2 {
+		c.JSON(http.StatusOK, []UserSearchResult{})
+		return
+	}
+
+	escapedQ := strings.ReplaceAll(q, `\`, `\\`)
+	escapedQ = strings.ReplaceAll(escapedQ, `%`, `\%`)
+	escapedQ = strings.ReplaceAll(escapedQ, `_`, `\_`)
+	searchPattern := "%" + escapedQ + "%"
+
+	ctx := c.Request.Context()
+	rows, err := h.pool.Query(ctx, `
+		SELECT
+			p.user_id::text,
+			COALESCE(p.username, ''),
+			COALESCE(p.full_name, ''),
+			COALESCE(p.avatar_url, ''),
+			COALESCE(p.city, ''),
+			CASE
+				WHEN f.status = 'accepted' THEN 'accepted'
+				WHEN f.status = 'pending' AND f.user_id = $1 THEN 'pending_sent'
+				WHEN f.status = 'pending' AND f.friend_id = $1 THEN 'pending_received'
+				ELSE 'none'
+			END AS friendship_status
+		FROM profiles p
+		LEFT JOIN friendships f ON
+			(f.user_id = $1 AND f.friend_id = p.user_id)
+			OR (f.user_id = p.user_id AND f.friend_id = $1)
+		WHERE p.user_id != $1
+		  AND COALESCE(p.is_banned, false) = false
+		  AND (
+			  p.username ILIKE $2 ESCAPE '\'
+			  OR p.full_name ILIKE $2 ESCAPE '\'
+		  )
+		  AND NOT EXISTS (
+			  SELECT 1 FROM blocks b
+			  WHERE (b.blocker_id = $1 AND b.blocked_id = p.user_id)
+			     OR (b.blocker_id = p.user_id AND b.blocked_id = $1)
+		  )
+		ORDER BY p.full_name ASC
+		LIMIT 20
+	`, currentUserID, searchPattern)
+	if err != nil {
+		log.Printf("[Error] Failed to search users: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search users"})
+		return
+	}
+	defer rows.Close()
+
+	users := make([]UserSearchResult, 0)
+	for rows.Next() {
+		var u UserSearchResult
+		if err := rows.Scan(&u.ID, &u.Username, &u.FullName, &u.AvatarURL, &u.City, &u.FriendshipStatus); err != nil {
+			log.Printf("[Error] Failed to scan searched user: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search users"})
+			return
+		}
+		users = append(users, u)
+	}
+
+	if err := rows.Err(); err != nil {
+		log.Printf("[Error] Error iterating searched users: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to search users"})
+		return
+	}
+
+	c.JSON(http.StatusOK, users)
 }
