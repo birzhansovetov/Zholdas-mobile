@@ -72,6 +72,56 @@ struct ZholdasTests {
         #expect(EventDeepLink.eventID(from: localURL, backendBaseURL: localBackend) == 42)
     }
 
+    @Test func eventDeepLinkWebURLs() {
+        // Standard web URLs: https://www.zholdas.app/e/<id>
+        let url1 = URL(string: "https://www.zholdas.app/e/123")!
+        #expect(EventDeepLink.eventID(from: url1) == 123)
+
+        // Trailing slash
+        let url2 = URL(string: "https://www.zholdas.app/e/456/")!
+        #expect(EventDeepLink.eventID(from: url2) == 456)
+
+        // Non-www host (zholdas.app)
+        let url3 = URL(string: "https://zholdas.app/e/789")!
+        #expect(EventDeepLink.eventID(from: url3) == 789)
+
+        // http scheme
+        let url4 = URL(string: "http://zholdas.app/e/101")!
+        #expect(EventDeepLink.eventID(from: url4) == 101)
+
+        // Path /events/<id>
+        let url5 = URL(string: "https://www.zholdas.app/events/202")!
+        #expect(EventDeepLink.eventID(from: url5) == 202)
+
+        // Query parameters
+        let url6 = URL(string: "https://www.zholdas.app/e/303?utm_source=telegram&ref=share")!
+        #expect(EventDeepLink.eventID(from: url6) == 303)
+
+        // Query parameters with trailing slash
+        let url7 = URL(string: "https://zholdas.app/e/404/?preview=true")!
+        #expect(EventDeepLink.eventID(from: url7) == 404)
+
+        // webURL generator
+        let generatedURL = EventDeepLink.webURL(for: 555)
+        #expect(generatedURL.absoluteString == "https://www.zholdas.app/e/555")
+        #expect(EventDeepLink.eventID(from: generatedURL) == 555)
+
+        let generatedURL32 = EventDeepLink.webURL(for: Int32(777))
+        #expect(generatedURL32.absoluteString == "https://www.zholdas.app/e/777")
+        #expect(EventDeepLink.eventID(from: generatedURL32) == 777)
+
+        // Invalid or non-positive IDs
+        #expect(EventDeepLink.eventID(from: URL(string: "https://www.zholdas.app/e/0")!) == nil)
+        #expect(EventDeepLink.eventID(from: URL(string: "https://www.zholdas.app/e/-10")!) == nil)
+        #expect(EventDeepLink.eventID(from: URL(string: "https://www.zholdas.app/e/abc")!) == nil)
+        #expect(EventDeepLink.eventID(from: URL(string: "https://www.zholdas.app/e")!) == nil)
+        #expect(EventDeepLink.eventID(from: URL(string: "https://www.zholdas.app/e/123/edit")!) == nil)
+
+        // Other hosts or paths
+        #expect(EventDeepLink.eventID(from: URL(string: "https://example.com/e/123")!) == nil)
+        #expect(EventDeepLink.eventID(from: URL(string: "https://www.zholdas.app/users/123")!) == nil)
+    }
+
     @Test func eventRestrictions() {
         let templates = EventRestrictionTemplates(
             prefix: "Restrictions: ",
